@@ -12,8 +12,8 @@ agentd sits between your AI coding agents (Claude Code, Cursor, Codex, Gemini CL
 
 ## Documentation
 
-- [User guide (English)](./docs/en/) — default
-- [Руководство (русский)](./docs/ru/)
+- [User guide (English)](./docs/en/) — default ([why agentd](./docs/en/why.md))
+- [Руководство (русский)](./docs/ru/) ([зачем нужен](./docs/ru/why.md))
 - Keeping docs current: [docs/en/maintaining.md](./docs/en/maintaining.md)
 
 Contributor design and conventions: [DESIGN.md](./DESIGN.md), [AGENTS.md](./AGENTS.md), [CONVENTIONS.md](./CONVENTIONS.md).

@@ -16,7 +16,7 @@
 | Install providers / scopes / entrypoints | [providers.md](./providers.md), [getting-started.md](./getting-started.md) |
 | Install / Releases / version | [installation.md](./installation.md) |
 | Failure modes / offline / timeouts | [troubleshooting.md](./troubleshooting.md) |
-| User-visible заявления в README | [README.md](../../README.md) + соответствующая страница docs |
+| User-visible заявления в README | [README.md](../../README.md) + соответствующая страница docs ([why.md](./why.md) при смене позиционирования) |
 
 Если код и DESIGN расходятся — **документируйте код** и по возможности поправьте DESIGN в том же изменении.
 

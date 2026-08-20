@@ -4,6 +4,8 @@
 
 Bring up a user-level daemon, write a minimal policy, install agent hooks, and confirm Status.
 
+Motivation and pain points: [Why agentd](./why.md).
+
 ## 1. Install binary
 
 See [Installation](./installation.md). Quick path:

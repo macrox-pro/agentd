@@ -16,7 +16,7 @@ How to keep `docs/en/` and `docs/ru/` accurate when code changes. EN is canonica
 | Install providers / scopes / entrypoints | [providers.md](./providers.md), [getting-started.md](./getting-started.md) |
 | Install / Releases / version wiring | [installation.md](./installation.md) |
 | Failure modes / offline / timeouts | [troubleshooting.md](./troubleshooting.md) |
-| User-visible README claims | [README.md](../../README.md) + matching docs page |
+| User-visible README claims | [README.md](../../README.md) + matching docs page ([why.md](./why.md) if positioning changes) |
 
 If code and DESIGN disagree, **document code** and fix DESIGN in the same change when practical.
 

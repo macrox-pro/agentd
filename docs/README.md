@@ -4,8 +4,8 @@ User guide for running and configuring [agentd](../README.md).
 
 | Language | Guide |
 |----------|--------|
-| English (default) | [docs/en/](./en/) |
-| Русский | [docs/ru/](./ru/) |
+| English (default) | [docs/en/](./en/) — start at [Why agentd](./en/why.md) |
+| Русский | [docs/ru/](./ru/) — начните с [Зачем нужен agentd](./ru/why.md) |
 
 Contributor / architecture docs stay at the repo root: [DESIGN.md](../DESIGN.md), [AGENTS.md](../AGENTS.md), [CONVENTIONS.md](../CONVENTIONS.md).
 
