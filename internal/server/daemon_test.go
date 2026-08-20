@@ -87,6 +87,8 @@ func TestDaemonService(t *testing.T) {
 				require.NoError(t, err, "Status()")
 				assert.GreaterOrEqual(t, resp.GetConfig().GetGeneration(), uint64(1), "Status()")
 				assert.Greater(t, resp.GetCompiledRouteCount(), uint32(0), "compiled_route_count")
+				assert.Equal(t, uint64(0), resp.GetAsyncDroppedCount(), "async_dropped_count")
+				assert.Equal(t, uint32(0), resp.GetAsyncQueueDepth(), "async_queue_depth")
 			},
 		},
 		{
@@ -119,4 +121,49 @@ func TestDaemonService(t *testing.T) {
 			tt.run(t)
 		})
 	}
+}
+
+func TestDaemonServiceAsyncDropped(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "agentd.yaml")
+	store, err := config.Load(ctx, path)
+	require.NoError(t, err, "Load(%q)", path)
+
+	async := store.Current().Async
+	async.QueueCapacity = 1
+	async.WorkerLimit = 1
+	q := dispatch.NewQueue(async, nil)
+	t.Cleanup(func() { q.Close(2 * time.Second) })
+
+	block := make(chan struct{})
+	started := make(chan struct{})
+	require.True(t, q.Enqueue(dispatch.Job{Run: func(context.Context) {
+		close(started)
+		<-block
+	}}), "first job")
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("worker did not start first job")
+	}
+	// Fill the single buffer slot while the worker is blocked.
+	require.True(t, q.Enqueue(dispatch.Job{Run: func(context.Context) {}}), "buffered job")
+	require.False(t, q.Enqueue(dispatch.Job{Run: func(context.Context) {}}), "overflow drop")
+
+	srv := server.New(server.Options{
+		Store:     store,
+		Engine:    dispatch.NewEngine(q, nil),
+		StartedAt: time.Now().UTC(),
+		Version:   "test",
+	})
+	conn := dialBuf(t, srv)
+	daemon := agentdv1.NewDaemonServiceClient(conn)
+
+	resp, err := daemon.Status(ctx, &agentdv1.StatusRequest{})
+	require.NoError(t, err, "Status()")
+	assert.Equal(t, uint64(1), resp.GetAsyncDroppedCount(), "async_dropped_count")
+	assert.Equal(t, uint32(1), resp.GetAsyncQueueDepth(), "async_queue_depth")
+	close(block)
 }

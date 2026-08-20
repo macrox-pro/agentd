@@ -20,6 +20,7 @@ func WriteStatus(w io.Writer, rep StatusReport, asJSON bool) error {
 			payload["generation"] = rep.Generation
 			payload["fingerprint"] = rep.Fingerprint
 			payload["async_queue_depth"] = rep.AsyncQueueDepth
+			payload["async_dropped_count"] = rep.AsyncDroppedCount
 			payload["compiled_route_count"] = rep.CompiledRouteCount
 		}
 		return json.NewEncoder(w).Encode(payload)

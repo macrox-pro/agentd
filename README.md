@@ -8,7 +8,7 @@ agentd sits between your AI coding agents (Claude Code, Cursor, Codex, Gemini CL
 ![Go Version](https://img.shields.io/badge/go-1.26+-00ADD8?logo=go)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-> **Status:** Early development (M0–M6 done; M7→v1 planned). API and config schema may change before v1. Roadmap: [DESIGN.md §13](./DESIGN.md#13-milestones).
+> **Status:** v1 (M0–M8). Roadmap history: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
 ## Why agentd?
 
@@ -25,10 +25,11 @@ agentd centralizes hook logic in a **long-lived daemon** while keeping the **age
 - **Universal hook proxy** — one CLI surface (`agentd hook run`) for all supported agents
 - **Sync + async + hybrid dispatch** — blocking decisions for the agent, fire-and-forget observability in parallel or after sync
 - **Declarative guards** — secrets, shell, MCP, path policies via YAML
-- **Runtime config overlay** — daemon-managed approvals and temporary blocks (without editing your repo config)
+- **Approvals & temporary blocks** — Ask once / approve with TTL; runtime overlay persisted across restarts
 - **Efficient config reload** — in-memory snapshots, fsnotify with debounce; zero config I/O on the hot path
 - **Cross-platform IPC** — gRPC over Unix domain sockets (Linux/macOS) or named pipes (Windows)
 - **Provider-faithful I/O** — stdout/stderr discipline and exit codes handled per agenthooks codecs
+- **Ops Status** — queue depth and async overflow drop counter on `daemon status`
 
 ## Supported agents
 
@@ -73,7 +74,7 @@ Details: [DESIGN.md](./DESIGN.md)
 go install github.com/macrox-pro/agentd@latest
 ```
 
-Pre-built binaries will be published with GitHub Releases (planned).
+Pre-built binaries for linux/darwin/windows are published on [GitHub Releases](https://github.com/macrox-pro/agentd/releases) (goreleaser).
 
 ## Quick start
 
@@ -138,13 +139,15 @@ Full schema, merge rules, and reload behavior: [DESIGN.md § Configuration schem
 |---------|---------|
 | `agentd daemon start` | Start the user-level daemon |
 | `agentd daemon stop` | Graceful shutdown |
-| `agentd daemon status` | Health, config generation, queue depth |
+| `agentd daemon status` | Health, config generation, queue depth, async drops |
 | `agentd hook run` | **Agent entrypoint** — blocking hooks |
 | `agentd hook notify` | Codex notify path (async) |
 | `agentd hook serve` | OpenCode NDJSON bridge |
 | `agentd install` | Write agent hook configs (via agenthooks) |
 | `agentd config validate` | Validate YAML offline (CI-friendly) |
 | `agentd config show` | Inspect merged config |
+| `agentd config patch` | Patch runtime overlay (persisted) |
+| `agentd config record-decision` | Record approval after Ask |
 | `agentd dispatch routes` | Show compiled dispatch routes |
 
 Rationale for each command: [DESIGN.md § CLI Reference](./DESIGN.md#6-cli-reference)
@@ -157,6 +160,7 @@ cd agentd
 make generate   # protobuf (requires buf)
 make test       # go test -race
 make lint       # golangci-lint + buf lint
+go test -tags=integration ./...   # optional daemon↔hook integration
 ```
 
 Contributor conventions: [AGENTS.md](./AGENTS.md)

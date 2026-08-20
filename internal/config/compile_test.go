@@ -97,6 +97,25 @@ dispatch:
 			},
 		},
 		{
+			name: "route sync_timeout",
+			content: `version: 1
+dispatch:
+  - name: tight
+    match:
+      kind: [tool.pre]
+    mode: sync_only
+    sync_timeout: 2s
+    sync:
+      - target: builtin
+        guards: [secrets]
+`,
+			check: func(t *testing.T, snap *config.Snapshot) {
+				t.Helper()
+				require.GreaterOrEqual(t, len(snap.Routes), 1)
+				assert.Equal(t, 2*time.Second, snap.Routes[0].SyncTimeout, "sync_timeout")
+			},
+		},
+		{
 			name: "accept grpc async",
 			content: `version: 1
 dispatch:

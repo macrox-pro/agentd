@@ -134,12 +134,24 @@ func compileUserRoutes(in []fileRoute) ([]CompiledRoute, error) {
 		if err != nil {
 			return nil, err
 		}
+		var syncTimeout time.Duration
+		if fr.SyncTimeout != "" {
+			d, err := time.ParseDuration(fr.SyncTimeout)
+			if err != nil {
+				return nil, fmt.Errorf("dispatch[%q].sync_timeout: %w", fr.Name, err)
+			}
+			if d <= 0 {
+				return nil, fmt.Errorf("dispatch[%q].sync_timeout must be > 0", fr.Name)
+			}
+			syncTimeout = d
+		}
 		out = append(out, CompiledRoute{
-			Name:  fr.Name,
-			Match: RouteMatch{Kinds: append([]string(nil), fr.Match.Kind...), Providers: append([]string(nil), fr.Match.Provider...), Tools: append([]string(nil), fr.Match.Tools...)},
-			Mode:  mode,
-			Sync:  syncTargets,
-			Async: asyncTargets,
+			Name:        fr.Name,
+			Match:       RouteMatch{Kinds: append([]string(nil), fr.Match.Kind...), Providers: append([]string(nil), fr.Match.Provider...), Tools: append([]string(nil), fr.Match.Tools...)},
+			Mode:        mode,
+			SyncTimeout: syncTimeout,
+			Sync:        syncTargets,
+			Async:       asyncTargets,
 		})
 	}
 	return out, nil

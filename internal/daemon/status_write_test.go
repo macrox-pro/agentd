@@ -61,6 +61,7 @@ func TestWriteStatus(t *testing.T) {
 				Generation:         2,
 				Fingerprint:        "abc",
 				AsyncQueueDepth:    4,
+				AsyncDroppedCount:  9,
 				CompiledRouteCount: 7,
 			},
 			check: func(t *testing.T, raw []byte) {
@@ -73,6 +74,7 @@ func TestWriteStatus(t *testing.T) {
 				assert.Equal(t, float64(2), got["generation"])
 				assert.Equal(t, "abc", got["fingerprint"])
 				assert.Equal(t, float64(4), got["async_queue_depth"])
+				assert.Equal(t, float64(9), got["async_dropped_count"])
 				assert.Equal(t, float64(7), got["compiled_route_count"])
 			},
 		},

@@ -57,6 +57,15 @@ func (t *GRPC) invoke(ctx context.Context, target config.CompiledTarget, provide
 	if timeout <= 0 {
 		timeout = defaultGRPCTimeout
 	}
+	if dl, ok := ctx.Deadline(); ok {
+		remain := time.Until(dl)
+		if remain <= 0 {
+			return nil, ctx.Err()
+		}
+		if timeout > remain {
+			timeout = remain
+		}
+	}
 	invokeCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 

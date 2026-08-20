@@ -29,6 +29,7 @@ func (d *daemonService) Status(context.Context, *agentdv1.StatusRequest) (*agent
 	if d.opts.Engine != nil {
 		if q := d.opts.Engine.Queue(); q != nil {
 			resp.AsyncQueueDepth = uint32(q.Depth())
+			resp.AsyncDroppedCount = q.Dropped()
 		}
 		if s := d.opts.Engine.Sessions(); s != nil {
 			resp.ActiveSessions = s.Active()

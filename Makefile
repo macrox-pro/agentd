@@ -13,7 +13,7 @@ lint:
 	@buf lint api/
 
 build:
-	@go build -o $(BIN) .
+	@go build -ldflags "-X github.com/macrox-pro/agentd/internal/version.Version=dev" -o $(BIN) .
 
 test:
 	@go test ./... -race -count=1

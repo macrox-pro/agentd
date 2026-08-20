@@ -56,13 +56,14 @@ type CompiledTarget struct {
 
 // CompiledRoute is a compiled dispatch route.
 type CompiledRoute struct {
-	Name    string
-	Kind    string // legacy single-kind key for default routes; empty when Match is set
-	Match   RouteMatch
-	Mode    DispatchMode
-	Sync    []CompiledTarget
-	Async   []CompiledTarget
-	Default bool // true for routes synthesized from dispatch_defaults
+	Name        string
+	Kind        string // legacy single-kind key for default routes; empty when Match is set
+	Match       RouteMatch
+	Mode        DispatchMode
+	SyncTimeout time.Duration // 0 = no route cap; used with provider timeout margin
+	Sync        []CompiledTarget
+	Async       []CompiledTarget
+	Default     bool // true for routes synthesized from dispatch_defaults
 }
 
 func parseKindDefaults(in map[string]fileKindDefault, def map[string]KindDefault) (map[string]KindDefault, error) {

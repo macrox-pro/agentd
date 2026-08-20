@@ -148,6 +148,7 @@ type StatusResponse struct {
 	AsyncQueueDepth    uint32                 `protobuf:"varint,5,opt,name=async_queue_depth,json=asyncQueueDepth,proto3" json:"async_queue_depth,omitempty"`
 	CompiledRouteCount uint32                 `protobuf:"varint,6,opt,name=compiled_route_count,json=compiledRouteCount,proto3" json:"compiled_route_count,omitempty"`
 	ConfigLayers       []*LayerInfo           `protobuf:"bytes,7,rep,name=config_layers,json=configLayers,proto3" json:"config_layers,omitempty"`
+	AsyncDroppedCount  uint64                 `protobuf:"varint,8,opt,name=async_dropped_count,json=asyncDroppedCount,proto3" json:"async_dropped_count,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -229,6 +230,13 @@ func (x *StatusResponse) GetConfigLayers() []*LayerInfo {
 		return x.ConfigLayers
 	}
 	return nil
+}
+
+func (x *StatusResponse) GetAsyncDroppedCount() uint64 {
+	if x != nil {
+		return x.AsyncDroppedCount
+	}
+	return 0
 }
 
 type ReloadConfigRequest struct {
@@ -399,7 +407,7 @@ const file_agentd_v1_daemon_proto_rawDesc = "" +
 	"\rHealthRequest\"(\n" +
 	"\x0eHealthResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\"\x0f\n" +
-	"\rStatusRequest\"\xdc\x02\n" +
+	"\rStatusRequest\"\x8c\x03\n" +
 	"\x0eStatusResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x129\n" +
 	"\n" +
@@ -408,7 +416,8 @@ const file_agentd_v1_daemon_proto_rawDesc = "" +
 	"\x0factive_sessions\x18\x04 \x01(\rR\x0eactiveSessions\x12*\n" +
 	"\x11async_queue_depth\x18\x05 \x01(\rR\x0fasyncQueueDepth\x120\n" +
 	"\x14compiled_route_count\x18\x06 \x01(\rR\x12compiledRouteCount\x129\n" +
-	"\rconfig_layers\x18\a \x03(\v2\x14.agentd.v1.LayerInfoR\fconfigLayers\"\x15\n" +
+	"\rconfig_layers\x18\a \x03(\v2\x14.agentd.v1.LayerInfoR\fconfigLayers\x12.\n" +
+	"\x13async_dropped_count\x18\b \x01(\x04R\x11asyncDroppedCount\"\x15\n" +
 	"\x13ReloadConfigRequest\"K\n" +
 	"\x14ReloadConfigResponse\x123\n" +
 	"\x06config\x18\x01 \x01(\v2\x1b.agentd.v1.ConfigGenerationR\x06config\"F\n" +

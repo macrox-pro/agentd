@@ -319,7 +319,7 @@ Protobuf definitions: `api/agentd/v1/`. Buf rules: [AGENTS.md § Protobuf](./AGE
 | RPC | Purpose |
 |-----|---------|
 | `Health` | Liveness |
-| `Status` | Uptime, generation, fingerprint, sessions, queue depth |
+| `Status` | Uptime, generation, fingerprint, sessions, queue depth, async drop count |
 | `ReloadConfig` | Force file re-merge |
 | `Shutdown` | Graceful stop |
 
@@ -393,7 +393,7 @@ Graceful shutdown: drain sync `Invoke`, async queue, remove socket/PID.
 
 ### `agentd daemon status [--json]`
 
-Runtime state: uptime, config generation, fingerprint, routes, queue depth.
+Runtime state: uptime, config generation, fingerprint, routes, queue depth, async drop count.
 
 - `--json` for CI/scripts
 - Not the same as `config show` (declarative vs runtime)
@@ -408,7 +408,7 @@ agentd daemon status --json
 
 Force config re-merge from disk (SIGHUP alias). Rare — fsnotify handles most cases.
 
-**See also:** `config patch` (runtime in-memory only)
+**See also:** `config patch` (runtime overlay; persisted to disk)
 
 ### `agentd hook run --provider=PROVIDER [--argv-payload] [--timeout]`
 
@@ -517,6 +517,7 @@ dispatch:
       kind: [tool.pre]
       provider: ["*"]
     mode: parallel
+    sync_timeout: 25s
     sync:
       - target: builtin
         guards: [secrets, shell]
@@ -540,6 +541,10 @@ guards:
     enabled: true
     deny_read: ["/etc/shadow"]
     deny_write: ["**/.env"]
+
+# Runtime layer ($XDG_STATE_HOME/agentd/runtime.yaml) may also carry:
+# approvals: { project: [...], session: [...] }
+# blocks: { temporary: [{ tool, pattern, reason, until }] }
 
 projects:
   /path/to/repo:
@@ -629,7 +634,7 @@ agentd/
 | **M5** | done | Config layers (project + runtime); ConfigService; config CLI; merged fingerprint |
 | **M6** | done | Guards: shell, mcp, paths |
 | **M7** | done | Approvals / `RecordDecision`; runtime persist; temporary blocks |
-| **M8 / v1** | planned | Ops polish, conformance, docs freeze, release gate |
+| **M8 / v1** | done | Ops polish, conformance, docs freeze, release gate |
 
 Session checklists and verify commands: [PROGRESS.md](./PROGRESS.md).
 
@@ -661,17 +666,17 @@ M7 acceptance: Approve once → subsequent matching tool.pre allows within TTL; 
 | D | Integration tests `//go:build integration` for daemon↔hook round-trip (optional CI job) |
 | E | Docs freeze: README features ↔ implemented; DESIGN §7/§6 accurate; remove oversell |
 | F | Release: tagged version, `goreleaser` or GH Actions binaries (linux/darwin/windows), changelog |
-| G | `scripts/e2e-v1.sh` (or compose m5–m7) + full `make lint` + `make test` |
+| G | `scripts/e2e-m8.sh` + full `make lint` + `make test` |
 
 **v1 exit criteria:**
 
-- [ ] Four-layer config merge + ConfigService Get/Patch/RecordDecision
-- [ ] Guards: secrets, shell, mcp, paths
-- [ ] Sync+async dispatch + all target kinds from DESIGN §2 (exec remains async-only)
-- [ ] Install + hook run/notify/serve for supported providers
-- [ ] Cross-platform IPC (unix + Windows SID pipe)
-- [ ] No CLI `not implemented` on documented commands
-- [ ] README/DESIGN match behavior; non-goals §11 unchanged
-- [ ] Lint + race tests + e2e-v1 green; release artifact published
+- [x] Four-layer config merge + ConfigService Get/Patch/RecordDecision
+- [x] Guards: secrets, shell, mcp, paths
+- [x] Sync+async dispatch + all target kinds from DESIGN §2 (exec remains async-only)
+- [x] Install + hook run/notify/serve for supported providers
+- [x] Cross-platform IPC (unix + Windows SID pipe)
+- [x] No CLI `not implemented` on documented commands
+- [x] README/DESIGN match behavior; non-goals §11 unchanged
+- [x] Lint + race tests + e2e-m8 green; release artifact published
 
 **Explicitly not v1** (see §11 + §12.5): agent auth, transcripts, plugins, hooks DSL, async retry storms, exec sync JSON decisions.

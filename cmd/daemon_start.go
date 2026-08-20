@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/macrox-pro/agentd/internal/daemon"
+	"github.com/macrox-pro/agentd/internal/version"
 )
 
 var daemonForeground bool
@@ -31,7 +32,7 @@ reports an error instead of replacing it.`,
 			Socket:     resolveSocket(),
 			ConfigPath: resolveConfigPath(),
 			Foreground: daemonForeground,
-			Version:    "dev",
+			Version:    version.Version,
 		})
 	},
 }

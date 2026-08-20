@@ -17,6 +17,7 @@ type StatusReport struct {
 	Generation         uint64
 	Fingerprint        string
 	AsyncQueueDepth    uint32
+	AsyncDroppedCount  uint64
 	CompiledRouteCount uint32
 }
 
@@ -49,6 +50,7 @@ func Status(ctx context.Context, socket string) (StatusReport, error) {
 		rep.Fingerprint = cfg.GetFingerprint()
 	}
 	rep.AsyncQueueDepth = resp.GetAsyncQueueDepth()
+	rep.AsyncDroppedCount = resp.GetAsyncDroppedCount()
 	rep.CompiledRouteCount = resp.GetCompiledRouteCount()
 	return rep, nil
 }

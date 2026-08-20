@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase: **m8** | Last: m7-g-checkpoint | Next: m8-a async overflow Status counter
+Phase: **m8** | Last: m8-g-checkpoint | Next: (tag v1.0.0 release when ready)
 
 ## agents_md_ready
 
@@ -15,84 +15,70 @@ true
 | Milestone | Status | One-liner |
 |-----------|--------|-----------|
 | M0–M7 | **done** | Daemon through approvals / RecordDecision / runtime persist |
-| **M8 / v1** | planned | Overflow counters, conformance, docs freeze, release |
+| **M8 / v1** | **done** | Overflow counters, conformance, docs freeze, release |
 
 Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
-## M7 checklist
+## M8 checklist
 
-### Phase A — Schema + compile
+### Phase A — Async overflow Status
 
-- [x] m7-a-schema — YAML `approvals` + `blocks.temporary`
-- [x] m7-a-merge — upsert by fingerprint / tool+pattern
-- [x] m7-a-compile — Snapshot + drop expired + ApprovalFingerprint
-- [x] m7-a-test
-- [x] m7-a-checkpoint
+- [x] m8-a-proto — `async_dropped_count` on StatusResponse
+- [x] m8-a-wire — Queue.Dropped → Status + CLI JSON
+- [x] m8-a-test-docs — server/daemon tests + DESIGN §5/§6
+- [x] m8-a-checkpoint
 
-### Phase B — RecordDecision
+### Phase B — Timeout margin
 
-- [x] m7-b-store — project 24h / session scope
-- [x] m7-b-grpc — ConfigService + hookclient
-- [x] m7-b-test
-- [x] m7-b-checkpoint
+- [x] m8-b-schema — route `sync_timeout`
+- [x] m8-b-budget — SyncBudget (10% margin)
+- [x] m8-b-engine — Engine applies deadline; grpc clamp
+- [x] m8-b-docs
+- [x] m8-b-checkpoint
 
-### Phase C — Hot path skip Ask
+### Phase C — Conformance
 
-- [x] m7-c-skip-ask — secrets + shell consult approvals
-- [x] m7-c-emit-fp — `approval_fingerprint=` in Ask system_message
-- [x] m7-c-test
-- [x] m7-c-checkpoint
+- [x] m8-c-conformance — agenthookstest fixtures (one per provider)
+- [x] m8-c-checkpoint
 
-### Phase D — Temporary blocks
+### Phase D — Integration
 
-- [x] m7-d-blocks — Deny attach before guards
-- [x] m7-d-test
-- [x] m7-d-checkpoint
+- [x] m8-d-integration — `roundtrip_integration_test.go`
+- [x] m8-d-checkpoint
 
-### Phase E — Persist
+### Phase E — Docs freeze
 
-- [x] m7-e-persist — 500ms debounce atomic flush + IgnoreSelfWrite
-- [x] m7-e-wire — PatchRuntime / RecordDecision / shutdown flush
-- [x] m7-e-test
-- [x] m7-e-checkpoint
+- [x] m8-e-readme
+- [x] m8-e-design
+- [x] m8-e-checkpoint
 
-### Phase F — Operator CLI
+### Phase F — Release
 
-- [x] m7-f-cli — `agentd config record-decision` + DESIGN §6
-- [x] m7-f-checkpoint
+- [x] m8-f-version — `internal/version`
+- [x] m8-f-release — goreleaser + CI/release workflows + CHANGELOG
+- [x] m8-f-checkpoint
 
-### Phase G — Close M7
+### Phase G — Close M8
 
-- [x] m7-g-e2e — `scripts/e2e-m7.sh`
-- [x] m7-g-lint-test
-- [x] m7-g-docs
-- [x] m7-g-checkpoint
+- [x] m8-g-e2e — `scripts/e2e-m8.sh`
+- [x] m8-g-verify — lint + test + e2e
+- [x] m8-g-checkpoint
 
-**M7 acceptance:** met.
-
-## Later (do not start until M7 checkpoint)
-
-### M8 / v1
-
-- Overflow drop counter on Status
-- Provider timeout margin polish
-- agenthookstest / integration build tag
-- Docs freeze + GitHub release binaries
-- `scripts/e2e-v1.sh` + v1 exit criteria in DESIGN §13
+**M8 acceptance:** met.
 
 ## Session notes
 
 - AGENTS.md / CONVENTIONS.md read: yes (2026-08-20)
-- M7 complete: approvals/blocks schema, RecordDecision, skip-Ask, temp blocks, runtime.yaml persist, `config record-decision`, e2e-m7
-- Files: `internal/config/{approvals,blocks,persist,file,merge,compile,store}.go`, `internal/guard/{approve,block,attach,shell}.go`, `cmd/config_record_decision.go`, `scripts/e2e-m7.sh`
-- Fingerprint format: `sha256:<kind>/<hex>` (kind embedded for RecordDecision routing)
+- M8 complete: Status drop counter; SyncBudget + route.sync_timeout; conformance; integration tag; docs freeze; goreleaser/CI; e2e-m8
+- Key files: `api/agentd/v1/daemon.proto`, `internal/dispatch/timeout.go`, `internal/hookedge/{conformance_test,roundtrip_integration_test}.go`, `internal/version/version.go`, `scripts/e2e-m8.sh`, `.goreleaser.yaml`, `.github/workflows/`
 
 ## Verify (last green)
 
 ```bash
 make lint
-go test ./internal/config/... ./internal/guard/... ./internal/dispatch/... ./internal/server/... ./cmd/... -race -count=1
-make e2e   # includes scripts/e2e-m7.sh
+make test
+go test -tags=integration ./internal/hookedge/ -race -count=1
+make e2e   # includes scripts/e2e-m8.sh
 ```
 
 ## Blockers

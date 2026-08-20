@@ -31,6 +31,7 @@ message StatusResponse {
   uint32 async_queue_depth = 5;
   uint32 compiled_route_count = 6;
   repeated LayerInfo config_layers = 7;
+  uint64 async_dropped_count = 8;
 }
 
 message ReloadConfigRequest {}

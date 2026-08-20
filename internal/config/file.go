@@ -86,11 +86,12 @@ type fileKindDefault struct {
 }
 
 type fileRoute struct {
-	Name  string       `yaml:"name"`
-	Match fileMatch    `yaml:"match"`
-	Mode  string       `yaml:"mode"`
-	Sync  []fileTarget `yaml:"sync"`
-	Async []fileTarget `yaml:"async"`
+	Name        string       `yaml:"name"`
+	Match       fileMatch    `yaml:"match"`
+	Mode        string       `yaml:"mode"`
+	SyncTimeout string       `yaml:"sync_timeout"`
+	Sync        []fileTarget `yaml:"sync"`
+	Async       []fileTarget `yaml:"async"`
 }
 
 type fileMatch struct {

@@ -84,6 +84,13 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 	unlock := e.sessions.Lock(SessionIDOf(typed))
 	defer unlock()
 
+	budget := SyncBudget(time.Now(), in.Deadline, eventKind, route.SyncTimeout)
+	if budget > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, budget)
+		defer cancel()
+	}
+
 	switch mode {
 	case config.ModeAsyncOnly:
 		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
