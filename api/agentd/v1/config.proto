@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package agentd.v1;
+
+import "agentd/v1/common.proto";
+import "buf/validate/validate.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/macrox-pro/agentd/gen/agentd/v1;agentdv1";
+
+service ConfigService {
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
+  rpc PatchConfig(PatchConfigRequest) returns (PatchConfigResponse);
+  rpc RecordDecision(RecordDecisionRequest) returns (RecordDecisionResponse);
+}
+
+message GetConfigRequest {
+  ConfigLayer layer = 1;
+  string cwd = 2;
+}
+
+message GetConfigResponse {
+  ConfigLayer layer = 1;
+  bytes yaml_content = 2;
+  ConfigGeneration config = 3;
+}
+
+message PatchConfigRequest {
+  bytes yaml_patch = 1 [(buf.validate.field).bytes.min_len = 1];
+  google.protobuf.FieldMask field_mask = 2;
+}
+
+message PatchConfigResponse {
+  ConfigGeneration config = 1;
+}
+
+message RecordDecisionRequest {
+  string approval_fingerprint = 1 [(buf.validate.field).string.min_len = 1];
+  ConfigLayer scope = 2;
+  string project_root = 3;
+  string session_id = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+message RecordDecisionResponse {
+  ConfigGeneration config = 1;
+}

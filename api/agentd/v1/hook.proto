@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package agentd.v1;
+
+import "agentd/v1/common.proto";
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/macrox-pro/agentd/gen/agentd/v1;agentdv1";
+
+service HookService {
+  rpc Invoke(InvokeRequest) returns (InvokeResponse);
+}
+
+message InvokeRequest {
+  Provider provider = 1 [(buf.validate.field).enum.defined_only = true];
+  string variant = 2;
+  bytes raw_payload = 3 [(buf.validate.field).bytes.min_len = 1];
+  InvocationMode invocation_mode = 4 [(buf.validate.field).enum.defined_only = true];
+  google.protobuf.Timestamp deadline = 5;
+  string cwd = 6;
+  string project_root = 7;
+}
+
+message InvokeResponse {
+  Decision decision = 1;
+  ConfigGeneration config = 2;
+  uint32 async_dispatched_count = 3;
+}

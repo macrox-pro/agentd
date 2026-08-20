@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package agentd.v1;
+
+import "agentd/v1/common.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/macrox-pro/agentd/gen/agentd/v1;agentdv1";
+
+service DaemonService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc Status(StatusRequest) returns (StatusResponse);
+  rpc ReloadConfig(ReloadConfigRequest) returns (ReloadConfigResponse);
+  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+}
+
+message StatusRequest {}
+
+message StatusResponse {
+  string version = 1;
+  google.protobuf.Timestamp started_at = 2;
+  ConfigGeneration config = 3;
+  uint32 active_sessions = 4;
+  uint32 async_queue_depth = 5;
+  uint32 compiled_route_count = 6;
+  repeated LayerInfo config_layers = 7;
+}
+
+message ReloadConfigRequest {}
+
+message ReloadConfigResponse {
+  ConfigGeneration config = 1;
+}
+
+message ShutdownRequest {
+  google.protobuf.Duration timeout = 1;
+}
+
+message ShutdownResponse {}

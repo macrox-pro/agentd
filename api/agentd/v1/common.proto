@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package agentd.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/macrox-pro/agentd/gen/agentd/v1;agentdv1";
+
+enum Provider {
+  PROVIDER_UNSPECIFIED = 0;
+  PROVIDER_CLAUDE_CODE = 1;
+  PROVIDER_CURSOR = 2;
+  PROVIDER_CODEX = 3;
+  PROVIDER_GEMINI = 4;
+  PROVIDER_OPENCODE = 5;
+  PROVIDER_KIMI_CODE = 6;
+}
+
+enum EventKind {
+  EVENT_KIND_UNSPECIFIED = 0;
+  EVENT_KIND_SESSION_START = 1;
+  EVENT_KIND_SESSION_END = 2;
+  EVENT_KIND_PROMPT_SUBMITTED = 3;
+  EVENT_KIND_TOOL_PRE = 4;
+  EVENT_KIND_TOOL_POST = 5;
+  EVENT_KIND_TOOL_ERROR = 6;
+  EVENT_KIND_PERMISSION = 7;
+  EVENT_KIND_AGENT_STOP = 8;
+  EVENT_KIND_NOTIFICATION = 9;
+  EVENT_KIND_OTHER = 10;
+}
+
+enum DecisionKind {
+  DECISION_KIND_UNSPECIFIED = 0;
+  DECISION_KIND_NO_DECISION = 1;
+  DECISION_KIND_DENY = 2;
+  DECISION_KIND_ASK = 3;
+  DECISION_KIND_ALLOW = 4;
+  DECISION_KIND_BLOCK_PROMPT = 5;
+}
+
+enum InvocationMode {
+  INVOCATION_MODE_UNSPECIFIED = 0;
+  INVOCATION_MODE_STDIN = 1;
+  INVOCATION_MODE_ARGV = 2;
+  INVOCATION_MODE_NOTIFY = 3;
+}
+
+enum ConfigLayer {
+  CONFIG_LAYER_UNSPECIFIED = 0;
+  CONFIG_LAYER_USER = 1;
+  CONFIG_LAYER_PROJECT = 2;
+  CONFIG_LAYER_RUNTIME = 3;
+  CONFIG_LAYER_MERGED = 4;
+}
+
+// Decision is encoded by hookedge into provider wire format.
+message Decision {
+  DecisionKind kind = 1;
+  string reason = 2;
+  string context = 3;
+  string system_message = 4;
+  bytes updated_input = 5;
+}
+
+message ConfigGeneration {
+  uint64 generation = 1;
+  string fingerprint = 2;
+}
+
+message LayerInfo {
+  ConfigLayer layer = 1;
+  string path = 2;
+  google.protobuf.Timestamp modified_at = 3;
+  string fingerprint = 4;
+}
