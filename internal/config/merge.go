@@ -42,6 +42,9 @@ func mergeFile(base *fileConfig, user *fileConfig) *fileConfig {
 		}
 		out.DispatchDefaults = dd
 	}
+	if user.Dispatch != nil {
+		out.Dispatch = append([]fileRoute(nil), user.Dispatch...)
+	}
 	return &out
 }
 

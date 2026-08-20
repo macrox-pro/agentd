@@ -3,23 +3,12 @@
 package transport
 
 import (
-	"context"
 	"fmt"
 	"net"
-	"os/user"
 
 	"github.com/Microsoft/go-winio"
 	"golang.org/x/sys/windows"
 )
-
-// DefaultSocketPath returns the platform default agentd named pipe path.
-func DefaultSocketPath() string {
-	u, err := user.Current()
-	if err != nil || u.Uid == "" {
-		return `\\.\pipe\agentd`
-	}
-	return `\\.\pipe\agentd-` + u.Uid
-}
 
 // Listen creates a Windows named pipe listener restricted to the current user.
 func Listen(path string) (net.Listener, error) {
@@ -27,14 +16,13 @@ func Listen(path string) (net.Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	return winio.ListenPipe(path, &winio.PipeConfig{
+	ln, err := winio.ListenPipe(path, &winio.PipeConfig{
 		SecurityDescriptor: sddl,
 	})
-}
-
-// Dial connects to a Windows named pipe.
-func Dial(ctx context.Context, path string) (net.Conn, error) {
-	return winio.DialPipeContext(ctx, path)
+	if err != nil {
+		return nil, fmt.Errorf("listen pipe: %w", err)
+	}
+	return ln, nil
 }
 
 func currentUserPipeSDDL() (string, error) {

@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -52,9 +53,26 @@ Compiles defaults merged with the user config file offline (no daemon required).
 			return enc.Encode(routes)
 		}
 		for _, r := range routes {
-			fmt.Fprintf(cmd.OutOrStdout(), "%s\tkind=%s\tmode=%s\tsync=%d\tasync=%d\n",
-				r.Name, r.Kind, r.Mode, len(r.Sync), len(r.Async))
+			kinds := r.Kind
+			if len(r.Match.Kinds) > 0 {
+				kinds = strings.Join(r.Match.Kinds, ",")
+			}
+			syncKinds := targetKinds(r.Sync)
+			asyncKinds := targetKinds(r.Async)
+			fmt.Fprintf(cmd.OutOrStdout(), "%s\tmatch.kind=%s\tmode=%s\tsync=[%s]\tasync=[%s]\n",
+				r.Name, kinds, r.Mode, syncKinds, asyncKinds)
 		}
 		return nil
 	},
+}
+
+func targetKinds(ts []config.CompiledTarget) string {
+	if len(ts) == 0 {
+		return ""
+	}
+	parts := make([]string, len(ts))
+	for i, t := range ts {
+		parts[i] = string(t.Kind)
+	}
+	return strings.Join(parts, ",")
 }

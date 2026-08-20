@@ -79,7 +79,7 @@ Form follows Go toolchain rules ([build constraints](https://pkg.go.dev/cmd/go#h
 - One primary concern per file; unexported helpers for that concern stay in the same file
 - Do not use kitchen-sink names: `util.go`, `helpers.go`, `common.go`, `misc.go`, `types.go`, `interfaces.go`, `consts.go`
 - `cmd/`: one file per subcommand, stem = command name (`hook.go` → `agentd hook`)
-- `doc.go`: package comment only
+- `{package}.go`: holds the package comment (immediately before `package`); may also contain package-level code for that package (e.g. `transport.go` in package `transport`). Do not put the package comment in a random concern file.
 - `errors.go`: package sentinel errors only (`ErrAlreadyRunning`, …)
 - `main.go`: process entry only — no business logic
 

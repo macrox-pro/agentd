@@ -158,9 +158,9 @@ func TestCompile(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		wantMode  map[string]config.DispatchMode
-		wantSync  bool
+		name     string
+		wantMode map[string]config.DispatchMode
+		wantSync bool
 	}{
 		{
 			name: "defaults",
@@ -192,6 +192,107 @@ func TestCompile(t *testing.T) {
 				if tt.wantSync && mode != config.ModeAsyncOnly {
 					assert.NotEmpty(t, r.Sync, "route %q sync", kind)
 				}
+			}
+		})
+	}
+}
+
+func TestLoadDispatchRoutes(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	tests := []struct {
+		name    string
+		content string
+		wantErr bool
+		check   func(t *testing.T, snap *config.Snapshot)
+	}{
+		{
+			name: "named route with file async",
+			content: `version: 1
+dispatch:
+  - name: gate-and-audit
+    match:
+      kind: [tool.pre]
+      provider: ["*"]
+    mode: parallel
+    sync:
+      - target: builtin
+        guards: [secrets]
+    async:
+      - target: file
+        path: /tmp/audit.jsonl
+      - target: log
+        level: info
+`,
+			check: func(t *testing.T, snap *config.Snapshot) {
+				t.Helper()
+				require.GreaterOrEqual(t, len(snap.Routes), 1)
+				r := snap.Routes[0]
+				assert.Equal(t, "gate-and-audit", r.Name)
+				assert.False(t, r.Default)
+				assert.Equal(t, config.ModeParallel, r.Mode)
+				require.Len(t, r.Async, 2)
+				assert.Equal(t, config.TargetFile, r.Async[0].Kind)
+				assert.Equal(t, config.TargetLog, r.Async[1].Kind)
+			},
+		},
+		{
+			name: "reject grpc",
+			content: `version: 1
+dispatch:
+  - name: fwd
+    match:
+      kind: [tool.pre]
+    mode: async_only
+    async:
+      - target: grpc
+`,
+			wantErr: true,
+		},
+		{
+			name: "reject sync http",
+			content: `version: 1
+dispatch:
+  - name: bad
+    match:
+      kind: [tool.pre]
+    mode: sync_only
+    sync:
+      - target: http
+        url: http://example.com
+`,
+			wantErr: true,
+		},
+		{
+			name: "reject unknown guard",
+			content: `version: 1
+dispatch:
+  - name: bad
+    match:
+      kind: [tool.pre]
+    mode: sync_only
+    sync:
+      - target: builtin
+        guards: [shell]
+`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			path := filepath.Join(t.TempDir(), "agentd.yaml")
+			require.NoError(t, os.WriteFile(path, []byte(tt.content), 0o600))
+			store, err := config.Load(ctx, path)
+			if tt.wantErr {
+				require.Error(t, err, "Load(%q)", tt.name)
+				return
+			}
+			require.NoError(t, err, "Load(%q)", tt.name)
+			if tt.check != nil {
+				tt.check(t, store.Current())
 			}
 		})
 	}

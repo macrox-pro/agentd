@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"sort"
+	"time"
 )
 
 func baseFileConfig() *fileConfig {
@@ -62,11 +63,144 @@ func Compile(user *fileConfig) (Policy, AsyncConfig, Guards, []CompiledRoute, er
 	if err != nil {
 		return Policy{}, AsyncConfig{}, Guards{}, nil, err
 	}
-	routes := compileRoutes(kinds, guards)
+	userRoutes, err := compileUserRoutes(merged.Dispatch)
+	if err != nil {
+		return Policy{}, AsyncConfig{}, Guards{}, nil, err
+	}
+	defaults := compileDefaultRoutes(kinds, guards)
+	routes := append(userRoutes, defaults...)
 	return pol, async, guards, routes, nil
 }
 
-func compileRoutes(kinds map[string]KindDefault, guards Guards) []CompiledRoute {
+func compileUserRoutes(in []fileRoute) ([]CompiledRoute, error) {
+	if len(in) == 0 {
+		return nil, nil
+	}
+	out := make([]CompiledRoute, 0, len(in))
+	seen := map[string]bool{}
+	for i, fr := range in {
+		if fr.Name == "" {
+			return nil, fmt.Errorf("dispatch[%d]: name is required", i)
+		}
+		if seen[fr.Name] {
+			return nil, fmt.Errorf("dispatch: duplicate route name %q", fr.Name)
+		}
+		seen[fr.Name] = true
+		mode, err := parseDispatchMode(fr.Mode)
+		if err != nil {
+			return nil, fmt.Errorf("dispatch[%q].mode: %w", fr.Name, err)
+		}
+		mode = NormalizeMode(mode)
+		syncTargets, err := compileTargets(fr.Sync, true, fr.Name)
+		if err != nil {
+			return nil, err
+		}
+		asyncTargets, err := compileTargets(fr.Async, false, fr.Name)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, CompiledRoute{
+			Name:  fr.Name,
+			Match: RouteMatch{Kinds: append([]string(nil), fr.Match.Kind...), Providers: append([]string(nil), fr.Match.Provider...), Tools: append([]string(nil), fr.Match.Tools...)},
+			Mode:  mode,
+			Sync:  syncTargets,
+			Async: asyncTargets,
+		})
+	}
+	return out, nil
+}
+
+func compileTargets(in []fileTarget, sync bool, routeName string) ([]CompiledTarget, error) {
+	if len(in) == 0 {
+		return nil, nil
+	}
+	out := make([]CompiledTarget, 0, len(in))
+	for i, ft := range in {
+		ct, err := compileOneTarget(ft, sync)
+		if err != nil {
+			return nil, fmt.Errorf("dispatch[%q] target[%d]: %w", routeName, i, err)
+		}
+		out = append(out, ct)
+	}
+	return out, nil
+}
+
+func compileOneTarget(ft fileTarget, sync bool) (CompiledTarget, error) {
+	kind := TargetKind(ft.Target)
+	switch kind {
+	case TargetBuiltin, TargetExec, TargetHTTP, TargetLog, TargetFile:
+	case TargetGRPC:
+		return CompiledTarget{}, fmt.Errorf("target %q is not supported until M4", ft.Target)
+	case "":
+		return CompiledTarget{}, fmt.Errorf("target is required")
+	default:
+		return CompiledTarget{}, fmt.Errorf("unknown target %q", ft.Target)
+	}
+	if sync && kind != TargetBuiltin {
+		return CompiledTarget{}, fmt.Errorf("sync target %q not supported in M3 (builtin only)", kind)
+	}
+	ct := CompiledTarget{
+		Kind:    kind,
+		Guards:  append([]string(nil), ft.Guards...),
+		Observe: ft.Observe,
+		URL:     ft.URL,
+		Command: append([]string(nil), ft.Command...),
+		Stdin:   ft.Stdin,
+		Level:   ft.Level,
+		Path:    ft.Path,
+	}
+	if ft.Retry != nil {
+		ct.Retry = *ft.Retry
+	}
+	if ft.Timeout != "" {
+		d, err := time.ParseDuration(ft.Timeout)
+		if err != nil {
+			return CompiledTarget{}, fmt.Errorf("timeout: %w", err)
+		}
+		ct.Timeout = d
+	}
+	switch kind {
+	case TargetBuiltin:
+		for _, g := range ct.Guards {
+			if g != "secrets" {
+				return CompiledTarget{}, fmt.Errorf("unknown guard %q (only secrets is implemented)", g)
+			}
+		}
+		if !sync && !ct.Observe && len(ct.Guards) == 0 {
+			ct.Observe = true
+		}
+	case TargetHTTP:
+		if ct.URL == "" {
+			return CompiledTarget{}, fmt.Errorf("http target requires url")
+		}
+		if ct.Retry != 0 {
+			return CompiledTarget{}, fmt.Errorf("http retry must be 0 in M3")
+		}
+	case TargetExec:
+		if len(ct.Command) == 0 {
+			return CompiledTarget{}, fmt.Errorf("exec target requires command")
+		}
+		if ct.Stdin != "" && ct.Stdin != "raw" {
+			return CompiledTarget{}, fmt.Errorf("exec stdin must be empty or %q", "raw")
+		}
+	case TargetFile:
+		if ct.Path == "" {
+			return CompiledTarget{}, fmt.Errorf("file target requires path")
+		}
+	case TargetLog:
+		if ct.Level == "" {
+			ct.Level = "info"
+		}
+		switch ct.Level {
+		case "debug", "info", "warn", "error":
+		default:
+			return CompiledTarget{}, fmt.Errorf("log level unknown %q", ct.Level)
+		}
+	}
+	return ct, nil
+}
+
+func compileDefaultRoutes(kinds map[string]KindDefault, guards Guards) []CompiledRoute {
 	keys := make([]string, 0, len(kinds))
 	for k := range kinds {
 		keys = append(keys, k)
@@ -78,9 +212,11 @@ func compileRoutes(kinds map[string]KindDefault, guards Guards) []CompiledRoute 
 		kd := kinds[kind]
 		mode := NormalizeMode(kd.Mode)
 		r := CompiledRoute{
-			Name: fmt.Sprintf("default-%s", kind),
-			Kind: kind,
-			Mode: mode,
+			Name:    fmt.Sprintf("default-%s", kind),
+			Kind:    kind,
+			Match:   RouteMatch{Kinds: []string{kind}},
+			Mode:    mode,
+			Default: true,
 		}
 		switch mode {
 		case ModeSyncOnly, ModeParallel, ModeAfterSync:

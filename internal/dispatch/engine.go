@@ -66,14 +66,16 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		Policy: in.Snap.Policy,
 		Log:    e.log,
 	}
+	providerName, _ := providerName(in.Provider)
+	eventKind := targets.EventKindOf(typed)
 
 	switch mode {
 	case config.ModeAsyncOnly:
-		n := e.enqueueAsync(builtin, route.Async, typed, nil)
+		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
 		return InvokeResult{Decision: NeutralDecision(), AsyncDispatchedCount: n}, nil
 
 	case config.ModeParallel:
-		n := e.enqueueAsync(builtin, route.Async, typed, nil)
+		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
 		d, err := e.runSync(ctx, builtin, route.Sync, typed)
 		if err != nil {
 			return InvokeResult{}, err
@@ -85,8 +87,10 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		if err != nil {
 			return InvokeResult{}, err
 		}
-		n := e.enqueueAsync(builtin, route.Async, typed, d)
-		return InvokeResult{Decision: DecisionToProto(d), AsyncDispatchedCount: n}, nil
+		proto := DecisionToProto(d)
+		outcome := &targets.SyncOutcome{Kind: proto.GetKind(), Reason: proto.GetReason()}
+		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, outcome)
+		return InvokeResult{Decision: proto, AsyncDispatchedCount: n}, nil
 
 	default: // sync_only
 		d, err := e.runSync(ctx, builtin, route.Sync, typed)
@@ -115,18 +119,38 @@ func (e *Engine) runSync(ctx context.Context, b *targets.Builtin, syncTargets []
 	return last, nil
 }
 
-func (e *Engine) enqueueAsync(b *targets.Builtin, asyncTargets []config.CompiledTarget, typed any, _ agenthooks.Decision) uint32 {
+func (e *Engine) enqueueAsync(
+	b *targets.Builtin,
+	asyncTargets []config.CompiledTarget,
+	typed any,
+	raw []byte,
+	provider, eventKind string,
+	outcome *targets.SyncOutcome,
+) uint32 {
 	if e == nil || e.queue == nil {
 		return 0
 	}
 	var n uint32
 	for _, t := range asyncTargets {
-		if t.Kind != config.TargetBuiltin || !t.Observe {
+		inv, err := targets.NewAsyncInvoker(t, b, e.log)
+		if err != nil {
+			if e.log != nil {
+				e.log.Warn("skip async target", "error", err)
+			}
 			continue
 		}
-		jobTyped := typed
+		req := targets.AsyncRequest{
+			Typed:       typed,
+			Raw:         raw,
+			Provider:    provider,
+			EventKind:   eventKind,
+			Target:      t,
+			SyncOutcome: outcome,
+		}
 		ok := e.queue.Enqueue(Job{Run: func(ctx context.Context) {
-			b.Observe(ctx, jobTyped)
+			if err := inv.InvokeAsync(ctx, req); err != nil && e.log != nil {
+				e.log.Warn("async target failed", "target", string(t.Kind), "error", err)
+			}
 		}})
 		if ok {
 			n++

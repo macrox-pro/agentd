@@ -3,6 +3,8 @@ package dispatch_test
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -115,7 +117,7 @@ func TestEngineParallelAsyncDoesNotBlock(t *testing.T) {
 	close(block)
 }
 
-func TestMatchRoute(t *testing.T) {
+func TestMatchRouteDefaultKind(t *testing.T) {
 	t.Parallel()
 	snap := testSnap(t)
 	typed, err := dispatch.DecodeTyped(context.Background(), agentdv1.Provider_PROVIDER_CLAUDE_CODE, claudeToolPre(t, "x"))
@@ -124,6 +126,40 @@ func TestMatchRoute(t *testing.T) {
 	require.NotNil(t, r)
 	assert.Equal(t, "tool.pre", r.Kind)
 	assert.Equal(t, config.ModeParallel, r.Mode)
+}
+
+func TestEngineFileAsync(t *testing.T) {
+	t.Parallel()
+	audit := filepath.Join(t.TempDir(), "audit.jsonl")
+	path := filepath.Join(t.TempDir(), "agentd.yaml")
+	content := "version: 1\ndispatch:\n  - name: audit\n    match:\n      kind: [tool.pre]\n    mode: parallel\n    sync:\n      - target: builtin\n        guards: [secrets]\n    async:\n      - target: file\n        path: " + audit + "\n"
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+	store, err := config.Load(context.Background(), path)
+	require.NoError(t, err)
+	snap := store.Current()
+
+	q := dispatch.NewQueue(config.AsyncConfig{QueueCapacity: 8, WorkerLimit: 2, TargetTimeout: time.Second}, nil)
+	t.Cleanup(func() { q.Close(2 * time.Second) })
+	eng := dispatch.NewEngine(q, nil)
+
+	_, err = eng.Invoke(context.Background(), dispatch.InvokeInput{
+		Provider:   agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+		RawPayload: claudeToolPre(t, "go test"),
+		Snap:       snap,
+	})
+	require.NoError(t, err)
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		if b, err := os.ReadFile(audit); err == nil && len(b) > 0 {
+			assert.Contains(t, string(b), "tool.pre")
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("audit file not written")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 }
 
 func TestDecodeTyped(t *testing.T) {

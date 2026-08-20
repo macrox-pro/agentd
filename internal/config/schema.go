@@ -55,10 +55,10 @@ const (
 
 // Policy is the compiled fail/ask policy.
 type Policy struct {
-	Fail         FailMode
-	Unsupported  UnsupportedMode
-	AskFallback  AskFallback
-	Offline      FailMode
+	Fail        FailMode
+	Unsupported UnsupportedMode
+	AskFallback AskFallback
+	Offline     FailMode
 }
 
 // AsyncConfig is the compiled async queue settings.
@@ -92,31 +92,53 @@ type TargetKind string
 
 const (
 	TargetBuiltin TargetKind = "builtin"
+	TargetExec    TargetKind = "exec"
+	TargetHTTP    TargetKind = "http"
+	TargetLog     TargetKind = "log"
+	TargetFile    TargetKind = "file"
+	TargetGRPC    TargetKind = "grpc" // rejected at compile until M4
 )
+
+// RouteMatch is compiled match criteria for a declarative route.
+type RouteMatch struct {
+	Kinds     []string // empty = any
+	Providers []string // empty or ["*"] = any
+	Tools     []string // empty = any; tool name or canonical class
+}
 
 // CompiledTarget is one sync or async target on a route.
 type CompiledTarget struct {
 	Kind    TargetKind
-	Guards  []string // for builtin sync
-	Observe bool     // for builtin async
+	Guards  []string // builtin sync
+	Observe bool     // builtin async
+	URL     string   // http
+	Command []string // exec
+	Stdin   string   // exec: "raw" or empty
+	Level   string   // log: info|warn|error|debug
+	Path    string   // file
+	Retry   int      // http (M3: always 0)
+	Timeout time.Duration
 }
 
-// CompiledRoute is a compiled dispatch route (M2: from dispatch_defaults).
+// CompiledRoute is a compiled dispatch route.
 type CompiledRoute struct {
-	Name   string
-	Kind   string // event kind key, e.g. "tool.pre"
-	Mode   DispatchMode
-	Sync   []CompiledTarget
-	Async  []CompiledTarget
+	Name    string
+	Kind    string // legacy single-kind key for default routes; empty when Match is set
+	Match   RouteMatch
+	Mode    DispatchMode
+	Sync    []CompiledTarget
+	Async   []CompiledTarget
+	Default bool // true for routes synthesized from dispatch_defaults
 }
 
-// fileConfig is the on-disk YAML shape (partial; M2 subset).
+// fileConfig is the on-disk YAML shape.
 type fileConfig struct {
-	Version          int                       `yaml:"version"`
-	Policy           *filePolicy               `yaml:"policy"`
-	Async            *fileAsync                `yaml:"async"`
-	Guards           *fileGuards               `yaml:"guards"`
+	Version          int                        `yaml:"version"`
+	Policy           *filePolicy                `yaml:"policy"`
+	Async            *fileAsync                 `yaml:"async"`
+	Guards           *fileGuards                `yaml:"guards"`
 	DispatchDefaults map[string]fileKindDefault `yaml:"dispatch_defaults"`
+	Dispatch         []fileRoute                `yaml:"dispatch"`
 }
 
 type filePolicy struct {
@@ -146,4 +168,31 @@ type fileSecretsGuard struct {
 type fileKindDefault struct {
 	Mode     string `yaml:"mode"`
 	Blocking *bool  `yaml:"blocking"`
+}
+
+type fileRoute struct {
+	Name  string       `yaml:"name"`
+	Match fileMatch    `yaml:"match"`
+	Mode  string       `yaml:"mode"`
+	Sync  []fileTarget `yaml:"sync"`
+	Async []fileTarget `yaml:"async"`
+}
+
+type fileMatch struct {
+	Kind     []string `yaml:"kind"`
+	Provider []string `yaml:"provider"`
+	Tools    []string `yaml:"tools"`
+}
+
+type fileTarget struct {
+	Target  string   `yaml:"target"`
+	Guards  []string `yaml:"guards"`
+	Observe bool     `yaml:"observe"`
+	URL     string   `yaml:"url"`
+	Command []string `yaml:"command"`
+	Stdin   string   `yaml:"stdin"`
+	Level   string   `yaml:"level"`
+	Path    string   `yaml:"path"`
+	Retry   *int     `yaml:"retry"`
+	Timeout string   `yaml:"timeout"`
 }

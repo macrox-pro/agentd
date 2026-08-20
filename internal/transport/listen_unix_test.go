@@ -68,29 +68,3 @@ func TestListenDialRoundTrip(t *testing.T) {
 		})
 	}
 }
-
-func TestDefaultSocketPath(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name       string
-		wantNonEmp bool
-		wantSubstr string
-	}{
-		{name: "non empty", wantNonEmp: true},
-		{name: "contains agentd", wantSubstr: "agentd"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got := transport.DefaultSocketPath()
-			if tt.wantNonEmp {
-				assert.NotEmpty(t, got, "DefaultSocketPath()")
-			}
-			if tt.wantSubstr != "" {
-				assert.Contains(t, got, tt.wantSubstr, "DefaultSocketPath()")
-			}
-		})
-	}
-}

@@ -114,6 +114,12 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	engine := dispatch.NewEngine(queue, log)
 	defer queue.Close(5 * time.Second)
 
+	watcher, err := store.Watch(config.WatchOptions{Log: log})
+	if err != nil {
+		return fmt.Errorf("watch config: %w", err)
+	}
+	defer func() { _ = watcher.Close() }()
+
 	gs := server.New(server.Options{
 		Store:      store,
 		Engine:     engine,
@@ -144,19 +150,34 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	defer signal.Stop(sigCh)
+	reloadCh := make(chan os.Signal, 1)
+	notifyReload(reloadCh)
+	defer signal.Stop(reloadCh)
 
-	select {
-	case <-runCtx.Done():
-		gs.GracefulStop()
-		return nil
-	case <-sigCh:
-		gs.GracefulStop()
-		return nil
-	case err := <-errCh:
-		if err != nil && err != grpc.ErrServerStopped {
-			return err
+	for {
+		select {
+		case <-runCtx.Done():
+			gs.GracefulStop()
+			return nil
+		case sig := <-sigCh:
+			if isReloadSignal(sig) {
+				if err := store.Reload(runCtx); err != nil {
+					log.Warn("config reload failed", "error", err)
+				}
+				continue
+			}
+			gs.GracefulStop()
+			return nil
+		case <-reloadCh:
+			if err := store.Reload(context.Background()); err != nil {
+				log.Warn("config reload failed", "error", err)
+			}
+		case err := <-errCh:
+			if err != nil && err != grpc.ErrServerStopped {
+				return err
+			}
+			return nil
 		}
-		return nil
 	}
 }
 
