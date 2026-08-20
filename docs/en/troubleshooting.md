@@ -1,0 +1,48 @@
+# Troubleshooting
+
+> **Language:** [English](./troubleshooting.md) · [Русский](../ru/troubleshooting.md)
+
+Failures seen in the field and how agentd behaves.
+
+## Daemon not running
+
+`hook run|notify|serve` prints `daemon not running` on stderr and exits **1**.
+
+```bash
+agentd daemon start
+agentd daemon status --json
+```
+
+Check `--socket` matches the edge process. Stale sockets are cleaned only under the start lock.
+
+## Timeouts
+
+Sync budget ≈ 90% of provider timeout, optionally capped by route `sync_timeout` ([Dispatch](./dispatch.md)). CLI `--timeout 0` leaves deadline unset; daemon then uses kind defaults (30s / 5s).
+
+If sync exceeds budget, context cancels; policy `fail` governs broader failure modes on the daemon side.
+
+## Ask loops
+
+Same tool keeps Asking → no matching approval. Extract `approval_fingerprint=` from the Ask message and run `config record-decision` ([Approvals](./approvals.md)). Wrong `--session-id` does not match session-scoped approvals.
+
+## Async drops
+
+`async_dropped_count` rising → queue full (`queue_capacity`). Raise capacity/workers or reduce async fan-out; `on_overflow: log` adds warnings but still drops.
+
+## Windows named pipe
+
+Default pipe is SID-scoped (`\\.\pipe\agentd-<SID>`). Mismatched user/session → dial failures that look like “daemon not running”.
+
+## Codex empty no-op
+
+Codex/Kimi no-op is **empty stdout**, exit 0 — not `{}`. Do not treat empty as failure.
+
+## Offline policy field
+
+`policy.offline` is parsed and stored; the hook edge does **not** consult it today. Unreachable daemon → exit 1 as above.
+
+## Not in v1
+
+No agent auth, transcript pipelines, Go plugins, hooks DSL, async retry storms, or sync `exec` decisions ([DESIGN.md §11](../../DESIGN.md#11-non-goals-v1)).
+
+See also: [CLI](./cli.md), [Operations](./operations.md).

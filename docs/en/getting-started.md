@@ -1,0 +1,76 @@
+# Getting started
+
+> **Language:** [English](./getting-started.md) · [Русский](../ru/getting-started.md)
+
+Bring up a user-level daemon, write a minimal policy, install agent hooks, and confirm Status.
+
+## 1. Install binary
+
+See [Installation](./installation.md). Quick path:
+
+```bash
+go install github.com/macrox-pro/agentd@latest
+```
+
+## 2. Start the daemon
+
+One instance per user. Default socket is OS-specific (`--socket` overrides).
+
+```bash
+agentd daemon start
+agentd daemon status
+```
+
+`--foreground` keeps the process attached (dev / process managers).
+
+## 3. Minimal user config
+
+Default path: `~/.agentd.yaml` (or `--config`).
+
+```yaml
+version: 1
+policy:
+  fail: fail_closed
+guards:
+  secrets:
+    enabled: true
+    action: ask
+```
+
+After edit, fsnotify reloads the user file; `agentd daemon reload` forces a re-merge.
+
+## 4. Install hooks for an agent
+
+From a project directory (example: Claude Code, project scope):
+
+```bash
+agentd install --provider=claude-code --scope=project
+```
+
+Generated configs call `agentd agenthooks …` (hidden alias of `agentd hook …`). Prefer documenting `hook run` / `hook serve` / `hook notify`.
+
+Providers and scopes: [Providers](./providers.md).
+
+## 5. Verify
+
+```bash
+agentd daemon status --json
+```
+
+Expect `"running": true` plus `generation`, `fingerprint`, `async_queue_depth`, `async_dropped_count`.
+
+Trigger a tool call in the agent, or pipe a fixture through the edge:
+
+```bash
+echo '{"session_id":"s","cwd":"/tmp","hook_event_name":"PreToolUse","tool_name":"Bash","tool_use_id":"t1","tool_input":{"command":"echo ok"}}' \
+  | agentd hook run --provider=claude-code
+```
+
+Clean tool.pre with defaults usually encodes a provider no-op (Claude: `{}`).
+
+## Next
+
+- [Configuration](./configuration.md) — layers and schema
+- [Guards](./guards.md) / [Dispatch](./dispatch.md) — policy and routing
+- [Approvals](./approvals.md) — Ask once, then allow
+- [CLI](./cli.md) — full flag list

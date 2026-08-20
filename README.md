@@ -10,6 +10,14 @@ agentd sits between your AI coding agents (Claude Code, Cursor, Codex, Gemini CL
 
 > **Status:** v1 (M0–M8). Roadmap history: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
+## Documentation
+
+- [User guide (English)](./docs/en/) — default
+- [Руководство (русский)](./docs/ru/)
+- Keeping docs current: [docs/en/maintaining.md](./docs/en/maintaining.md)
+
+Contributor design and conventions: [DESIGN.md](./DESIGN.md), [AGENTS.md](./AGENTS.md), [CONVENTIONS.md](./CONVENTIONS.md).
+
 ## Why agentd?
 
 Coding-agent hooks are powerful but painful to operationalize:
@@ -76,6 +84,8 @@ go install github.com/macrox-pro/agentd@latest
 
 Pre-built binaries for linux/darwin/windows are published on [GitHub Releases](https://github.com/macrox-pro/agentd/releases) (goreleaser).
 
+Details: [docs/en/installation.md](./docs/en/installation.md).
+
 ## Quick start
 
 **1. Start the daemon** (one instance per user):
@@ -112,6 +122,8 @@ agentd daemon status --json
 
 For OpenCode, use `agentd hook serve --provider=opencode` in generated plugin config (see [DESIGN.md](./DESIGN.md) — OpenCode integration).
 
+Full walkthrough: [docs/en/getting-started.md](./docs/en/getting-started.md).
+
 ## Configuration
 
 Configuration merges four layers: defaults → `~/.agentd.yaml` → `.agentd.yaml` (project) → runtime overlay (daemon-written).
@@ -131,7 +143,7 @@ dispatch:
         level: info
 ```
 
-Full schema, merge rules, and reload behavior: [DESIGN.md § Configuration schema](./DESIGN.md#7-configuration-schema)
+Full schema, merge rules, and reload behavior: [DESIGN.md § Configuration schema](./DESIGN.md#7-configuration-schema) · [docs/en/configuration.md](./docs/en/configuration.md)
 
 ## CLI overview
 
@@ -150,7 +162,7 @@ Full schema, merge rules, and reload behavior: [DESIGN.md § Configuration schem
 | `agentd config record-decision` | Record approval after Ask |
 | `agentd dispatch routes` | Show compiled dispatch routes |
 
-Rationale for each command: [DESIGN.md § CLI Reference](./DESIGN.md#6-cli-reference)
+Rationale for each command: [DESIGN.md § CLI Reference](./DESIGN.md#6-cli-reference) · [docs/en/cli.md](./docs/en/cli.md)
 
 ## Development
 

@@ -341,6 +341,9 @@ Every new subcommand:
 
 1. Cobra Short, Long, Example (English)
 2. Matching section in [DESIGN.md § CLI Reference](./DESIGN.md#6-cli-reference)
+3. [docs/en/cli.md](./docs/en/cli.md) and mirror [docs/ru/cli.md](./docs/ru/cli.md)
+
+User-facing docs live under [docs/](./docs/). EN is canonical; RU is a full mirror. When behavior, YAML, Status, or install changes, follow [docs/en/maintaining.md](./docs/en/maintaining.md) and run `make docs-check`.
 
 ## Session handoff & PR
 
@@ -358,4 +361,5 @@ PR checklist:
 - [ ] `make generate` if proto changed
 - [ ] New `scripts/e2e-mN.sh` → append to Makefile `e2e` (+ run `make e2e`)
 - [ ] DESIGN.md CLI section if commands changed
+- [ ] `docs/en/` + `docs/ru/` if user-facing behavior/CLI/schema changed (`make docs-check`)
 - [ ] PROGRESS.md updated

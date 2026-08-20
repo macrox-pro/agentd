@@ -115,7 +115,8 @@ func TestParsePolicy(t *testing.T) {
 - Install hooks with `agentd hook run --provider=...`.
 - ConfigStore hot path: `store.Current()` only — no disk I/O. Runtime overlay + one debounced reload goroutine.
 - Async dispatch must not block the sync hook response.
-- New CLI command → update [DESIGN.md §6](./DESIGN.md#6-cli-reference).
+- New CLI command → update [DESIGN.md §6](./DESIGN.md#6-cli-reference) **and** [docs/en/cli.md](./docs/en/cli.md) + [docs/ru/cli.md](./docs/ru/cli.md).
+- User-visible behavior / config / Status / install change → update matching pages under [docs/en/](./docs/en/) then mirror [docs/ru/](./docs/ru/) (see [docs/en/maintaining.md](./docs/en/maintaining.md)). Run `make docs-check`.
 
 ## Protobuf
 
@@ -135,4 +136,4 @@ func TestParsePolicy(t *testing.T) {
 
 On stop / context limit: update [PROGRESS.md](./PROGRESS.md) (next todo + files touched).
 
-PR: `make lint` + `make test` on touched packages; `make e2e` when shipping a milestone e2e script (and wire it into Makefile `e2e`); `make generate` if `api/` changed; DESIGN.md CLI section if commands changed.
+PR: `make lint` + `make test` on touched packages; `make e2e` when shipping a milestone e2e script (and wire it into Makefile `e2e`); `make generate` if `api/` changed; DESIGN.md CLI section **and** `docs/en`+`docs/ru` if commands or user-facing behavior changed (`make docs-check`).

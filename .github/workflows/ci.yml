@@ -18,6 +18,8 @@ jobs:
           go-version: "1.26.x"
       - name: Lint
         run: make lint
+      - name: Docs parity
+        run: make docs-check
       - name: Test
         run: make test
       - name: Integration
