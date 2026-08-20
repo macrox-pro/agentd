@@ -16,6 +16,11 @@ import (
 	"github.com/macrox-pro/agentd/internal/transport"
 )
 
+const (
+	readyTimeout = 5 * time.Second
+	readyPoll    = 25 * time.Millisecond
+)
+
 // StartOptions configures daemon Start.
 type StartOptions struct {
 	Socket     string
@@ -25,7 +30,8 @@ type StartOptions struct {
 }
 
 // Start runs the daemon. In foreground mode it blocks until shutdown.
-// When Foreground is false it re-execs/detaches and returns after the child is launched.
+// When Foreground is false it re-execs/detaches and returns only after the
+// child answers Health (or a readiness timeout).
 func Start(ctx context.Context, opts StartOptions) error {
 	if opts.Socket == "" {
 		opts.Socket = transport.DefaultSocketPath()
@@ -53,6 +59,8 @@ func ensureNotRunning(ctx context.Context, socket string) error {
 	return nil
 }
 
+// rejectLivePID returns ErrAlreadyRunning when a live PID file is present.
+// It never removes socket/PID — cleanup happens only under the lock.
 func rejectLivePID(paths Paths) error {
 	pid, err := paths.ReadPID()
 	if err != nil {
@@ -61,8 +69,11 @@ func rejectLivePID(paths Paths) error {
 	if processAlive(pid) {
 		return ErrAlreadyRunning
 	}
-	paths.RemoveStale()
 	return nil
+}
+
+func cleanStaleUnderLock(paths Paths) {
+	paths.RemoveStale()
 }
 
 func runForeground(ctx context.Context, opts StartOptions) error {
@@ -76,6 +87,8 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 		return err
 	}
 	defer ReleaseLock(lock)
+
+	cleanStaleUnderLock(paths)
 
 	store, err := config.Load(ctx, opts.ConfigPath)
 	if err != nil {
@@ -91,10 +104,6 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 		paths.RemoveStale()
 	}()
 
-	if err := paths.WritePID(os.Getpid()); err != nil {
-		return fmt.Errorf("write pid: %w", err)
-	}
-
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -109,6 +118,19 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	go func() {
 		errCh <- gs.Serve(ln)
 	}()
+
+	readyCtx, readyCancel := context.WithTimeout(ctx, readyTimeout)
+	err = waitHealth(readyCtx, opts.Socket)
+	readyCancel()
+	if err != nil {
+		gs.GracefulStop()
+		return fmt.Errorf("daemon failed to become ready: %w", err)
+	}
+
+	if err := paths.WritePID(os.Getpid()); err != nil {
+		gs.GracefulStop()
+		return fmt.Errorf("write pid: %w", err)
+	}
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -126,6 +148,25 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 			return err
 		}
 		return nil
+	}
+}
+
+func waitHealth(ctx context.Context, socket string) error {
+	for {
+		checkCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+		err := pingHealth(checkCtx, socket)
+		cancel()
+		if err == nil {
+			return nil
+		}
+		if ctx.Err() != nil {
+			return fmt.Errorf("health: %w", ctx.Err())
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("health: %w", ctx.Err())
+		case <-time.After(readyPoll):
+		}
 	}
 }
 

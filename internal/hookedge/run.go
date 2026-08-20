@@ -85,7 +85,7 @@ func Run(ctx context.Context, opts Options) int {
 		return 1
 	}
 
-	return encodeNoDecision(ctx, opts.Provider, opts.ArgvPayload, payload, stdout, stderr)
+	return encodeDaemonNoDecision(ctx, opts.Provider, opts.ArgvPayload, payload, stdout, stderr)
 }
 
 func readPayload(opts Options) ([]byte, agentdv1.InvocationMode, error) {
@@ -130,8 +130,25 @@ func parseProvider(s string) (agentdv1.Provider, error) {
 	}
 }
 
-func encodeNoDecision(ctx context.Context, provider string, argvPayload bool, payload []byte, stdout, stderr io.Writer) int {
+// encodeDaemonNoDecision encodes provider wire for a daemon-confirmed NoDecision.
+// agenthooks does not export Encode; Runner.Run is the supported wire path.
+// Handlers always return NoDecision so the edge cannot invent Allow/Deny —
+// Decide remains in the daemon; richer decision mapping is M2.
+func encodeDaemonNoDecision(ctx context.Context, provider string, argvPayload bool, payload []byte, stdout, stderr io.Writer) int {
 	r := agenthooks.New(agenthooks.WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil))))
+	r.OnToolPre(func(context.Context, *agenthooks.ToolPreEvent) (agenthooks.ToolPreDecision, error) {
+		return agenthooks.NoDecision(), nil
+	})
+	r.OnPermission(func(context.Context, *agenthooks.PermissionEvent) (agenthooks.ToolPreDecision, error) {
+		return agenthooks.NoDecision(), nil
+	})
+	r.OnToolPost(func(context.Context, *agenthooks.ToolPostEvent) (agenthooks.ToolPostDecision, error) {
+		return agenthooks.Observed(), nil
+	})
+	r.OnToolError(func(context.Context, *agenthooks.ToolPostEvent) (agenthooks.ToolPostDecision, error) {
+		return agenthooks.Observed(), nil
+	})
+
 	args := []string{"run", "--provider=" + provider}
 	var stdin io.Reader
 	if argvPayload {

@@ -10,7 +10,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
 
+	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/hookedge"
 	"github.com/macrox-pro/agentd/internal/server"
@@ -90,13 +92,13 @@ func TestRunErrors(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		missingSocket  bool
-		provider       string
-		stdin          io.Reader
-		wantCode       int
-		wantOut        string
-		wantErrSubstr  string
+		name          string
+		missingSocket bool
+		provider      string
+		stdin         io.Reader
+		wantCode      int
+		wantOut       string
+		wantErrSubstr string
 	}{
 		{
 			name:          "daemon down",
@@ -138,6 +140,52 @@ func TestRunErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunUnsupportedDecision(t *testing.T) {
+	dir := t.TempDir()
+	socket := filepath.Join(dir, "agentd.sock")
+
+	ln, err := transport.Listen(socket)
+	require.NoError(t, err, "Listen(%q)", socket)
+	t.Cleanup(func() { _ = ln.Close() })
+
+	gs := grpc.NewServer()
+	agentdv1.RegisterHookServiceServer(gs, denyHook{})
+	agentdv1.RegisterDaemonServiceServer(gs, okDaemon{})
+	go func() { _ = gs.Serve(ln) }()
+	t.Cleanup(gs.Stop)
+	waitForSocket(t, socket)
+
+	var stdout, stderr bytes.Buffer
+	code := hookedge.Run(context.Background(), hookedge.Options{
+		Socket:   socket,
+		Provider: "claude-code",
+		Stdin:    bytes.NewReader([]byte(`{}`)),
+		Stdout:   &stdout,
+		Stderr:   &stderr,
+	})
+	assert.Equal(t, 1, code, "Run(unsupported)")
+	assert.Empty(t, stdout.String(), "Run(unsupported)")
+	assert.Contains(t, stderr.String(), "unsupported decision", "Run(unsupported)")
+}
+
+type denyHook struct {
+	agentdv1.UnimplementedHookServiceServer
+}
+
+func (denyHook) Invoke(context.Context, *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
+	return &agentdv1.InvokeResponse{
+		Decision: &agentdv1.Decision{Kind: agentdv1.DecisionKind_DECISION_KIND_DENY},
+	}, nil
+}
+
+type okDaemon struct {
+	agentdv1.UnimplementedDaemonServiceServer
+}
+
+func (okDaemon) Health(context.Context, *agentdv1.HealthRequest) (*agentdv1.HealthResponse, error) {
+	return &agentdv1.HealthResponse{Status: "ok"}, nil
 }
 
 func waitForSocket(t *testing.T, socket string) {

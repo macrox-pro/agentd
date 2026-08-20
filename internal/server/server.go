@@ -4,17 +4,18 @@ import (
 	"context"
 	"time"
 
-	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
-	"github.com/macrox-pro/agentd/internal/config"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
+	"github.com/macrox-pro/agentd/internal/config"
 )
 
 // Options configures the gRPC services.
 type Options struct {
-	Store     *config.Store
-	StartedAt time.Time
-	Version   string
+	Store      *config.Store
+	StartedAt  time.Time
+	Version    string
 	OnShutdown func()
 }
 

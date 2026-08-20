@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# M1 acceptance: start → status → hook run → reload → already-running → stop
+# M1 acceptance: detached start → status → hook run → reload → already-running → stop
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -8,19 +8,16 @@ cd "$ROOT"
 WORKDIR="$(mktemp -d)"
 SOCK="$WORKDIR/agentd.sock"
 BIN="$WORKDIR/agentd"
-trap 'rm -rf "$WORKDIR"' EXIT
-
-go build -o "$BIN" .
-
-"$BIN" daemon start --foreground --socket "$SOCK" &
-DAEMON_PID=$!
 
 cleanup() {
   "$BIN" daemon stop --socket "$SOCK" --timeout 5s >/dev/null 2>&1 || true
-  wait "$DAEMON_PID" 2>/dev/null || true
   rm -rf "$WORKDIR"
 }
 trap cleanup EXIT
+
+go build -o "$BIN" .
+
+"$BIN" daemon start --socket "$SOCK"
 
 for _ in $(seq 1 50); do
   if "$BIN" daemon status --socket "$SOCK" --json 2>/dev/null | grep -qE '"running"[[:space:]]*:[[:space:]]*true'; then

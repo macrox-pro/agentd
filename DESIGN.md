@@ -366,7 +366,8 @@ agentd
 Start the user-level daemon (gRPC, ConfigStore, Dispatch, async queue).
 
 - Detach by default (like agenthooks `detach_*`); `--foreground` for dev/systemd
-- Lock file prevents double start
+- Detached start returns only after Health succeeds (or a readiness timeout / error)
+- Lock file prevents double start; stale socket/PID cleanup runs only under the lock
 - Does not handle hook events
 
 **See also:** `daemon stop`, `daemon status`

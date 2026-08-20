@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -49,8 +48,9 @@ var daemonStartCmd = &cobra.Command{
 	Short: "Start the agentd background service",
 	Long: `Start the agentd background service for this user.
 
-By default the service runs in the background. Use --foreground to keep it
-attached to the terminal (useful while developing or under a process manager).
+By default the service runs in the background and start waits until the
+service answers health checks. Use --foreground to keep it attached to the
+terminal (useful while developing or under a process manager).
 
 Only one instance should run per user. If a service is already running, start
 reports an error instead of replacing it.`,
@@ -97,7 +97,31 @@ use "agentd config show".`,
   agentd daemon status --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_ = args
-		return runDaemonStatus(cmd.Context())
+		rep, err := daemon.Status(cmd.Context(), resolveSocket())
+		if err != nil {
+			return err
+		}
+		out := cmd.OutOrStdout()
+		if daemonStatusJSON {
+			payload := map[string]any{
+				"running": rep.Running,
+				"socket":  rep.Socket,
+			}
+			if rep.Running {
+				payload["version"] = rep.Version
+				payload["started_at"] = rep.StartedAt.UTC().Format(time.RFC3339)
+				payload["generation"] = rep.Generation
+				payload["fingerprint"] = rep.Fingerprint
+			}
+			return json.NewEncoder(out).Encode(payload)
+		}
+		if !rep.Running {
+			fmt.Fprintln(out, "agentd: not running")
+			return nil
+		}
+		fmt.Fprintf(out, "agentd: running (version %s, generation %d)\n",
+			rep.Version, rep.Generation)
+		return nil
 	},
 }
 
@@ -142,44 +166,4 @@ func resolveConfigPath() string {
 		return ""
 	}
 	return filepath.Join(home, ".agentd.yaml")
-}
-
-func runDaemonStatus(ctx context.Context) error {
-	socket := resolveSocket()
-	printStopped := func() error {
-		if daemonStatusJSON {
-			return json.NewEncoder(os.Stdout).Encode(map[string]any{
-				"running": false,
-				"socket":  socket,
-			})
-		}
-		fmt.Println("agentd: not running")
-		return nil
-	}
-
-	cli, err := hookclient.Dial(ctx, socket)
-	if err != nil {
-		return printStopped()
-	}
-	defer cli.Close()
-
-	resp, err := cli.Status(ctx)
-	if err != nil {
-		return printStopped()
-	}
-
-	if daemonStatusJSON {
-		return json.NewEncoder(os.Stdout).Encode(map[string]any{
-			"running":     true,
-			"socket":      socket,
-			"version":     resp.GetVersion(),
-			"started_at":  resp.GetStartedAt().AsTime().UTC().Format(time.RFC3339),
-			"generation":  resp.GetConfig().GetGeneration(),
-			"fingerprint": resp.GetConfig().GetFingerprint(),
-		})
-	}
-
-	fmt.Printf("agentd: running (version %s, generation %d)\n",
-		resp.GetVersion(), resp.GetConfig().GetGeneration())
-	return nil
 }

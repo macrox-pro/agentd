@@ -5,7 +5,7 @@
 
 ## Current phase
 
-Phase: m2 | Last: m1-h-checkpoint | Next: dispatch-engine (M2)
+Phase: m2 | Last: m1-defect-refactor | Next: dispatch-engine (M2)
 
 ## agents_md_ready
 
@@ -14,6 +14,7 @@ true
 ## Session notes
 
 - AGENTS.md read: yes (2026-08-20)
+- M1 defect refactor: detach wait-for-ready, lock-first stale cleanup, hookedge NoDecision encode, Windows pipe ACL, Status moved to internal/daemon
 
 ## M1 checklist
 
@@ -76,20 +77,21 @@ true
 
 ## Files touched (this session)
 
-- internal/hookedge/run.go, run_test.go
-- cmd/daemon.go, cmd/hook.go
-- internal/daemon/start.go (ensureNotRunning)
+- internal/daemon/start.go, detach.go, status.go, start_test.go
+- internal/hookedge/run.go
+- internal/transport/listener_windows.go
+- internal/server/server.go (imports)
+- cmd/daemon.go
 - scripts/e2e-m1.sh
-- DESIGN.md §13
-- go.mod, go.sum (agenthooks)
+- DESIGN.md §6 daemon start
 - PROGRESS.md
 
 ## Verify (last green)
 
 ```bash
 bash scripts/e2e-m1.sh
-go test ./... -race -count=1
-golangci-lint run ./internal/hookedge/... ./cmd/... ./internal/daemon/... ./internal/hookclient/... ./internal/server/... ./internal/config/... ./internal/transport/...
+go test ./internal/daemon/... ./internal/hookedge/... ./internal/transport/... ./internal/server/... ./internal/config/... -race -count=1
+golangci-lint run ./internal/daemon/... ./internal/hookedge/... ./internal/transport/... ./internal/server/... ./cmd/...
 ```
 
 ## Blockers

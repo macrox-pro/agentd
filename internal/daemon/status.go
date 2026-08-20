@@ -1,0 +1,50 @@
+package daemon
+
+import (
+	"context"
+	"time"
+
+	"github.com/macrox-pro/agentd/internal/hookclient"
+	"github.com/macrox-pro/agentd/internal/transport"
+)
+
+// StatusReport is a snapshot of daemon liveness for CLI status.
+type StatusReport struct {
+	Running     bool
+	Socket      string
+	Version     string
+	StartedAt   time.Time
+	Generation  uint64
+	Fingerprint string
+}
+
+// Status probes the daemon and returns a StatusReport. When the daemon is
+// unreachable, Running is false and other fields are zero (Socket is still set).
+func Status(ctx context.Context, socket string) (StatusReport, error) {
+	if socket == "" {
+		socket = transport.DefaultSocketPath()
+	}
+	rep := StatusReport{Socket: socket}
+
+	cli, err := hookclient.Dial(ctx, socket)
+	if err != nil {
+		return rep, nil
+	}
+	defer cli.Close()
+
+	resp, err := cli.Status(ctx)
+	if err != nil {
+		return rep, nil
+	}
+
+	rep.Running = true
+	rep.Version = resp.GetVersion()
+	if ts := resp.GetStartedAt(); ts != nil {
+		rep.StartedAt = ts.AsTime().UTC()
+	}
+	if cfg := resp.GetConfig(); cfg != nil {
+		rep.Generation = cfg.GetGeneration()
+		rep.Fingerprint = cfg.GetFingerprint()
+	}
+	return rep, nil
+}
