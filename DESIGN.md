@@ -604,10 +604,10 @@ agentd/
 ## 12. Open questions
 
 1. Typed `Decision` in proto + hookedge encode — **accepted**
-2. Approval TTL: project 24h, session until end — **proposal**
-3. Async overflow: drop + metric — **proposal**
+2. Approval TTL: project 24h, session until end — **accepted** (v1; see M7)
+3. Async overflow: drop + counter in `DaemonService.Status` — **accepted** (v1; see M8)
 4. Runtime format: YAML, atomic rename — **accepted**
-5. `exec` sync JSON decision — optional; default async-only — **proposal**
+5. `exec` sync JSON decision — **deferred post-v1**; v1 keeps exec async-only (sync path stays builtin/http/grpc)
 
 ---
 
@@ -620,11 +620,95 @@ agentd/
 | **M2** | done | Dispatch Engine; parallel/after_sync; async queue; secrets guard |
 | **M3** | done | Forward targets (exec, http, log, file); full dispatch YAML; fsnotify reload |
 | **M4** | done | gRPC forward; OpenCode serve bridge; install wrapper; Windows npipe hardening |
+| **M5** | planned | Config layers (project + runtime); ConfigService; config CLI; merged fingerprint |
+| **M6** | planned | Guards: shell, mcp, paths |
+| **M7** | planned | Approvals / `RecordDecision`; runtime persist; temporary blocks |
+| **M8 / v1** | planned | Ops polish, conformance, docs freeze, release gate |
 
-M1 acceptance: `daemon start|status|reload|stop` and `hook run --provider=…` round-trip; see PROGRESS.md.
+Session checklists and verify commands: [PROGRESS.md](./PROGRESS.md).
+
+### Done (M0–M4)
+
+M1 acceptance: `daemon start|status|reload|stop` and `hook run --provider=…` round-trip.
 
 M2 acceptance: Dispatch Engine (parallel/after_sync), bounded async queue, secrets guard Ask/Deny on tool.pre, `dispatch routes`, `scripts/e2e-m2.sh`.
 
 M3 acceptance: declarative `dispatch:` + async exec/http/log/file; debounced fsnotify reload; `scripts/e2e-m3.sh`.
 
 M4 acceptance: declarative `target: grpc` (sync+async); `hook serve` / `hook notify` + agenthooks sentinel; `agentd install`; Windows pipe path by SID; `scripts/e2e-m4.sh`.
+
+### M5 — Config layers + ConfigService
+
+**Goal:** Match DESIGN §3 merge model and wire the management config surface.
+
+| Phase | Work |
+|-------|------|
+| A | Project layer: resolve `.agentd.yaml` from `cwd` / `project_root`; merge `defaults ⊕ user ⊕ project`; lazy fsnotify on first sighting |
+| B | Runtime overlay path (`$XDG_STATE_HOME/agentd/runtime.yaml`); load on startup; ignore self-writes in watcher |
+| C | Fingerprint → `sha256(canonical_json(merged_config))`; keep monotonic `generation` |
+| D | Implement `ConfigService` (`GetConfig`, `PatchConfig`); register on daemon gRPC server |
+| E | CLI: `config validate`, `config show`, `config patch` (drop `errNotImplemented`) |
+| F | `dispatch routes` / Invoke use project-aware snapshot when `cwd` present |
+| G | `scripts/e2e-m5.sh` + unit tests |
+
+**Out of M5:** `RecordDecision` body can stub/`Unimplemented` until M7 if Get/Patch land first; prefer shipping Get+Patch fully.
+
+**Acceptance:** offline `config validate|show`; live `config patch` updates generation; Invoke with project cwd picks project overrides; fingerprint changes on merge-affecting edits; e2e-m5 green.
+
+### M6 — Remaining guards
+
+**Goal:** Declarative guards match DESIGN §7 (beyond secrets).
+
+| Phase | Work |
+|-------|------|
+| A | Schema + compile: `guards.shell`, `guards.mcp`, `guards.paths` (+ defaults) |
+| B | `internal/guard`: shell deny/ask patterns on tool.pre |
+| C | MCP deny_servers / allowlist on MCP tool events |
+| D | Paths deny_read / deny_write on file/tool path fields |
+| E | Builtin target attaches selected guards by route `guards: [...]` |
+| F | `scripts/e2e-m6.sh` |
+
+**Acceptance:** YAML enables each guard; Ask/Deny honor `policy` + provider caps; route can select subset; e2e-m6 green.
+
+### M7 — Approvals and runtime decisions
+
+**Goal:** Ask outcomes and temporary policy live in the runtime overlay.
+
+| Phase | Work |
+|-------|------|
+| A | Runtime schema: `approvals` + `blocks.temporary` (DESIGN §3 example) |
+| B | `ConfigService.RecordDecision` — write approval with TTL (project 24h, session until end) |
+| C | Hot path: matching approval skips re-Ask; expired entries ignored on compile |
+| D | Temporary blocks consulted before/with guards |
+| E | Debounced atomic flush of runtime.yaml (500 ms); PatchConfig/RecordDecision trigger swap + flush |
+| F | Hook/CLI path after Ask → RecordDecision (minimal operator flow) |
+| G | `scripts/e2e-m7.sh` |
+
+**Acceptance:** Approve once → subsequent matching tool.pre allows within TTL; restart daemon reloads approvals; expired entries gone from effective config; e2e-m7 green.
+
+### M8 — v1 gate
+
+**Goal:** Ship a coherent v1: advertised features work, docs match code, releaseable.
+
+| Phase | Work |
+|-------|------|
+| A | Async overflow: `on_overflow: drop` + expose drop counter (and queue depth) on `Status` |
+| B | Provider timeout margin polish (`min(provider_timeout - margin, route.sync_timeout)`) where still soft |
+| C | Conformance: selected `agenthooks/agenthookstest` fixtures on hookedge encode/decode |
+| D | Integration tests `//go:build integration` for daemon↔hook round-trip (optional CI job) |
+| E | Docs freeze: README features ↔ implemented; DESIGN §7/§6 accurate; remove oversell |
+| F | Release: tagged version, `goreleaser` or GH Actions binaries (linux/darwin/windows), changelog |
+| G | `scripts/e2e-v1.sh` (or compose m5–m7) + full `make lint` + `make test` |
+
+**v1 exit criteria:**
+
+- [ ] Four-layer config merge + ConfigService Get/Patch/RecordDecision
+- [ ] Guards: secrets, shell, mcp, paths
+- [ ] Sync+async dispatch + all target kinds from DESIGN §2 (exec remains async-only)
+- [ ] Install + hook run/notify/serve for supported providers
+- [ ] Cross-platform IPC (unix + Windows SID pipe)
+- [ ] No CLI `not implemented` on documented commands
+- [ ] README/DESIGN match behavior; non-goals §11 unchanged
+- [ ] Lint + race tests + e2e-v1 green; release artifact published
+
+**Explicitly not v1** (see §11 + §12.5): agent auth, transcripts, plugins, hooks DSL, async retry storms, exec sync JSON decisions.

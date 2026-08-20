@@ -1,116 +1,113 @@
 # agentd — implementation progress
 
-> Source of truth for multi-session / context-compressed agents.
-> Full design: [DESIGN.md](./DESIGN.md) | Contributor rules: [AGENTS.md](./AGENTS.md)
+> Session handoff for agents. Roadmap to v1: [DESIGN.md §13](./DESIGN.md#13-milestones). Rules: [AGENTS.md](./AGENTS.md).
 
 ## Current phase
 
-Phase: m5 | Last: packages-conventions-refactor | Next: ConfigService (Deferred)
+Phase: **m5** | Last: roadmap-to-v1 | Next: m5-a project layer
 
 ## agents_md_ready
 
 true
 
+## Roadmap (summary)
+
+| Milestone | Status | One-liner |
+|-----------|--------|-----------|
+| M0–M4 | **done** | Daemon, dispatch, targets, secrets, install, OpenCode, Windows npipe |
+| **M5** | **in progress** | Project + runtime layers, ConfigService, config CLI, merged fingerprint |
+| M6 | planned | Guards: shell, mcp, paths |
+| M7 | planned | Approvals / RecordDecision, runtime persist, temporary blocks |
+| M8 / v1 | planned | Overflow counters, conformance, docs freeze, release |
+
+Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
+
+## M5 checklist
+
+### Phase A — Project layer
+
+- [ ] m5-a-resolve — nearest `.agentd.yaml` from cwd / project_root
+- [ ] m5-a-merge — `defaults ⊕ user ⊕ project`
+- [ ] m5-a-watch — lazy fsnotify on first project sighting
+- [ ] m5-a-test
+- [ ] m5-a-checkpoint
+
+### Phase B — Runtime overlay
+
+- [ ] m5-b-path — `$XDG_STATE_HOME/agentd/runtime.yaml` (+ defaults)
+- [ ] m5-b-load — merge as highest layer on startup / reload
+- [ ] m5-b-watch — ignore self-writes (atomic rename)
+- [ ] m5-b-test
+- [ ] m5-b-checkpoint
+
+### Phase C — Fingerprint
+
+- [ ] m5-c-canonical — `sha256(canonical_json(merged_config))`
+- [ ] m5-c-status — Status exposes new fingerprint + generation
+- [ ] m5-c-test
+- [ ] m5-c-checkpoint
+
+### Phase D — ConfigService (Get / Patch)
+
+- [ ] m5-d-get — `GetConfig` (merged + per-layer)
+- [ ] m5-d-patch — `PatchConfig` → in-memory merge + snapshot swap
+- [ ] m5-d-register — register on daemon gRPC server
+- [ ] m5-d-test
+- [ ] m5-d-checkpoint
+
+### Phase E — Config CLI
+
+- [ ] m5-e-validate — `agentd config validate` (offline compile)
+- [ ] m5-e-show — `agentd config show` (merged / layer)
+- [ ] m5-e-patch — `agentd config patch` via gRPC
+- [ ] m5-e-test
+- [ ] m5-e-checkpoint
+
+### Phase F — Hot path cwd
+
+- [ ] m5-f-invoke — Invoke / routes honor project-aware snapshot when cwd set
+- [ ] m5-f-test
+- [ ] m5-f-checkpoint
+
+### Phase G — Close M5
+
+- [ ] m5-g-e2e — `scripts/e2e-m5.sh`
+- [ ] m5-g-lint-test — `make lint` + `make test` on touched packages
+- [ ] m5-g-docs — DESIGN/README/PROGRESS sync
+- [ ] m5-g-checkpoint — mark M5 done in DESIGN §13
+
+**M5 acceptance:** see DESIGN §13 M5. `RecordDecision` may remain stub until M7.
+
+## Later (do not start until M5 checkpoint)
+
+### M6 — Guards
+
+- Schema + compile for shell / mcp / paths
+- `internal/guard` handlers + builtin attach by route list
+- `scripts/e2e-m6.sh`
+
+### M7 — Approvals
+
+- Runtime `approvals` + `blocks.temporary`
+- `RecordDecision` + TTL (project 24h, session end)
+- Debounced runtime.yaml flush
+- `scripts/e2e-m7.sh`
+
+### M8 / v1
+
+- Overflow drop counter on Status
+- Provider timeout margin polish
+- agenthookstest / integration build tag
+- Docs freeze + GitHub release binaries
+- `scripts/e2e-v1.sh` + v1 exit criteria in DESIGN §13
+
 ## Session notes
 
-- AGENTS.md read: yes (2026-08-20)
-- CONVENTIONS.md read: yes (2026-08-20) — root `CONVENTIONS.md`
-- packages conventions refactor: install/hookedge/hookclient/server/guard — concern files, named consts, dead API removed, test layout
-- M4 complete: gRPC forward (sync+async), OpenCode serve + notify, agenthooks sentinel, install wrapper, Windows SID pipe path, e2e-m4
-- cmd/ refactor (AGENTS/CONVENTIONS): one file per subcommand; Cobra-thin; WriteStatus/Reload/DefaultUserPath in internal/; hook↔agenthooks builders shared; notimpl.go removed
-- config/ refactor (AGENTS/CONVENTIONS): split schema/merge by concern; FormatRoutes folded into cmd/dispatch_routes.go; Store.reloadMu; removed KindDefault.Blocking + Snapshot.RawYAML; fingerprint remains sha256(raw user YAML) until M5
-
-## Files touched (packages conventions refactor)
-
-- internal/install: install.go→run.go (+ run_test.go); identity/timeout consts; provider normalize; table TestRun
-- internal/hookedge: split options/provider/payload/decision/encode; hookedge.go package doc; notify_test.go; unified fromProto
-- internal/hookclient: unexport daemon/hook; grpcDialTarget; client_test.go
-- internal/server: split server.go / daemon.go / invoke.go; drop Options.Log; daemon_test.go + invoke_test.go
-- internal/daemon/start.go: remove Log from server.Options
-- internal/guard: rule-id consts; RuleIDs(); attach_test.go; align test vs config.DefaultSecretsRules
-- PROGRESS.md
-
-## Files touched (config conventions refactor)
-
-- deleted internal/config/{schema,format_routes}.go (+ format_routes_test)
-- added internal/config/{config,file,policy,async,guards,mode,route}.go + compile_test/mode_test
-- updated internal/config/{merge,compile,store,defaults}.go + store_test
-- cmd/dispatch_routes.go (+ dispatch_routes_test.go); FormatRoutes unexported helper in cmd
-- DESIGN.md §3 fingerprint note; PROGRESS.md
-
-## Files touched (cmd conventions refactor)
-
-- cmd/{root,daemon,daemon_*,hook,hook_*,agenthooks,agenthooks_*,install,config,config_*,dispatch,dispatch_routes}.go; deleted notimpl.go
-- internal/config/{paths}.go + tests
-- internal/daemon/{status_write,reload}.go + status_write_test.go
-- DESIGN.md §6 CLI tree (agenthooks/)
-- PROGRESS.md
-
-### Phase 0
-- [x] m4-p0-agents
-
-### Phase A — Config grpc schema
-- [x] m4-a-schema
-- [x] m4-a-compile
-- [x] m4-a-test
-- [x] m4-a-checkpoint
-
-### Phase B — Transport endpoint
-- [x] m4-b-endpoint
-- [x] m4-b-test
-- [x] m4-b-checkpoint
-
-### Phase C — gRPC forward target
-- [x] m4-c-grpc-target
-- [x] m4-c-factory
-- [x] m4-c-test
-- [x] m4-c-checkpoint
-
-### Phase D — Session mutex
-- [x] m4-d-session
-- [x] m4-d-test
-- [x] m4-d-checkpoint
-
-### Phase E — OpenCode serve / notify / sentinel
-- [x] m4-e-serve
-- [x] m4-e-notify
-- [x] m4-e-cli
-- [x] m4-e-test
-- [x] m4-e-checkpoint
-
-### Phase F — Install
-- [x] m4-f-install-pkg
-- [x] m4-f-cli
-- [x] m4-f-test
-- [x] m4-f-checkpoint
-
-### Phase G — Windows npipe
-- [x] m4-g-sid-path
-- [x] m4-g-test
-- [x] m4-g-docs
-- [x] m4-g-checkpoint
-
-### Phase H — CLI docs
-- [x] m4-h-cli-docs
-
-### Phase I — Close
-- [x] m4-i-e2e
-- [x] m4-i-lint-test
-- [x] m4-i-progress
-- [x] m4-i-checkpoint
-
-## Files touched (this session)
-
-- internal/config/{schema,compile}.go + store_test.go
-- internal/transport/{endpoint,path_windows,listen_windows}.go + tests
-- internal/dispatch/{engine,session}.go + targets/{grpc,factory}.go + tests
-- internal/server/server.go
-- internal/hookedge/{serve,notify}.go + tests
-- internal/install/install.go + tests
-- cmd/{hook,agenthooks,install}.go
-- scripts/e2e-m4.sh
-- DESIGN.md §1/§5/§6/§9/§13
-- PROGRESS.md
+- AGENTS.md / CONVENTIONS.md read: yes (2026-08-20)
+- M4 complete (grpc forward, OpenCode serve/notify, install, Windows SID pipe, e2e-m4)
+- Post-M4: cmd/ + config/ + packages conventions refactors (concern files; config CLI still stubs)
+- ConfigStore today: defaults ⊕ user only; fingerprint = sha256(raw user YAML) until M5-C
+- Roadmap M5–M8 / v1 written into DESIGN §13 (2026-08-20)
 
 ## Verify (last green)
 
@@ -122,7 +119,3 @@ golangci-lint run ./internal/install/... ./internal/hookedge/... ./internal/hook
 ## Blockers
 
 (none)
-
-## Deferred (M5+)
-
-ConfigService, shell/mcp/paths guards, project layer / runtime overlay
