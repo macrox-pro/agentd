@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase: **m7** | Last: m6-f-checkpoint | Next: m7-a runtime approvals schema
+Phase: **m8** | Last: m7-g-checkpoint | Next: m8-a async overflow Status counter
 
 ## agents_md_ready
 
@@ -14,69 +14,63 @@ true
 
 | Milestone | Status | One-liner |
 |-----------|--------|-----------|
-| M0–M6 | **done** | Daemon through config layers, secrets+shell+mcp+paths guards |
-| **M7** | planned | Approvals / RecordDecision, runtime persist, temporary blocks |
-| M8 / v1 | planned | Overflow counters, conformance, docs freeze, release |
+| M0–M7 | **done** | Daemon through approvals / RecordDecision / runtime persist |
+| **M8 / v1** | planned | Overflow counters, conformance, docs freeze, release |
 
 Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
-## M6 checklist
+## M7 checklist
 
 ### Phase A — Schema + compile
 
-- [x] m6-a-schema — YAML `guards.shell` / `mcp` / `paths`
-- [x] m6-a-types — compiled types + parse
-- [x] m6-a-merge — field-level overlay
-- [x] m6-a-defaults — enabled:false opt-in
-- [x] m6-a-compile — allowlist + default routes attach enabled set
-- [x] m6-a-test
-- [x] m6-a-checkpoint
+- [x] m7-a-schema — YAML `approvals` + `blocks.temporary`
+- [x] m7-a-merge — upsert by fingerprint / tool+pattern
+- [x] m7-a-compile — Snapshot + drop expired + ApprovalFingerprint
+- [x] m7-a-test
+- [x] m7-a-checkpoint
 
-### Phase B — Shell
+### Phase B — RecordDecision
 
-- [x] m6-b-shell — deny_patterns / ask_on substring on ToolShell
-- [x] m6-b-attach — AttachShell (ToolPre + Permission)
-- [x] m6-b-test
-- [x] m6-b-checkpoint
+- [x] m7-b-store — project 24h / session scope
+- [x] m7-b-grpc — ConfigService + hookclient
+- [x] m7-b-test
+- [x] m7-b-checkpoint
 
-### Phase C — MCP
+### Phase C — Hot path skip Ask
 
-- [x] m6-c-mcp — deny_servers glob on Tool.MCP.Server
-- [x] m6-c-attach — AttachMCP
-- [x] m6-c-test
-- [x] m6-c-checkpoint
+- [x] m7-c-skip-ask — secrets + shell consult approvals
+- [x] m7-c-emit-fp — `approval_fingerprint=` in Ask system_message
+- [x] m7-c-test
+- [x] m7-c-checkpoint
 
-### Phase D — Paths
+### Phase D — Temporary blocks
 
-- [x] m6-d-paths — deny_read / deny_write with `**` globs
-- [x] m6-d-attach — AttachPaths
-- [x] m6-d-test
-- [x] m6-d-checkpoint
+- [x] m7-d-blocks — Deny attach before guards
+- [x] m7-d-test
+- [x] m7-d-checkpoint
 
-### Phase E — Builtin attach
+### Phase E — Persist
 
-- [x] m6-e-builtin — route `guards: [...]` switch
-- [x] m6-e-test — subset + multi-guard
-- [x] m6-e-checkpoint
+- [x] m7-e-persist — 500ms debounce atomic flush + IgnoreSelfWrite
+- [x] m7-e-wire — PatchRuntime / RecordDecision / shutdown flush
+- [x] m7-e-test
+- [x] m7-e-checkpoint
 
-### Phase F — Close M6
+### Phase F — Operator CLI
 
-- [x] m6-f-e2e — `scripts/e2e-m6.sh`
-- [x] m6-f-makefile — wired into `make e2e`
-- [x] m6-f-lint-test
-- [x] m6-f-docs
-- [x] m6-f-checkpoint
+- [x] m7-f-cli — `agentd config record-decision` + DESIGN §6
+- [x] m7-f-checkpoint
 
-**M6 acceptance:** met.
+### Phase G — Close M7
 
-## Later (do not start until M6 checkpoint)
+- [x] m7-g-e2e — `scripts/e2e-m7.sh`
+- [x] m7-g-lint-test
+- [x] m7-g-docs
+- [x] m7-g-checkpoint
 
-### M7 — Approvals
+**M7 acceptance:** met.
 
-- Runtime `approvals` + `blocks.temporary`
-- `RecordDecision` + TTL (project 24h, session end)
-- Debounced runtime.yaml flush
-- `scripts/e2e-m7.sh`
+## Later (do not start until M7 checkpoint)
 
 ### M8 / v1
 
@@ -89,15 +83,16 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 ## Session notes
 
 - AGENTS.md / CONVENTIONS.md read: yes (2026-08-20)
-- M6 complete: shell/mcp/paths schema+compile, `internal/guard/{shell,mcp,paths}.go`, builtin attach by route list, e2e-m6
-- Files: `internal/config/{file,guards,merge,defaults,compile}.go`, `internal/guard/{attach,shell,mcp,paths}.go`, `internal/dispatch/targets/builtin.go`, `scripts/e2e-m6.sh`, `Makefile`
-- **Convention:** `make e2e` discovers `scripts/e2e-m*.sh`; shared setup in `scripts/e2e-common.sh`
+- M7 complete: approvals/blocks schema, RecordDecision, skip-Ask, temp blocks, runtime.yaml persist, `config record-decision`, e2e-m7
+- Files: `internal/config/{approvals,blocks,persist,file,merge,compile,store}.go`, `internal/guard/{approve,block,attach,shell}.go`, `cmd/config_record_decision.go`, `scripts/e2e-m7.sh`
+- Fingerprint format: `sha256:<kind>/<hex>` (kind embedded for RecordDecision routing)
 
 ## Verify (last green)
 
 ```bash
+make lint
 go test ./internal/config/... ./internal/guard/... ./internal/dispatch/... ./internal/server/... ./cmd/... -race -count=1
-make e2e   # includes scripts/e2e-m6.sh
+make e2e   # includes scripts/e2e-m7.sh
 ```
 
 ## Blockers

@@ -470,7 +470,14 @@ Inspect config layers or merged effective config (offline).
 
 ### `agentd config patch --file DELTA.yaml`
 
-Patch runtime overlay via gRPC (`ConfigService.PatchConfig`). In-memory until M7 disk flush.
+Patch runtime overlay via gRPC (`ConfigService.PatchConfig`). Persists to
+`$XDG_STATE_HOME/agentd/runtime.yaml` (debounced atomic flush).
+
+### `agentd config record-decision --fingerprint FP --scope project|session [--project-root PATH] [--session-id ID] [--expires-at RFC3339]`
+
+Record an approval after Ask (`ConfigService.RecordDecision`). Project scope
+defaults to 24h TTL; session scope matches `--session-id` until cleared.
+Fingerprint comes from the Ask `system_message` (`approval_fingerprint=…`).
 
 ### `agentd dispatch routes [--json] [--cwd PATH]`
 
@@ -621,12 +628,12 @@ agentd/
 | **M4** | done | gRPC forward; OpenCode serve bridge; install wrapper; Windows npipe hardening |
 | **M5** | done | Config layers (project + runtime); ConfigService; config CLI; merged fingerprint |
 | **M6** | done | Guards: shell, mcp, paths |
-| **M7** | planned | Approvals / `RecordDecision`; runtime persist; temporary blocks |
+| **M7** | done | Approvals / `RecordDecision`; runtime persist; temporary blocks |
 | **M8 / v1** | planned | Ops polish, conformance, docs freeze, release gate |
 
 Session checklists and verify commands: [PROGRESS.md](./PROGRESS.md).
 
-### Done (M0–M6)
+### Done (M0–M7)
 
 M1 acceptance: `daemon start|status|reload|stop` and `hook run --provider=…` round-trip.
 
@@ -636,25 +643,11 @@ M3 acceptance: declarative `dispatch:` + async exec/http/log/file; debounced fsn
 
 M4 acceptance: declarative `target: grpc` (sync+async); `hook serve` / `hook notify` + agenthooks sentinel; `agentd install`; Windows pipe path by SID; `scripts/e2e-m4.sh`.
 
-M5 acceptance: four-layer merge; ConfigService Get/Patch; `config validate|show|patch`; merged fingerprint; project-aware Invoke; `scripts/e2e-m5.sh`. (`RecordDecision` body and runtime.yaml disk flush → M7.)
+M5 acceptance: four-layer merge; ConfigService Get/Patch; `config validate|show|patch`; merged fingerprint; project-aware Invoke; `scripts/e2e-m5.sh`.
 
 M6 acceptance: declarative `guards.shell` / `mcp` / `paths`; Ask/Deny honor policy + provider caps; route `guards: [...]` subset; `scripts/e2e-m6.sh`.
 
-### M7 — Approvals and runtime decisions
-
-**Goal:** Ask outcomes and temporary policy live in the runtime overlay.
-
-| Phase | Work |
-|-------|------|
-| A | Runtime schema: `approvals` + `blocks.temporary` (DESIGN §3 example) |
-| B | `ConfigService.RecordDecision` — write approval with TTL (project 24h, session until end) |
-| C | Hot path: matching approval skips re-Ask; expired entries ignored on compile |
-| D | Temporary blocks consulted before/with guards |
-| E | Debounced atomic flush of runtime.yaml (500 ms); PatchConfig/RecordDecision trigger swap + flush |
-| F | Hook/CLI path after Ask → RecordDecision (minimal operator flow) |
-| G | `scripts/e2e-m7.sh` |
-
-**Acceptance:** Approve once → subsequent matching tool.pre allows within TTL; restart daemon reloads approvals; expired entries gone from effective config; e2e-m7 green.
+M7 acceptance: Approve once → subsequent matching tool.pre allows within TTL; restart daemon reloads approvals; expired entries gone from effective config; `scripts/e2e-m7.sh`.
 
 ### M8 — v1 gate
 

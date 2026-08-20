@@ -6,21 +6,24 @@ import (
 	"os"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"go.yaml.in/yaml/v3"
 )
 
 // Snapshot is an immutable compiled configuration generation.
 type Snapshot struct {
-	Generation  uint64
-	Fingerprint string
-	UserPath    string
-	RuntimePath string
-	ProjectPath string
-	Policy      Policy
-	Async       AsyncConfig
-	Guards      Guards
-	Routes      []CompiledRoute
+	Generation      uint64
+	Fingerprint     string
+	UserPath        string
+	RuntimePath     string
+	ProjectPath     string
+	Policy          Policy
+	Async           AsyncConfig
+	Guards          Guards
+	Approvals       Approvals
+	TemporaryBlocks []TemporaryBlock
+	Routes          []CompiledRoute
 }
 
 // Layer identifies a config source for Get / show.
@@ -49,7 +52,8 @@ type Store struct {
 
 	projects map[string]*projectState // abs .agentd.yaml path → state
 
-	watcher *Watcher
+	watcher      *Watcher
+	persistTimer *time.Timer
 }
 
 type projectState struct {
@@ -169,7 +173,7 @@ func (s *Store) Reload(ctx context.Context) error {
 }
 
 // PatchRuntime merges yamlPatch into the in-memory runtime layer and recompiles.
-// Does not persist to disk (M7).
+// Schedules a debounced flush to runtime.yaml when RuntimePath is set.
 func (s *Store) PatchRuntime(yamlPatch []byte) error {
 	if len(yamlPatch) == 0 {
 		return fmt.Errorf("runtime patch: empty")
@@ -188,7 +192,89 @@ func (s *Store) PatchRuntime(yamlPatch []byte) error {
 		return fmt.Errorf("marshal runtime: %w", err)
 	}
 	s.runtimeRaw = raw
-	return s.recompileAllLocked()
+	if err := s.recompileAllLocked(); err != nil {
+		return err
+	}
+	s.schedulePersistLocked()
+	return nil
+}
+
+// RecordDecisionOptions configures Store.RecordDecision.
+type RecordDecisionOptions struct {
+	Fingerprint string
+	Scope       ApprovalScope
+	Project     string
+	SessionID   string
+	ExpiresAt   time.Time // zero → default by scope
+}
+
+// RecordDecision upserts a runtime approval and recompiles.
+func (s *Store) RecordDecision(opts RecordDecisionOptions) error {
+	if opts.Fingerprint == "" {
+		return fmt.Errorf("record decision: fingerprint is required")
+	}
+	kind, err := ParseApprovalKind(opts.Fingerprint)
+	if err != nil {
+		return fmt.Errorf("record decision: %w", err)
+	}
+	switch opts.Scope {
+	case ApprovalScopeProject:
+		if opts.Project == "" {
+			return fmt.Errorf("record decision: project is required for project scope")
+		}
+	case ApprovalScopeSession:
+		if opts.SessionID == "" {
+			return fmt.Errorf("record decision: session_id is required for session scope")
+		}
+	default:
+		return fmt.Errorf("record decision: unknown scope %q", opts.Scope)
+	}
+
+	now := time.Now().UTC()
+	expires := opts.ExpiresAt
+	if expires.IsZero() && opts.Scope == ApprovalScopeProject {
+		expires = now.Add(projectApprovalTTL)
+	}
+	if !expires.IsZero() && !expires.After(now) {
+		return fmt.Errorf("record decision: expires_at must be in the future")
+	}
+
+	entry := fileApproval{
+		Fingerprint: opts.Fingerprint,
+		Scope:       string(opts.Scope),
+		Project:     opts.Project,
+		SessionID:   opts.SessionID,
+		GrantedBy:   grantedByAskUser,
+	}
+	if !expires.IsZero() {
+		entry.ExpiresAt = expires.UTC().Format(time.RFC3339)
+	}
+
+	s.reloadMu.Lock()
+	defer s.reloadMu.Unlock()
+
+	if s.runtimeFC == nil {
+		s.runtimeFC = &fileConfig{Version: 1}
+	}
+	if s.runtimeFC.Approvals == nil {
+		s.runtimeFC.Approvals = &fileApprovals{}
+	}
+	switch kind {
+	case ApprovalKindSecrets:
+		s.runtimeFC.Approvals.Secrets = upsertApprovalList(s.runtimeFC.Approvals.Secrets, []fileApproval{entry})
+	case ApprovalKindShell:
+		s.runtimeFC.Approvals.Shell = upsertApprovalList(s.runtimeFC.Approvals.Shell, []fileApproval{entry})
+	}
+	raw, err := yaml.Marshal(s.runtimeFC)
+	if err != nil {
+		return fmt.Errorf("marshal runtime: %w", err)
+	}
+	s.runtimeRaw = raw
+	if err := s.recompileAllLocked(); err != nil {
+		return err
+	}
+	s.schedulePersistLocked()
+	return nil
 }
 
 // IgnoreSelfWrite marks path so the next watch events for it are skipped (atomic rename).
@@ -278,75 +364,62 @@ func (s *Store) reloadAllLocked() error {
 }
 
 func (s *Store) recompileAllLocked() error {
-	pol, async, guards, routes, merged, err := CompileMerged(s.userFC, nil, s.runtimeFC)
+	res, err := CompileMerged(s.userFC, nil, s.runtimeFC)
 	if err != nil {
 		return fmt.Errorf("compile config: %w", err)
 	}
-	fp, err := Fingerprint(merged)
+	fp, err := Fingerprint(res.Merged)
 	if err != nil {
 		return err
 	}
-	s.mergedFC = merged
+	s.mergedFC = res.Merged
 	gen := s.gen.Add(1)
-	base := &Snapshot{
-		Generation:  gen,
-		Fingerprint: fp,
-		UserPath:    s.userPath,
-		RuntimePath: s.runtimePath,
-		Policy:      pol,
-		Async:       async,
-		Guards:      guards,
-		Routes:      routes,
-	}
+	base := snapshotFrom(res, gen, fp, s.userPath, s.runtimePath, "")
 	s.snap.Store(base)
 
 	for path, ps := range s.projects {
-		pol, async, guards, routes, merged, err := CompileMerged(s.userFC, ps.fc, s.runtimeFC)
+		pres, err := CompileMerged(s.userFC, ps.fc, s.runtimeFC)
 		if err != nil {
 			return fmt.Errorf("compile project config %q: %w", path, err)
 		}
-		fp, err := Fingerprint(merged)
+		pfp, err := Fingerprint(pres.Merged)
 		if err != nil {
 			return err
 		}
-		ps.snap = &Snapshot{
-			Generation:  gen,
-			Fingerprint: fp,
-			UserPath:    s.userPath,
-			RuntimePath: s.runtimePath,
-			ProjectPath: path,
-			Policy:      pol,
-			Async:       async,
-			Guards:      guards,
-			Routes:      routes,
-		}
+		ps.snap = snapshotFrom(pres, gen, pfp, s.userPath, s.runtimePath, path)
 		s.projects[path] = ps
 	}
 	return nil
 }
 
 func (s *Store) compileOneProjectLocked(ps *projectState) error {
-	pol, async, guards, routes, merged, err := CompileMerged(s.userFC, ps.fc, s.runtimeFC)
+	res, err := CompileMerged(s.userFC, ps.fc, s.runtimeFC)
 	if err != nil {
 		return fmt.Errorf("compile project config %q: %w", ps.path, err)
 	}
-	fp, err := Fingerprint(merged)
+	fp, err := Fingerprint(res.Merged)
 	if err != nil {
 		return err
 	}
 	gen := s.gen.Add(1)
-	ps.snap = &Snapshot{
-		Generation:  gen,
-		Fingerprint: fp,
-		UserPath:    s.userPath,
-		RuntimePath: s.runtimePath,
-		ProjectPath: ps.path,
-		Policy:      pol,
-		Async:       async,
-		Guards:      guards,
-		Routes:      routes,
-	}
+	ps.snap = snapshotFrom(res, gen, fp, s.userPath, s.runtimePath, ps.path)
 	return nil
+}
+
+func snapshotFrom(res CompileResult, gen uint64, fp, userPath, runtimePath, projectPath string) *Snapshot {
+	return &Snapshot{
+		Generation:      gen,
+		Fingerprint:     fp,
+		UserPath:        userPath,
+		RuntimePath:     runtimePath,
+		ProjectPath:     projectPath,
+		Policy:          res.Policy,
+		Async:           res.Async,
+		Guards:          res.Guards,
+		Approvals:       res.Approvals,
+		TemporaryBlocks: res.TemporaryBlocks,
+		Routes:          res.Routes,
+	}
 }
 
 func (s *Store) readProjectLocked(path string) (*projectState, error) {

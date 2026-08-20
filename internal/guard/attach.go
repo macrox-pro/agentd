@@ -12,19 +12,19 @@ import (
 )
 
 // AttachSecrets registers secrets scanning handlers on r.
-func AttachSecrets(r *agenthooks.Runner, cfg config.SecretsGuard) {
+func AttachSecrets(r *agenthooks.Runner, cfg config.SecretsGuard, dctx DecisionContext) {
 	if r == nil || !cfg.Enabled {
 		return
 	}
-	attachToolPre(r, secretsHandler(cfg))
+	attachToolPre(r, secretsHandler(cfg, dctx))
 }
 
 // AttachShell registers shell deny/ask handlers on r.
-func AttachShell(r *agenthooks.Runner, cfg config.ShellGuard) {
+func AttachShell(r *agenthooks.Runner, cfg config.ShellGuard, dctx DecisionContext) {
 	if r == nil || !cfg.Enabled {
 		return
 	}
-	attachToolPre(r, shellHandler(cfg))
+	attachToolPre(r, shellHandler(cfg, dctx))
 }
 
 // AttachMCP registers MCP server deny handlers on r.
@@ -53,13 +53,24 @@ func attachToolPre(r *agenthooks.Runner, handler func(context.Context, *agenthoo
 	})
 }
 
-func secretsHandler(cfg config.SecretsGuard) func(context.Context, *agenthooks.ToolPreEvent) (agenthooks.ToolPreDecision, error) {
+func secretsHandler(cfg config.SecretsGuard, dctx DecisionContext) func(context.Context, *agenthooks.ToolPreEvent) (agenthooks.ToolPreDecision, error) {
 	return func(ctx context.Context, e *agenthooks.ToolPreEvent) (agenthooks.ToolPreDecision, error) {
 		findings := Scan(e.Tool.Input, cfg.Rules)
 		if len(findings) == 0 {
 			return agenthooks.NoDecision(), nil
 		}
 		found := describe(findings)
+		fp := config.ApprovalFingerprint(
+			config.ApprovalKindSecrets,
+			e.Tool.Name,
+			config.SecretsStableKey(findingRuleIDs(findings)),
+		)
+		if approved(dctx, config.ApprovalKindSecrets, fp, e.Session.ID) {
+			agenthooks.Logger(ctx).Info("secrets guard: approval matched, skipping ask",
+				"tool", e.Tool.Name, "fingerprint", fp)
+			return agenthooks.NoDecision(), nil
+		}
+
 		agenthooks.Logger(ctx).Warn("secrets guard: credential-shaped strings in tool input",
 			"tool", e.Tool.Name, "findings", len(findings))
 
@@ -73,7 +84,7 @@ func secretsHandler(cfg config.SecretsGuard) func(context.Context, *agenthooks.T
 		return agenthooks.AskUser(fmt.Sprintf(
 			"tool call input contains credential-shaped strings: %s. Approve to accept the risk and continue; reject to block the call.",
 			found,
-		)).WithSystemMessage("secrets: " + found), nil
+		)).WithSystemMessage(fmt.Sprintf("secrets: %s; approval_fingerprint=%s", found, fp)), nil
 	}
 }
 

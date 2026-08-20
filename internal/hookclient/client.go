@@ -89,3 +89,8 @@ func (c *Client) GetConfig(ctx context.Context, req *agentdv1.GetConfigRequest) 
 func (c *Client) PatchConfig(ctx context.Context, req *agentdv1.PatchConfigRequest) (*agentdv1.PatchConfigResponse, error) {
 	return c.config.PatchConfig(ctx, req)
 }
+
+// RecordDecision records an approval in the runtime overlay.
+func (c *Client) RecordDecision(ctx context.Context, req *agentdv1.RecordDecisionRequest) (*agentdv1.RecordDecisionResponse, error) {
+	return c.config.RecordDecision(ctx, req)
+}

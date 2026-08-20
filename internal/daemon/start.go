@@ -159,6 +159,7 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	for {
 		select {
 		case <-runCtx.Done():
+			_ = store.FlushRuntime()
 			gs.GracefulStop()
 			return nil
 		case sig := <-sigCh:
@@ -168,6 +169,7 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 				}
 				continue
 			}
+			_ = store.FlushRuntime()
 			gs.GracefulStop()
 			return nil
 		case <-reloadCh:
@@ -175,6 +177,7 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 				log.Warn("config reload failed", "error", err)
 			}
 		case err := <-errCh:
+			_ = store.FlushRuntime()
 			if err != nil && err != grpc.ErrServerStopped {
 				return err
 			}

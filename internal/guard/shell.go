@@ -11,7 +11,7 @@ import (
 	"github.com/macrox-pro/agentd/internal/config"
 )
 
-func shellHandler(cfg config.ShellGuard) func(context.Context, *agenthooks.ToolPreEvent) (agenthooks.ToolPreDecision, error) {
+func shellHandler(cfg config.ShellGuard, dctx DecisionContext) func(context.Context, *agenthooks.ToolPreEvent) (agenthooks.ToolPreDecision, error) {
 	return func(ctx context.Context, e *agenthooks.ToolPreEvent) (agenthooks.ToolPreDecision, error) {
 		if e.Tool.Canonical != agenthooks.ToolShell {
 			return agenthooks.NoDecision(), nil
@@ -28,6 +28,12 @@ func shellHandler(cfg config.ShellGuard) func(context.Context, *agenthooks.ToolP
 			)), nil
 		}
 		if hit := firstSubstring(cmd, cfg.AskOn); hit != "" {
+			fp := config.ApprovalFingerprint(config.ApprovalKindShell, e.Tool.Name, hit)
+			if approved(dctx, config.ApprovalKindShell, fp, e.Session.ID) {
+				agenthooks.Logger(ctx).Info("shell guard: approval matched, skipping ask",
+					"tool", e.Tool.Name, "fingerprint", fp)
+				return agenthooks.NoDecision(), nil
+			}
 			agenthooks.Logger(ctx).Warn("shell guard: ask_on matched",
 				"tool", e.Tool.Name, "pattern", hit)
 			if !e.Can(agenthooks.CapAsk) {
@@ -38,7 +44,7 @@ func shellHandler(cfg config.ShellGuard) func(context.Context, *agenthooks.ToolP
 			return agenthooks.AskUser(fmt.Sprintf(
 				"shell command matched ask_on pattern %q. Approve to continue; reject to block.",
 				hit,
-			)).WithSystemMessage("shell: " + hit), nil
+			)).WithSystemMessage(fmt.Sprintf("shell: %s; approval_fingerprint=%s", hit, fp)), nil
 		}
 		return agenthooks.NoDecision(), nil
 	}

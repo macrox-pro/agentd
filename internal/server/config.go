@@ -58,8 +58,44 @@ func (c *configService) PatchConfig(_ context.Context, req *agentdv1.PatchConfig
 	}, nil
 }
 
-func (c *configService) RecordDecision(context.Context, *agentdv1.RecordDecisionRequest) (*agentdv1.RecordDecisionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "RecordDecision is not implemented until M7")
+func (c *configService) RecordDecision(_ context.Context, req *agentdv1.RecordDecisionRequest) (*agentdv1.RecordDecisionResponse, error) {
+	if c.store == nil {
+		return nil, status.Error(codes.FailedPrecondition, "config store unavailable")
+	}
+	scope, err := protoToApprovalScope(req.GetScope())
+	if err != nil {
+		return nil, err
+	}
+	opts := config.RecordDecisionOptions{
+		Fingerprint: req.GetApprovalFingerprint(),
+		Scope:       scope,
+		Project:     req.GetProjectRoot(),
+		SessionID:   req.GetSessionId(),
+	}
+	if ts := req.GetExpiresAt(); ts != nil {
+		opts.ExpiresAt = ts.AsTime().UTC()
+	}
+	if err := c.store.RecordDecision(opts); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "record decision: %v", err)
+	}
+	snap := c.store.Current()
+	return &agentdv1.RecordDecisionResponse{
+		Config: &agentdv1.ConfigGeneration{
+			Generation:  snap.Generation,
+			Fingerprint: snap.Fingerprint,
+		},
+	}, nil
+}
+
+func protoToApprovalScope(l agentdv1.ConfigLayer) (config.ApprovalScope, error) {
+	switch l {
+	case agentdv1.ConfigLayer_CONFIG_LAYER_PROJECT:
+		return config.ApprovalScopeProject, nil
+	case agentdv1.ConfigLayer_CONFIG_LAYER_RUNTIME:
+		return config.ApprovalScopeSession, nil
+	default:
+		return "", status.Errorf(codes.InvalidArgument, "scope must be PROJECT or RUNTIME (session), got %v", l)
+	}
 }
 
 func protoToLayer(l agentdv1.ConfigLayer) (config.Layer, error) {

@@ -25,6 +25,12 @@ func mergeFile(base *fileConfig, user *fileConfig) *fileConfig {
 		g := mergeGuardsPtr(out.Guards, user.Guards)
 		out.Guards = g
 	}
+	if user.Approvals != nil {
+		out.Approvals = mergeApprovalsPtr(out.Approvals, user.Approvals)
+	}
+	if user.Blocks != nil {
+		out.Blocks = mergeBlocksPtr(out.Blocks, user.Blocks)
+	}
 	if len(user.DispatchDefaults) > 0 {
 		dd := map[string]fileKindDefault{}
 		maps.Copy(dd, out.DispatchDefaults)

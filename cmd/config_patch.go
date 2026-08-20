@@ -23,8 +23,8 @@ var configPatchCmd = &cobra.Command{
 	Long: `Apply temporary overrides to the running service without editing your
 user or project config files.
 
-Requires a running agentd service. Changes apply in-memory until the next
-full reload from disk (runtime persist lands in a later milestone).`,
+Requires a running agentd service. Changes are applied immediately and
+persisted to the runtime overlay (debounced atomic write to runtime.yaml).`,
 	Example: `  agentd config patch --file runtime-delta.yaml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_ = args

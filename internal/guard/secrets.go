@@ -22,6 +22,7 @@ const (
 // Finding is one detected credential-shaped string. The value itself is never
 // carried — only a masked preview safe for prompts and logs.
 type Finding struct {
+	ID     string
 	Rule   string
 	Masked string
 }
@@ -76,7 +77,7 @@ func Scan(input json.RawMessage, enabledRules []string) []Finding {
 			}
 			if m := r.re.FindString(s); m != "" {
 				seen[r.id] = true
-				findings = append(findings, Finding{Rule: r.name, Masked: mask(m)})
+				findings = append(findings, Finding{ID: r.id, Rule: r.name, Masked: mask(m)})
 			}
 		}
 	})

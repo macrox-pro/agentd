@@ -6,8 +6,35 @@ type fileConfig struct {
 	Policy           *filePolicy                `yaml:"policy"`
 	Async            *fileAsync                 `yaml:"async"`
 	Guards           *fileGuards                `yaml:"guards"`
+	Approvals        *fileApprovals             `yaml:"approvals"`
+	Blocks           *fileBlocks                `yaml:"blocks"`
 	DispatchDefaults map[string]fileKindDefault `yaml:"dispatch_defaults"`
 	Dispatch         []fileRoute                `yaml:"dispatch"`
+}
+
+type fileApprovals struct {
+	Secrets []fileApproval `yaml:"secrets"`
+	Shell   []fileApproval `yaml:"shell"`
+}
+
+type fileApproval struct {
+	Fingerprint string `yaml:"fingerprint"`
+	Scope       string `yaml:"scope"`
+	Project     string `yaml:"project"`
+	SessionID   string `yaml:"session_id"`
+	ExpiresAt   string `yaml:"expires_at"`
+	GrantedBy   string `yaml:"granted_by"`
+}
+
+type fileBlocks struct {
+	Temporary []fileTemporaryBlock `yaml:"temporary"`
+}
+
+type fileTemporaryBlock struct {
+	Tool    string `yaml:"tool"`
+	Pattern string `yaml:"pattern"`
+	Reason  string `yaml:"reason"`
+	Until   string `yaml:"until"`
 }
 
 type filePolicy struct {

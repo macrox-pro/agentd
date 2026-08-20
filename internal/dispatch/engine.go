@@ -71,9 +71,12 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 
 	mode := config.NormalizeMode(route.Mode)
 	builtin := &targets.Builtin{
-		Guards: in.Snap.Guards,
-		Policy: in.Snap.Policy,
-		Log:    e.log,
+		Guards:          in.Snap.Guards,
+		Policy:          in.Snap.Policy,
+		Approvals:       in.Snap.Approvals,
+		TemporaryBlocks: in.Snap.TemporaryBlocks,
+		ProjectRoot:     targets.ProjectRootOf(in.Snap),
+		Log:             e.log,
 	}
 	providerName, _ := providerName(in.Provider)
 	eventKind := targets.EventKindOf(typed)

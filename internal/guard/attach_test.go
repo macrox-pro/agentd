@@ -56,7 +56,7 @@ func TestAttachSecrets(t *testing.T) {
 				Enabled: true,
 				Action:  tt.action,
 				Rules:   config.DefaultSecretsRules,
-			})
+			}, guard.DecisionContext{})
 
 			ev := &agenthooks.ToolPreEvent{
 				Event: agenthooks.Event{
@@ -82,7 +82,7 @@ func TestAttachSecrets(t *testing.T) {
 func TestAttachSecretsDisabled(t *testing.T) {
 	t.Parallel()
 	r := agenthooks.New()
-	guard.AttachSecrets(r, config.SecretsGuard{Enabled: false, Action: config.GuardAsk})
+	guard.AttachSecrets(r, config.SecretsGuard{Enabled: false, Action: config.GuardAsk}, guard.DecisionContext{})
 	ev := &agenthooks.ToolPreEvent{
 		Event: agenthooks.Event{Provider: agenthooks.ProviderClaudeCode, Kind: agenthooks.KindToolPre},
 		Tool:  agenthooks.ToolCall{Name: "Bash", Input: json.RawMessage(`{"command":"AKIAIOSFODNN7EXAMPLE"}`)},

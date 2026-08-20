@@ -75,7 +75,7 @@ func TestAttachShell(t *testing.T) {
 				Enabled:      true,
 				DenyPatterns: []string{"rm -rf /"},
 				AskOn:        []string{"curl"},
-			})
+			}, guard.DecisionContext{})
 			input, err := json.Marshal(map[string]string{"command": tt.command})
 			require.NoError(t, err)
 			ev := &agenthooks.ToolPreEvent{
@@ -103,7 +103,7 @@ func TestAttachShellDisabled(t *testing.T) {
 	guard.AttachShell(r, config.ShellGuard{
 		Enabled:      false,
 		DenyPatterns: []string{"rm -rf /"},
-	})
+	}, guard.DecisionContext{})
 	ev := &agenthooks.ToolPreEvent{
 		Event: agenthooks.Event{Provider: agenthooks.ProviderClaudeCode, Kind: agenthooks.KindToolPre},
 		Tool: agenthooks.ToolCall{
