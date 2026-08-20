@@ -27,6 +27,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/transport"
 )
 
 var (
@@ -44,6 +47,8 @@ fire hooks.
 
 Use "agentd daemon" to start and manage the service, and "agentd hook" as the
 command agents call from their hook settings.`,
+	Example: `  agentd daemon start
+  agentd hook run --provider=claude-code`,
 }
 
 func Execute() {
@@ -79,4 +84,18 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil && verbose {
 		fmt.Fprintln(os.Stderr, "using config file:", viper.ConfigFileUsed())
 	}
+}
+
+func resolveSocket() string {
+	if socketPath != "" {
+		return socketPath
+	}
+	return transport.DefaultSocketPath()
+}
+
+func resolveConfigPath() string {
+	if cfgFile != "" {
+		return cfgFile
+	}
+	return config.DefaultUserPath()
 }

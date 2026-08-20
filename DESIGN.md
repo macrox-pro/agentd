@@ -354,11 +354,12 @@ CLI families mirror process roles:
 
 ```
 agentd
-├── daemon/     # lifecycle
-├── hook/       # agent entrypoint
-├── install/    # agenthooks install wrapper
-├── config/     # config ops
-└── dispatch/   # route introspection
+├── daemon/      # lifecycle
+├── hook/        # agent entrypoint
+├── agenthooks/  # Hidden install argv sentinel (same as hook *)
+├── install/     # agenthooks install wrapper
+├── config/      # config ops
+└── dispatch/    # route introspection
 ```
 
 **Persistent flags:** `--config`, `--socket`, `-v` (stderr only; never hook stdout).

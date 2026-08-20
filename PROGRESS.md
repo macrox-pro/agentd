@@ -5,7 +5,7 @@
 
 ## Current phase
 
-Phase: m5 | Last: m4-complete | Next: ConfigService (Deferred)
+Phase: m5 | Last: cmd-conventions-refactor | Next: ConfigService (Deferred)
 
 ## agents_md_ready
 
@@ -16,8 +16,15 @@ true
 - AGENTS.md read: yes (2026-08-20)
 - CONVENTIONS.md read: yes (2026-08-20) — root `CONVENTIONS.md`
 - M4 complete: gRPC forward (sync+async), OpenCode serve + notify, agenthooks sentinel, install wrapper, Windows SID pipe path, e2e-m4
+- cmd/ refactor (AGENTS/CONVENTIONS): one file per subcommand; Cobra-thin; WriteStatus/Reload/FormatRoutes/DefaultUserPath in internal/; hook↔agenthooks builders shared; notimpl.go removed
 
-## M4 checklist
+## Files touched (cmd conventions refactor)
+
+- cmd/{root,daemon,daemon_*,hook,hook_*,agenthooks,agenthooks_*,install,config,config_*,dispatch,dispatch_routes}.go; deleted notimpl.go
+- internal/config/{paths,format_routes}.go + tests
+- internal/daemon/{status_write,reload}.go + status_write_test.go
+- DESIGN.md §6 CLI tree (agenthooks/)
+- PROGRESS.md
 
 ### Phase 0
 - [x] m4-p0-agents
