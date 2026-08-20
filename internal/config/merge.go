@@ -100,24 +100,119 @@ func mergeGuardsPtr(base, user *fileGuards) *fileGuards {
 		return nil
 	}
 	out := fileGuards{}
-	if base != nil && base.Secrets != nil {
-		s := *base.Secrets
-		out.Secrets = &s
+	if base != nil {
+		if base.Secrets != nil {
+			s := *base.Secrets
+			out.Secrets = &s
+		}
+		if base.Shell != nil {
+			s := *base.Shell
+			out.Shell = &s
+		}
+		if base.MCP != nil {
+			m := *base.MCP
+			out.MCP = &m
+		}
+		if base.Paths != nil {
+			p := *base.Paths
+			out.Paths = &p
+		}
 	}
-	if user == nil || user.Secrets == nil {
+	if user == nil {
 		return &out
 	}
-	if out.Secrets == nil {
-		out.Secrets = &fileSecretsGuard{}
+	out.Secrets = mergeSecretsGuardPtr(out.Secrets, user.Secrets)
+	out.Shell = mergeShellGuardPtr(out.Shell, user.Shell)
+	out.MCP = mergeMCPGuardPtr(out.MCP, user.MCP)
+	out.Paths = mergePathsGuardPtr(out.Paths, user.Paths)
+	return &out
+}
+
+func mergeSecretsGuardPtr(base, user *fileSecretsGuard) *fileSecretsGuard {
+	if base == nil && user == nil {
+		return nil
 	}
-	if user.Secrets.Enabled != nil {
-		out.Secrets.Enabled = user.Secrets.Enabled
+	out := fileSecretsGuard{}
+	if base != nil {
+		out = *base
 	}
-	if user.Secrets.Action != "" {
-		out.Secrets.Action = user.Secrets.Action
+	if user == nil {
+		return &out
 	}
-	if user.Secrets.Rules != nil {
-		out.Secrets.Rules = append([]string(nil), user.Secrets.Rules...)
+	if user.Enabled != nil {
+		out.Enabled = user.Enabled
+	}
+	if user.Action != "" {
+		out.Action = user.Action
+	}
+	if user.Rules != nil {
+		out.Rules = append([]string(nil), user.Rules...)
+	}
+	return &out
+}
+
+func mergeShellGuardPtr(base, user *fileShellGuard) *fileShellGuard {
+	if base == nil && user == nil {
+		return nil
+	}
+	out := fileShellGuard{}
+	if base != nil {
+		out = *base
+	}
+	if user == nil {
+		return &out
+	}
+	if user.Enabled != nil {
+		out.Enabled = user.Enabled
+	}
+	if user.DenyPatterns != nil {
+		out.DenyPatterns = append([]string(nil), user.DenyPatterns...)
+	}
+	if user.AskOn != nil {
+		out.AskOn = append([]string(nil), user.AskOn...)
+	}
+	return &out
+}
+
+func mergeMCPGuardPtr(base, user *fileMCPGuard) *fileMCPGuard {
+	if base == nil && user == nil {
+		return nil
+	}
+	out := fileMCPGuard{}
+	if base != nil {
+		out = *base
+	}
+	if user == nil {
+		return &out
+	}
+	if user.Enabled != nil {
+		out.Enabled = user.Enabled
+	}
+	if user.DenyServers != nil {
+		out.DenyServers = append([]string(nil), user.DenyServers...)
+	}
+	return &out
+}
+
+func mergePathsGuardPtr(base, user *filePathsGuard) *filePathsGuard {
+	if base == nil && user == nil {
+		return nil
+	}
+	out := filePathsGuard{}
+	if base != nil {
+		out = *base
+	}
+	if user == nil {
+		return &out
+	}
+	if user.Enabled != nil {
+		out.Enabled = user.Enabled
+	}
+	if user.DenyRead != nil {
+		out.DenyRead = append([]string(nil), user.DenyRead...)
+	}
+	if user.DenyWrite != nil {
+		out.DenyWrite = append([]string(nil), user.DenyWrite...)
 	}
 	return &out
 }

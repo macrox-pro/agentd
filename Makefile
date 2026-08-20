@@ -27,6 +27,7 @@ e2e:
 	@bash scripts/e2e-m3.sh
 	@bash scripts/e2e-m4.sh
 	@bash scripts/e2e-m5.sh
+	@bash scripts/e2e-m6.sh
 
 start: build
 	@./$(BIN) daemon start

@@ -620,13 +620,13 @@ agentd/
 | **M3** | done | Forward targets (exec, http, log, file); full dispatch YAML; fsnotify reload |
 | **M4** | done | gRPC forward; OpenCode serve bridge; install wrapper; Windows npipe hardening |
 | **M5** | done | Config layers (project + runtime); ConfigService; config CLI; merged fingerprint |
-| **M6** | planned | Guards: shell, mcp, paths |
+| **M6** | done | Guards: shell, mcp, paths |
 | **M7** | planned | Approvals / `RecordDecision`; runtime persist; temporary blocks |
 | **M8 / v1** | planned | Ops polish, conformance, docs freeze, release gate |
 
 Session checklists and verify commands: [PROGRESS.md](./PROGRESS.md).
 
-### Done (M0–M5)
+### Done (M0–M6)
 
 M1 acceptance: `daemon start|status|reload|stop` and `hook run --provider=…` round-trip.
 
@@ -638,20 +638,7 @@ M4 acceptance: declarative `target: grpc` (sync+async); `hook serve` / `hook not
 
 M5 acceptance: four-layer merge; ConfigService Get/Patch; `config validate|show|patch`; merged fingerprint; project-aware Invoke; `scripts/e2e-m5.sh`. (`RecordDecision` body and runtime.yaml disk flush → M7.)
 
-### M6 — Remaining guards
-
-**Goal:** Declarative guards match DESIGN §7 (beyond secrets).
-
-| Phase | Work |
-|-------|------|
-| A | Schema + compile: `guards.shell`, `guards.mcp`, `guards.paths` (+ defaults) |
-| B | `internal/guard`: shell deny/ask patterns on tool.pre |
-| C | MCP deny_servers / allowlist on MCP tool events |
-| D | Paths deny_read / deny_write on file/tool path fields |
-| E | Builtin target attaches selected guards by route `guards: [...]` |
-| F | `scripts/e2e-m6.sh` |
-
-**Acceptance:** YAML enables each guard; Ask/Deny honor `policy` + provider caps; route can select subset; e2e-m6 green.
+M6 acceptance: declarative `guards.shell` / `mcp` / `paths`; Ask/Deny honor policy + provider caps; route `guards: [...]` subset; `scripts/e2e-m6.sh`.
 
 ### M7 — Approvals and runtime decisions
 

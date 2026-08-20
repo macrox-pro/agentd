@@ -26,12 +26,32 @@ type fileAsync struct {
 
 type fileGuards struct {
 	Secrets *fileSecretsGuard `yaml:"secrets"`
+	Shell   *fileShellGuard   `yaml:"shell"`
+	MCP     *fileMCPGuard     `yaml:"mcp"`
+	Paths   *filePathsGuard   `yaml:"paths"`
 }
 
 type fileSecretsGuard struct {
 	Enabled *bool    `yaml:"enabled"`
 	Action  string   `yaml:"action"`
 	Rules   []string `yaml:"rules"`
+}
+
+type fileShellGuard struct {
+	Enabled      *bool    `yaml:"enabled"`
+	DenyPatterns []string `yaml:"deny_patterns"`
+	AskOn        []string `yaml:"ask_on"`
+}
+
+type fileMCPGuard struct {
+	Enabled     *bool    `yaml:"enabled"`
+	DenyServers []string `yaml:"deny_servers"`
+}
+
+type filePathsGuard struct {
+	Enabled   *bool    `yaml:"enabled"`
+	DenyRead  []string `yaml:"deny_read"`
+	DenyWrite []string `yaml:"deny_write"`
 }
 
 type fileKindDefault struct {

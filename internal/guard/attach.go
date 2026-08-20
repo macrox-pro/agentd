@@ -16,7 +16,34 @@ func AttachSecrets(r *agenthooks.Runner, cfg config.SecretsGuard) {
 	if r == nil || !cfg.Enabled {
 		return
 	}
-	handler := secretsHandler(cfg)
+	attachToolPre(r, secretsHandler(cfg))
+}
+
+// AttachShell registers shell deny/ask handlers on r.
+func AttachShell(r *agenthooks.Runner, cfg config.ShellGuard) {
+	if r == nil || !cfg.Enabled {
+		return
+	}
+	attachToolPre(r, shellHandler(cfg))
+}
+
+// AttachMCP registers MCP server deny handlers on r.
+func AttachMCP(r *agenthooks.Runner, cfg config.MCPGuard) {
+	if r == nil || !cfg.Enabled {
+		return
+	}
+	attachToolPre(r, mcpHandler(cfg))
+}
+
+// AttachPaths registers filesystem path deny handlers on r.
+func AttachPaths(r *agenthooks.Runner, cfg config.PathsGuard) {
+	if r == nil || !cfg.Enabled {
+		return
+	}
+	attachToolPre(r, pathsHandler(cfg))
+}
+
+func attachToolPre(r *agenthooks.Runner, handler func(context.Context, *agenthooks.ToolPreEvent) (agenthooks.ToolPreDecision, error)) {
 	r.OnToolPre(handler)
 	r.OnPermission(func(ctx context.Context, e *agenthooks.PermissionEvent) (agenthooks.ToolPreDecision, error) {
 		return handler(ctx, &agenthooks.ToolPreEvent{

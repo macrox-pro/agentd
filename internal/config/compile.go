@@ -166,8 +166,8 @@ func compileOneTarget(ft fileTarget, sync bool) (CompiledTarget, error) {
 	switch kind {
 	case TargetBuiltin:
 		for _, g := range ct.Guards {
-			if g != guardNameSecrets {
-				return CompiledTarget{}, fmt.Errorf("unknown guard %q (only secrets is implemented)", g)
+			if !knownGuardName(g) {
+				return CompiledTarget{}, fmt.Errorf("unknown guard %q", g)
 			}
 		}
 		if !sync && !ct.Observe && len(ct.Guards) == 0 {
@@ -243,10 +243,11 @@ func compileDefaultRoutes(kinds map[string]KindDefault, guards Guards) []Compile
 		}
 		switch mode {
 		case ModeSyncOnly, ModeParallel, ModeAfterSync:
-			if guards.Secrets.Enabled {
+			names := enabledGuardNames(guards)
+			if len(names) > 0 {
 				r.Sync = []CompiledTarget{{
 					Kind:   TargetBuiltin,
-					Guards: []string{guardNameSecrets},
+					Guards: names,
 				}}
 			} else {
 				r.Sync = []CompiledTarget{{Kind: TargetBuiltin}}

@@ -44,6 +44,9 @@ func defaultGuards() Guards {
 			Action:  GuardAsk,
 			Rules:   rules,
 		},
+		Shell: ShellGuard{Enabled: false},
+		MCP:   MCPGuard{Enabled: false},
+		Paths: PathsGuard{Enabled: false},
 	}
 }
 

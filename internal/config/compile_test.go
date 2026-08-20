@@ -195,10 +195,57 @@ dispatch:
     mode: sync_only
     sync:
       - target: builtin
-        guards: [shell]
+        guards: [nope]
 `,
 			wantErr: true,
 		},
+		{
+			name: "accept shell mcp paths guards",
+			content: `version: 1
+guards:
+  shell:
+    enabled: true
+    deny_patterns: ["rm -rf /"]
+    ask_on: [curl]
+  mcp:
+    enabled: true
+    deny_servers: ["untrusted-*"]
+  paths:
+    enabled: true
+    deny_read: ["/etc/shadow"]
+    deny_write: ["**/.env"]
+dispatch:
+  - name: gate
+    match:
+      kind: [tool.pre]
+    mode: sync_only
+    sync:
+      - target: builtin
+        guards: [secrets, shell, mcp, paths]
+`,
+			check: func(t *testing.T, snap *config.Snapshot) {
+				t.Helper()
+				assert.True(t, snap.Guards.Shell.Enabled, "shell.enabled")
+				assert.Equal(t, []string{"rm -rf /"}, snap.Guards.Shell.DenyPatterns)
+				assert.Equal(t, []string{"curl"}, snap.Guards.Shell.AskOn)
+				assert.True(t, snap.Guards.MCP.Enabled, "mcp.enabled")
+				assert.Equal(t, []string{"untrusted-*"}, snap.Guards.MCP.DenyServers)
+				assert.True(t, snap.Guards.Paths.Enabled, "paths.enabled")
+				assert.Equal(t, []string{"/etc/shadow"}, snap.Guards.Paths.DenyRead)
+				assert.Equal(t, []string{"**/.env"}, snap.Guards.Paths.DenyWrite)
+				found := false
+				for _, r := range snap.Routes {
+					if r.Name != "gate" {
+						continue
+					}
+					found = true
+					require.Len(t, r.Sync, 1)
+					assert.Equal(t, []string{"secrets", "shell", "mcp", "paths"}, r.Sync[0].Guards)
+				}
+				assert.True(t, found, "gate route")
+			},
+		},
+
 	}
 
 	for _, tt := range tests {

@@ -48,6 +48,12 @@ func (b *Builtin) newRunner(guardNames []string, observeOnly bool) *agenthooks.R
 		switch name {
 		case "secrets":
 			guard.AttachSecrets(r, b.Guards.Secrets)
+		case "shell":
+			guard.AttachShell(r, b.Guards.Shell)
+		case "mcp":
+			guard.AttachMCP(r, b.Guards.MCP)
+		case "paths":
+			guard.AttachPaths(r, b.Guards.Paths)
 		}
 	}
 	return r

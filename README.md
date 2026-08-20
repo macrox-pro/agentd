@@ -8,7 +8,7 @@ agentd sits between your AI coding agents (Claude Code, Cursor, Codex, Gemini CL
 ![Go Version](https://img.shields.io/badge/go-1.26+-00ADD8?logo=go)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-> **Status:** Early development (M0–M5 done; M6→v1 planned). API and config schema may change before v1. Roadmap: [DESIGN.md §13](./DESIGN.md#13-milestones).
+> **Status:** Early development (M0–M6 done; M7→v1 planned). API and config schema may change before v1. Roadmap: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
 ## Why agentd?
 
