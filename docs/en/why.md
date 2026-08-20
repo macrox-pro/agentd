@@ -22,6 +22,13 @@ Not an agent auth product, transcript pipeline, plugin runtime, or general hooks
 
 ## Who it is for
 
-Engineers who run coding-agent hooks in real workflows and need **one** place for secrets/shell/MCP/path guards, optional forward targets, and provider-faithful responses.
+Engineers and teams who already run coding agents in real workflows and want **one** place to:
+
+- **Guard** — secrets / shell / MCP / paths, Ask / Deny, temporary blocks;
+- **Observe** — async sinks (`log` / `http` / `exec` / …) without blocking the agent response;
+- **Understand agent behavior** — a single hook stream across providers plus ops status (`daemon status`: queue depth, dropped async work);
+- **Respond in the provider’s native format** without re-implementing each agent’s dialect in your scripts.
+
+Nearby cases: audit of “what the agent tried,” metrics/alerts on hooks, one policy across Claude + Cursor + … without duplicated glue.
 
 Next: [Getting started](./getting-started.md) · architecture: [DESIGN.md](../../DESIGN.md).
