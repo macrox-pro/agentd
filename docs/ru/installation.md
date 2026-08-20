@@ -2,7 +2,7 @@
 
 > **Language:** [English](../en/installation.md) · [Русский](./installation.md)
 
-Как получить бинарник `agentd` в `PATH`. Для сборки из исходников нужен Go **1.26+**.
+Как получить исполняемый файл `agentd` в `PATH`. Для сборки из исходников нужен Go **1.26+**.
 
 ## go install
 
@@ -10,11 +10,11 @@
 go install github.com/macrox-pro/agentd@latest
 ```
 
-Устанавливает в `$(go env GOPATH)/bin` (каталог должен быть в `PATH`).
+Ставит бинарник в `$(go env GOPATH)/bin` (этот каталог должен быть в `PATH`).
 
-## GitHub Releases
+## Готовые сборки (GitHub Releases)
 
-Готовые бинарники (linux / darwin / windows, amd64 / arm64) публикуются через goreleaser на [GitHub Releases](https://github.com/macrox-pro/agentd/releases).
+Бинарники для linux / darwin / windows (amd64 / arm64) публикуются через goreleaser на [странице релизов](https://github.com/macrox-pro/agentd/releases).
 
 ## Сборка из исходников
 
@@ -24,15 +24,15 @@ cd agentd
 make build
 ```
 
-`make build` пишет `./agentd` и через ldflags задаёт `internal/version.Version` (локально по умолчанию `dev`). Теги релизов подставляют semver через goreleaser.
+`make build` создаёт `./agentd` и через флаги компоновщика (`ldflags`) задаёт `internal/version.Version` (локально по умолчанию `dev`). При выпуске тега goreleaser подставляет semver.
 
-`agentd daemon status` показывает поле `version`.
+Поле `version` видно в `agentd daemon status`.
 
 ## Требования
 
 - Linux, macOS или Windows
-- Поддерживаемый coding agent ([Providers](./providers.md))
+- Поддерживаемый ИИ-агент для кода ([Провайдеры](./providers.md))
 
-Регенерация proto (для контрибьюторов): `make generate` (нужен [buf](https://buf.build)).
+Пересборка protobuf (для разработчиков проекта): `make generate` (нужен [buf](https://buf.build)).
 
 См. также: [Быстрый старт](./getting-started.md).

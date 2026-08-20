@@ -41,16 +41,16 @@ agentd centralizes hook logic in a **long-lived daemon** while keeping the **age
 
 ## Supported agents
 
-| Agent | Hook install target | Entry command |
-|-------|---------------------|---------------|
-| Claude Code | `.claude/settings.json`, plugins | `agentd hook run --provider=claude-code` |
-| Cursor | `hooks.json` | `agentd hook run --provider=cursor` |
-| OpenAI Codex | `hooks.json` / `config.toml` | `agentd hook run --provider=codex` |
-| Gemini CLI | `settings.json` | `agentd hook run --provider=gemini` |
-| OpenCode | plugin shim (stdio) | `agentd hook serve --provider=opencode` |
-| Kimi Code | project settings | `agentd hook run --provider=kimicode` |
+| Agent | Hook install target | Entry command | Guide |
+|-------|---------------------|---------------|-------|
+| Claude Code | `.claude/settings.json`, plugins | `agentd hook run --provider=claude-code` | [docs](./docs/en/providers-claude-code.md) |
+| Cursor | `.cursor/hooks.json` | `agentd hook run --provider=cursor` | [docs](./docs/en/providers-cursor.md) |
+| OpenAI Codex | `hooks.json` / `config.toml` | `agentd hook run --provider=codex` | [docs](./docs/en/providers-codex.md) |
+| Gemini CLI | `.gemini/settings.json` | `agentd hook run --provider=gemini` | [docs](./docs/en/providers-gemini.md) |
+| OpenCode | `.opencode/plugin` shim | `agentd hook serve --provider=opencode` | [docs](./docs/en/providers-opencode.md) |
+| Kimi Code | user `~/.kimi-code/config.toml` only | `agentd hook run --provider=kimi-code` | [docs](./docs/en/providers-kimi.md) |
 
-Provider quirks (timeouts, fail-open vs fail-closed, MCP naming) are encoded once — via agenthooks — not in your hook scripts.
+Provider quirks (Ask support, empty stdout, timeouts, install scope): [docs/en/providers.md](./docs/en/providers.md).
 
 ## Architecture
 

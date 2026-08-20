@@ -70,7 +70,7 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
 - AGENTS.md / CONVENTIONS.md read: yes (2026-08-20)
 - M8 complete: Status drop counter; SyncBudget + route.sync_timeout; conformance; integration tag; docs freeze; goreleaser/CI; e2e-m8
-- User docs: bilingual `docs/en/` + `docs/ru/`; maintenance process in `docs/*/maintaining.md`; `make docs-check`
+- User docs: bilingual `docs/en/` + `docs/ru/`; per-provider guides + quirks (`providers-*.md`); maintenance in `docs/*/maintaining.md`; `make docs-check`
 - Key files: `api/agentd/v1/daemon.proto`, `internal/dispatch/timeout.go`, `internal/hookedge/{conformance_test,roundtrip_integration_test}.go`, `internal/version/version.go`, `scripts/e2e-m8.sh`, `.goreleaser.yaml`, `.github/workflows/`, `docs/`
 
 ## Verify (last green)

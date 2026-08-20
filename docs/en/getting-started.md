@@ -51,7 +51,7 @@ agentd install --provider=claude-code --scope=project
 
 Generated configs call `agentd agenthooks …` (hidden alias of `agentd hook …`). Prefer documenting `hook run` / `hook serve` / `hook notify`.
 
-Providers and scopes: [Providers](./providers.md).
+Providers, scopes, and quirks: [Providers](./providers.md).
 
 ## 5. Verify
 

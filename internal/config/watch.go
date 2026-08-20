@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -10,7 +11,10 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-const defaultWatchDebounce = 300 * time.Millisecond
+const (
+	defaultWatchDebounce = 300 * time.Millisecond
+	watchDirPerm         = 0o700
+)
 
 type watchKind int
 
@@ -145,6 +149,12 @@ func (w *Watcher) addFile(path string) {
 	}
 	dir := filepath.Dir(abs)
 	if w.dirs[dir] == 0 {
+		if err := os.MkdirAll(dir, watchDirPerm); err != nil {
+			if w.log != nil {
+				w.log.Warn("config watch mkdir", "path", dir, "error", err)
+			}
+			return
+		}
 		if err := fw.Add(dir); err != nil {
 			if w.log != nil {
 				w.log.Warn("config watch add", "path", dir, "error", err)

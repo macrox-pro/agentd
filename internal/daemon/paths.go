@@ -56,8 +56,13 @@ func (p Paths) ReadPID() (int, error) {
 	return pid, nil
 }
 
+// ClearPID removes the PID file so Stop waiters observe shutdown promptly.
+func (p Paths) ClearPID() {
+	_ = os.Remove(p.PID)
+}
+
 // RemoveStale removes PID and socket files after shutdown.
 func (p Paths) RemoveStale() {
-	_ = os.Remove(p.PID)
+	p.ClearPID()
 	_ = os.Remove(p.Socket)
 }

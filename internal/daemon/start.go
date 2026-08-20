@@ -156,11 +156,18 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	notifyReload(reloadCh)
 	defer signal.Stop(reloadCh)
 
+	shutdown := func() {
+		// Drop PID before signal.Stop / queue drain so Stop does not fall through
+		// to SIGTERM against this process (foreground PID == os.Getpid()).
+		paths.ClearPID()
+		_ = store.FlushRuntime()
+		gs.GracefulStop()
+	}
+
 	for {
 		select {
 		case <-runCtx.Done():
-			_ = store.FlushRuntime()
-			gs.GracefulStop()
+			shutdown()
 			return nil
 		case sig := <-sigCh:
 			if isReloadSignal(sig) {
@@ -169,14 +176,14 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 				}
 				continue
 			}
-			_ = store.FlushRuntime()
-			gs.GracefulStop()
+			shutdown()
 			return nil
 		case <-reloadCh:
 			if err := store.Reload(context.Background()); err != nil {
 				log.Warn("config reload failed", "error", err)
 			}
 		case err := <-errCh:
+			paths.ClearPID()
 			_ = store.FlushRuntime()
 			if err != nil && err != grpc.ErrServerStopped {
 				return err

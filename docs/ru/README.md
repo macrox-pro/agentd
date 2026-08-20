@@ -2,25 +2,25 @@
 
 > **Language:** [English](../en/README.md) · [Русский](./README.md)
 
-Установка, конфигурация и эксплуатация agentd (v1). Текст сверен с CLI и YAML-схемой.
+Установка, настройка и эксплуатация agentd (v1). Содержание сверено с CLI и схемой YAML.
 
-Сначала [Зачем нужен agentd](./why.md), если нужна постановка задачи; иначе [Быстрый старт](./getting-started.md).
+Начните с [Зачем нужен agentd](./why.md), если нужна постановка задачи; иначе — с [Быстрого старта](./getting-started.md).
 
 ## Содержание
 
-| Страница | Содержание |
-|----------|------------|
-| [Зачем нужен agentd](./why.md) | Проблемы, боли, чем v1 является / не является |
-| [Быстрый старт](./getting-started.md) | Демон, минимальный конфиг, install hooks, проверка |
-| [Установка](./installation.md) | `go install`, Releases, сборка из исходников |
-| [Конфигурация](./configuration.md) | Слои, ключи YAML, validate/show/patch, reload |
-| [CLI](./cli.md) | Команды и флаги |
-| [Guards](./guards.md) | secrets, shell, mcp, paths |
-| [Dispatch](./dispatch.md) | Режимы, targets, таймауты, async queue |
-| [Approvals](./approvals.md) | Ask → record-decision, blocks, persist |
-| [Providers](./providers.md) | Install и entrypoint по агентам |
-| [Эксплуатация](./operations.md) | Status, stop, reload |
-| [Troubleshooting](./troubleshooting.md) | Типичные сбои |
-| [Актуализация docs](./maintaining.md) | Когда/как обновлять EN+RU (для контрибьюторов) |
+| Страница | О чём |
+|----------|--------|
+| [Зачем нужен agentd](./why.md) | Задачи продукта, боли, границы v1 |
+| [Быстрый старт](./getting-started.md) | Демон, минимальный конфиг, установка хуков, проверка |
+| [Установка](./installation.md) | `go install`, релизы, сборка из исходников |
+| [Конфигурация](./configuration.md) | Слои конфига, ключи YAML, validate/show/patch, перезагрузка |
+| [Справочник CLI](./cli.md) | Команды и флаги |
+| [Охранники (guards)](./guards.md) | `secrets`, `shell`, `mcp`, `paths` |
+| [Маршрутизация (dispatch)](./dispatch.md) | Режимы, цели, таймауты, асинхронная очередь |
+| [Одобрения (approvals)](./approvals.md) | Ask → `record-decision`, временные блокировки, сохранение |
+| [Провайдеры](./providers.md) | Install, точки входа и **особенности** — [Claude](./providers-claude-code.md) · [Cursor](./providers-cursor.md) · [Codex](./providers-codex.md) · [Gemini](./providers-gemini.md) · [OpenCode](./providers-opencode.md) · [Kimi](./providers-kimi.md) |
+| [Эксплуатация](./operations.md) | Статус, остановка, перезагрузка конфига |
+| [Диагностика](./troubleshooting.md) | Типичные сбои |
+| [Актуализация документации](./maintaining.md) | Когда и как обновлять EN+RU (для разработчиков) |
 
 Архитектура: [DESIGN.md](../../DESIGN.md).

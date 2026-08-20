@@ -1,54 +1,47 @@
-# Providers
+# Провайдеры
 
 > **Language:** [English](../en/providers.md) · [Русский](./providers.md)
 
-Цели install и entrypoint hooks по coding agent.
+Как установить хуки agentd в каждого поддерживаемого агента, какой командой он вызывает agentd и **какие особенности** (возможности протокола, формат ответа, пути install).
 
-## Поддерживаемые `--provider`
+**Условие:** `agentd daemon start` ([Быстрый старт](./getting-started.md)).
 
-| Флаг | Агент | Entrypoint |
-|------|-------|------------|
-| `claude-code` | Claude Code | `hook run` |
-| `cursor` | Cursor | `hook run` (часто `--argv-payload`) |
-| `codex` | OpenAI Codex | `hook run` / `hook notify` |
-| `gemini` | Gemini CLI | `hook run` |
-| `opencode` | OpenCode | `hook serve` |
-| `kimicode` / `kimi-code` | Kimi Code | `hook run` |
+## Руководства по агентам
 
-Install принимает те же строки. Для encode у Kimi предпочтителен `kimi-code` (имя agenthooks); `kimicode` принимает parse в agentd.
+| Агент | `--provider` | Точка входа | Страница |
+|-------|--------------|-------------|----------|
+| Claude Code | `claude-code` | `hook run` (stdin) | [providers-claude-code.md](./providers-claude-code.md) |
+| Cursor | `cursor` | `hook run` (`--argv-payload`) | [providers-cursor.md](./providers-cursor.md) |
+| OpenAI Codex | `codex` | `hook run` + `hook notify` | [providers-codex.md](./providers-codex.md) |
+| Gemini CLI | `gemini` | `hook run` (stdin) | [providers-gemini.md](./providers-gemini.md) |
+| OpenCode | `opencode` | `hook serve` (NDJSON) | [providers-opencode.md](./providers-opencode.md) |
+| Kimi Code | `kimi-code` / `kimicode` | `hook run` | [providers-kimi.md](./providers-kimi.md) |
 
-## install
+## Особенности одним взглядом
+
+| Провайдер | Ask на tool.pre | «Пустой» ответ | Важные ограничения |
+|-----------|-----------------|----------------|--------------------|
+| Claude | да | `{}` + код 0 | Полный Ask/Deny/Allow на PreToolUse |
+| Cursor | только shell/MCP | диалект Cursor | URL в команде ломает install; async не меняет sync |
+| Codex | **нет** Ask | **пустой** stdout + код 0 | Trust в `config.toml`; notify только async |
+| Gemini | да | свой диалект + дисциплина stderr | Таймауты в **мс**; не писать debug в stderr с hookedge |
+| OpenCode | **нет** Ask на tool.pre | кадры serve | Долгий `serve`; mutex сессии в демоне |
+| Kimi | **нет** Ask | **пустой** stdout + код 0 | Только user install; в JSON только deny/allow |
+
+Матрица возможностей — из agenthooks; охранники agentd опираются на то, что провайдер умеет выразить (`policy.ask_fallback`, если Ask недоступен).
+
+## Общее поведение install
 
 ```bash
-agentd install --provider=claude-code --scope=project --dir /path/to/repo
+agentd install --provider=PROVIDER --scope=SCOPE [--dir PATH]
 ```
 
 | `--scope` | Смысл |
 |-----------|--------|
-| `project` (default) | Project hook settings |
-| `user` | User-level |
-| `plugin` | Plugin target |
+| `project` (по умолчанию) | Настройки в каталоге проекта |
+| `user` | Домашний каталог настроек агента (укажите `--dir`) |
+| `plugin` | Раскладка плагина (Claude, Cursor) |
 
-Пишет конфиги через agenthooks; `Command` — абсолютный путь к `agentd`. Сгенерированный argv использует hidden sentinel `agentd agenthooks …` (эквивалент `hook …`).
+В argv агента — `agentd agenthooks …`. Таймауты HookSpec: ToolPre / PromptSubmitted **30 s**; короткие виды **5 s**.
 
-Таймауты HookSpec при install: ToolPre / PromptSubmitted **30s**; короткие hooks **5s** — defaults sync budget без deadline у Invoke ([Dispatch](./dispatch.md)).
-
-## OpenCode
-
-Долгоживущий NDJSON:
-
-```bash
-agentd hook serve --provider=opencode
-```
-
-Install может сгенерировать `agentd agenthooks serve --provider=opencode`.
-
-## Codex notify
-
-```bash
-agentd hook notify --provider=codex '{"type":"agent-turn-complete"}'
-```
-
-Async-семантика; пустой stdout — валидный no-op для Codex.
-
-Codecs: [agenthooks](https://github.com/speakeasy-api/agenthooks). Архитектура: [DESIGN.md §1](../../DESIGN.md).
+Дизайн: [DESIGN.md §1–§2](../../DESIGN.md) · кодеки: [agenthooks](https://github.com/speakeasy-api/agenthooks).

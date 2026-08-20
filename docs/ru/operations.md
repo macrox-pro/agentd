@@ -2,46 +2,46 @@
 
 > **Language:** [English](../en/operations.md) · [Русский](./operations.md)
 
-Day-2 управление user-демоном.
+Повседневное управление демоном после установки.
 
 ## Один демон на пользователя
 
-Lock + socket не дают второму start. IPC переопределяется `--socket`.
+Файловая блокировка и сокет не дают запустить второй экземпляр. Точку IPC можно сменить флагом `--socket`.
 
-## Status
+## Статус
 
 ```bash
 agentd daemon status
 agentd daemon status --json
 ```
 
-JSON при `running`:
+Поля JSON, когда демон запущен:
 
 | Поле | Смысл |
 |------|--------|
-| `running` | bool |
-| `socket` | path / pipe |
-| `version` | версия сборки (`dev`, если без ldflags/tag) |
-| `started_at` | RFC3339 UTC |
-| `generation` | generation конфига |
-| `fingerprint` | fingerprint merged-конфига |
-| `async_queue_depth` | jobs в async queue |
-| `async_dropped_count` | overflow drops (монотонно) |
-| `compiled_route_count` | число routes в snapshot |
+| `running` | работает ли демон |
+| `socket` | путь к сокету или имя pipe |
+| `version` | версия сборки (`dev`, если без ldflags/тега) |
+| `started_at` | время старта (RFC3339, UTC) |
+| `generation` | поколение конфига после слияния |
+| `fingerprint` | отпечаток слитого конфига |
+| `async_queue_depth` | сколько задач ждёт в асинхронной очереди |
+| `async_dropped_count` | сколько задач отброшено из‑за переполнения (растёт только вверх) |
+| `compiled_route_count` | число скомпилированных маршрутов |
 
-Human: `agentd: running (version …, generation …)` — без depth/drops (нужен `--json`).
+Человекочитаемая строка: `agentd: running (version …, generation …)` — без глубины очереди и drops (для них нужен `--json`).
 
-## Reload / stop
+## Перезагрузка и остановка
 
 ```bash
 agentd daemon reload
 agentd daemon stop --timeout 10s
 ```
 
-Stop: drain sync, затем async (до timeout), снятие socket/PID.
+При остановке: сначала дождаться синхронных запросов, затем асинхронной очереди (не дольше `--timeout`), потом снять сокет и PID-файл.
 
 ## Логирование
 
-Hook path: без debug в stdout. Демон / async `log` targets — structured logs (stderr / sinks).
+На пути хука не писать отладку в stdout. Демон и асинхронные цели `log` пишут структурированные логи (stderr / настроенные приёмники).
 
-См. также: [Dispatch](./dispatch.md) (overflow), [Конфигурация](./configuration.md) (reload).
+См. также: [Маршрутизация](./dispatch.md) (переполнение очереди), [Конфигурация](./configuration.md) (перезагрузка).

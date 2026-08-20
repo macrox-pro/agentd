@@ -18,7 +18,7 @@ Start with [Why agentd](./why.md) if you need the problem statement; otherwise [
 | [Guards](./guards.md) | secrets, shell, mcp, paths |
 | [Dispatch](./dispatch.md) | Modes, targets, timeouts, async queue |
 | [Approvals](./approvals.md) | Ask → record-decision, blocks, persist |
-| [Providers](./providers.md) | Per-agent install and entrypoints |
+| [Providers](./providers.md) | Per-agent install, entrypoints, **quirks** — [Claude](./providers-claude-code.md) · [Cursor](./providers-cursor.md) · [Codex](./providers-codex.md) · [Gemini](./providers-gemini.md) · [OpenCode](./providers-opencode.md) · [Kimi](./providers-kimi.md) |
 | [Operations](./operations.md) | Status, stop, reload |
 | [Troubleshooting](./troubleshooting.md) | Common failures |
 | [Maintaining docs](./maintaining.md) | When/how to update EN+RU (contributors) |

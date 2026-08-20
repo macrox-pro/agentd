@@ -1,26 +1,26 @@
-# Guards
+# Охранники (guards)
 
 > **Language:** [English](../en/guards.md) · [Русский](./guards.md)
 
-Декларативные sync-проверки на `tool.pre` (и смежных kind через builtin). Конфиг в `guards:`.
+Декларативные **синхронные** проверки на событии `tool.pre` (и смежных видах через встроенную цель `builtin`). Настройки — в секции `guards:`.
 
 ## Имена
 
-| Guard | Default `enabled` | Основные поля |
-|-------|-------------------|---------------|
-| `secrets` | `true` | `action`: `ask` \| `deny` (default `ask`); опционально `rules` |
+| Охранник | `enabled` по умолчанию | Основные поля |
+|----------|------------------------|---------------|
+| `secrets` | `true` | `action`: `ask` (спросить) \| `deny` (запретить); опционально `rules` |
 | `shell` | `false` | `deny_patterns`, `ask_on` |
 | `mcp` | `false` | `deny_servers` |
 | `paths` | `false` | `deny_read`, `deny_write` |
 
-Sync builtin на route может сузить набор: `guards: [secrets, shell]`. Пустой список — compiled default для этого target.
+В маршруте у sync-цели `builtin` можно сузить список: `guards: [secrets, shell]`. Пустой список — встроенный набор по умолчанию для этой цели.
 
-## Ask vs Deny
+## Спросить (Ask) и запретить (Deny)
 
-- **Deny** — жёсткий стоп; provider кодирует deny.
-- **Ask** — Ask / permission у агента; в сообщении может быть `approval_fingerprint=sha256:…` для [Approvals](./approvals.md).
+- **Deny** — жёсткий отказ; провайдер получает запрет в своём формате.
+- **Ask** — запрос разрешения у пользователя агента; в тексте может быть `approval_fingerprint=sha256:…` для последующей записи одобрения ([Одобрения](./approvals.md)).
 
-Ограничения capability провайдера сохраняются (не все агенты умеют Ask).
+Ограничения протокола конкретного агента сохраняются: не все умеют режим «спросить».
 
 ## Пример
 
@@ -42,6 +42,6 @@ guards:
     deny_write: ["**/.env"]
 ```
 
-Temporary blocks (runtime) выполняются до guards — см. [Approvals](./approvals.md).
+Временные блокировки из runtime проверяются **до** охранников — см. [Одобрения](./approvals.md).
 
-Архитектура: [DESIGN.md](../../DESIGN.md). Поведение на wire: [Dispatch](./dispatch.md).
+Архитектура: [DESIGN.md](../../DESIGN.md). Как это стыкуется с маршрутами: [Маршрутизация](./dispatch.md).

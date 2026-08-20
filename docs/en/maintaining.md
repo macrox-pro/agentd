@@ -13,7 +13,7 @@ How to keep `docs/en/` and `docs/ru/` accurate when code changes. EN is canonica
 | Guard / Ask / Deny behavior | [guards.md](./guards.md), [approvals.md](./approvals.md), [troubleshooting.md](./troubleshooting.md) |
 | Dispatch mode, target, timeout, async overflow | [dispatch.md](./dispatch.md), [operations.md](./operations.md) |
 | Status / daemon ops fields | [operations.md](./operations.md), [cli.md](./cli.md) |
-| Install providers / scopes / entrypoints | [providers.md](./providers.md), [getting-started.md](./getting-started.md) |
+| Install providers / scopes / entrypoints / quirks | [providers.md](./providers.md) + `providers-*.md`, [getting-started.md](./getting-started.md) |
 | Install / Releases / version wiring | [installation.md](./installation.md) |
 | Failure modes / offline / timeouts | [troubleshooting.md](./troubleshooting.md) |
 | User-visible README claims | [README.md](../../README.md) + matching docs page ([why.md](./why.md) if positioning changes) |

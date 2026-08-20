@@ -2,53 +2,46 @@
 
 > **Language:** [English](./providers.md) · [Русский](../ru/providers.md)
 
-Install targets and hook entrypoints per coding agent.
+How to install agentd hooks into each supported coding agent, which CLI entrypoint it uses, and **provider-specific quirks** (capabilities, wire, install paths).
 
-## Supported `--provider` values
+**Prerequisite:** `agentd daemon start` ([Getting started](./getting-started.md)).
 
-| Provider flag | Typical agent | Entrypoint |
-|---------------|---------------|------------|
-| `claude-code` | Claude Code | `hook run` |
-| `cursor` | Cursor | `hook run` (often `--argv-payload`) |
-| `codex` | OpenAI Codex | `hook run` / `hook notify` |
-| `gemini` | Gemini CLI | `hook run` |
-| `opencode` | OpenCode | `hook serve` |
-| `kimicode` / `kimi-code` | Kimi Code | `hook run` |
+## Agent guides
 
-Install accepts the same provider strings. Encode path for Kimi should use `kimi-code` (agenthooks name); `kimicode` is accepted by agentd parse.
+| Agent | `--provider` | Entrypoint | Guide |
+|-------|--------------|------------|--------|
+| Claude Code | `claude-code` | `hook run` (stdin) | [providers-claude-code.md](./providers-claude-code.md) |
+| Cursor | `cursor` | `hook run` (`--argv-payload`) | [providers-cursor.md](./providers-cursor.md) |
+| OpenAI Codex | `codex` | `hook run` + `hook notify` | [providers-codex.md](./providers-codex.md) |
+| Gemini CLI | `gemini` | `hook run` (stdin) | [providers-gemini.md](./providers-gemini.md) |
+| OpenCode | `opencode` | `hook serve` (NDJSON) | [providers-opencode.md](./providers-opencode.md) |
+| Kimi Code | `kimi-code` / `kimicode` | `hook run` | [providers-kimi.md](./providers-kimi.md) |
 
-## install
+## Quirks at a glance
+
+| Provider | Ask on tool.pre | Neutral / no-op wire | Notable constraints |
+|----------|-----------------|----------------------|---------------------|
+| Claude | yes | `{}` + exit 0 | Full Ask/Deny/Allow surface on PreToolUse |
+| Cursor | only shell/MCP natives | provider dialect | URL in command breaks install; async must not flip sync |
+| Codex | **no** CapAsk | **empty** stdout + exit 0 | Trust keys in `config.toml`; notify is async-only |
+| Gemini | yes | dialect + stderr discipline | Timeouts in **ms**; never debug on stderr from hookedge |
+| OpenCode | **no** CapAsk on tool.pre | serve frames | Long-lived `serve`; per-session mutex in daemon |
+| Kimi | **no** CapAsk | **empty** stdout + exit 0 | User-scope install only; deny/allow JSON only |
+
+Capabilities come from agenthooks’ matrix; agentd guards honor what the provider can express (`policy.ask_fallback` when Ask is unsupported).
+
+## Shared install behavior
 
 ```bash
-agentd install --provider=claude-code --scope=project --dir /path/to/repo
+agentd install --provider=PROVIDER --scope=SCOPE [--dir PATH]
 ```
 
 | `--scope` | Meaning |
 |-----------|---------|
-| `project` (default) | Project hook settings |
-| `user` | User-level settings |
-| `plugin` | Plugin install target |
+| `project` (default) | Project-local settings under `--dir` (CWD if omitted) |
+| `user` | User-level agent home (pass that directory as `--dir` when required) |
+| `plugin` | Plugin layout where supported (Claude, Cursor) |
 
-Writes provider configs via agenthooks; `Command` is the absolute `agentd` binary. Generated argv uses the hidden `agentd agenthooks …` sentinel (same as `hook …`).
+Generated argv uses `agentd agenthooks …` (same as `hook …`). HookSpec timeouts: ToolPre / PromptSubmitted **30s**; shorter kinds **5s**.
 
-Install HookSpec timeouts: ToolPre / PromptSubmitted **30s**; shorter hooks **5s** — used as sync budget defaults when Invoke has no deadline ([Dispatch](./dispatch.md)).
-
-## OpenCode
-
-Long-lived NDJSON:
-
-```bash
-agentd hook serve --provider=opencode
-```
-
-Install may generate `agentd agenthooks serve --provider=opencode`.
-
-## Codex notify
-
-```bash
-agentd hook notify --provider=codex '{"type":"agent-turn-complete"}'
-```
-
-Async semantics; empty stdout is a valid no-op for Codex.
-
-Wire codecs: [agenthooks](https://github.com/speakeasy-api/agenthooks). Architecture: [DESIGN.md §1](../../DESIGN.md).
+Deep design: [DESIGN.md §1–§2](../../DESIGN.md) · codecs: [agenthooks](https://github.com/speakeasy-api/agenthooks).

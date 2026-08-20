@@ -1,4 +1,4 @@
-# Troubleshooting
+# Диагностика
 
 > **Language:** [English](../en/troubleshooting.md) · [Русский](./troubleshooting.md)
 
@@ -6,43 +6,43 @@
 
 ## Демон не запущен
 
-`hook run|notify|serve` пишет в stderr `daemon not running` и выходит с кодом **1**.
+`hook run|notify|serve` пишет в stderr `daemon not running` и завершается с кодом **1**.
 
 ```bash
 agentd daemon start
 agentd daemon status --json
 ```
 
-`--socket` у edge и демона должен совпадать. Stale socket чистится только под start lock.
+`--socket` у клиента хука и у демона должен совпадать. Устаревший сокет удаляется только при старте под блокировкой.
 
 ## Таймауты
 
-Sync budget ≈ 90% provider timeout, опционально capped `route.sync_timeout` ([Dispatch](./dispatch.md)). CLI `--timeout 0` не задаёт deadline; демон берёт kind defaults (30s / 5s).
+Бюджет sync ≈ 90 % таймаута провайдера, при желании ограничен `route.sync_timeout` ([Маршрутизация](./dispatch.md)). CLI `--timeout 0` не задаёт deadline; демон берёт значения по виду события (30 s / 5 s).
 
-Превышение budget → cancel context; более широкий fail mode на стороне демона задаёт `policy.fail`.
+Превышение бюджета отменяет контекст; более широкий режим при ошибках на стороне демона задаёт `policy.fail`.
 
-## Циклы Ask
+## Циклы «спросить снова»
 
-Тот же tool снова Ask → нет matching approval. Возьмите `approval_fingerprint=` из Ask и выполните `config record-decision` ([Approvals](./approvals.md)). Неверный `--session-id` не матчит session-scope.
+Тот же инструмент снова уходит в Ask — нет подходящего одобрения. Возьмите `approval_fingerprint=` из сообщения Ask и выполните `config record-decision` ([Одобрения](./approvals.md)). Неверный `--session-id` не совпадёт с одобрением области `session`.
 
-## Async drops
+## Рост async_dropped_count
 
-Растёт `async_dropped_count` → очередь полна (`queue_capacity`). Увеличьте capacity/workers или уменьшите fan-out; `on_overflow: log` добавляет warn, но всё равно drop.
+Растёт счётчик отброшенных задач → очередь полна (`queue_capacity`). Увеличьте ёмкость/число воркеров или сократите число асинхронных целей на событие; `on_overflow: log` добавит предупреждение в лог, но задача всё равно будет отброшена.
 
-## Windows named pipe
+## Именованный канал Windows
 
-Default pipe привязан к SID (`\\.\pipe\agentd-<SID>`). Другой user/session → dial failure, похожий на «daemon not running».
+Канал по умолчанию привязан к SID пользователя (`\\.\pipe\agentd-<SID>`). Другой пользователь или сеанс → ошибка соединения, похожая на «демон не запущен».
 
-## Codex empty no-op
+## Пустой ответ Codex / Kimi
 
-Для Codex/Kimi no-op — **пустой stdout**, exit 0, не `{}`. Пустой stdout не считать ошибкой.
+Для Codex и Kimi нормальный «пустой» ответ — **пустой stdout** и код 0, а не `{}`. Пустой stdout сам по себе не ошибка.
 
-## Поле offline
+## Поле policy.offline
 
-`policy.offline` парсится и хранится; hook edge **сейчас его не читает**. Недоступный демон → exit 1, как выше.
+Ключ парсится и хранится, но клиент хука **сейчас его не читает**. Недоступный демон → код 1, как выше.
 
 ## Не входит в v1
 
-Нет agent auth, transcript pipelines, Go plugins, hooks DSL, async retry storms и sync `exec` decisions ([DESIGN.md §11](../../DESIGN.md#11-non-goals-v1)).
+Нет входа в аккаунты агентов, конвейера транскриптов, загрузки Go-плагинов, отдельного DSL хуков, автоматических ретраев async (шторм повторов) и синхронного `exec` с JSON-решением ([DESIGN.md §11](../../DESIGN.md#11-non-goals-v1)).
 
-См. также: [CLI](./cli.md), [Эксплуатация](./operations.md).
+См. также: [Справочник CLI](./cli.md), [Эксплуатация](./operations.md).

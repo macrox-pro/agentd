@@ -1,0 +1,41 @@
+# OpenCode
+
+> **Language:** [English](./providers-opencode.md) · [Русский](../ru/providers-opencode.md)
+
+`--provider=opencode`. Entrypoint: long-lived **`agentd hook serve`** (NDJSON stdio), not per-event `hook run`.
+
+## Install
+
+```bash
+agentd install --provider=opencode --scope=project --dir /path/to/repo
+```
+
+Writes `.opencode/plugin/agenthooks.ts`, spawning:
+
+`agentd agenthooks serve --provider=opencode`
+
+(= `agentd hook serve --provider=opencode`).
+
+## Runtime
+
+1. `agentd daemon start`
+2. OpenCode loads the plugin; shim keeps a child on `serve`.
+3. Each NDJSON frame → gRPC `Invoke`.
+
+```bash
+agentd hook serve --provider=opencode
+```
+
+`hook serve` rejects any `--provider` other than `opencode`.
+
+## Provider quirks
+
+| Topic | Behavior |
+|-------|----------|
+| **Process model** | One long-lived serve process; frames multiplexed over stdio |
+| **Session ordering** | Daemon holds a **per-session mutex** for sync (and coordinates async) ([DESIGN.md §1](../../DESIGN.md)) |
+| **No CapAsk on tool.pre** | ToolPre capabilities are Deny + update-input only — no Ask. Use Deny or `ask_fallback` policy |
+| **Stop / session.idle** | Stop-like events may be non-blocking / empty capability set — do not expect Continue on every stop shape |
+| **Permission** | Permission events go through OpenCode’s permission channel (allow/deny), not Claude-style Ask JSON |
+
+See also: [Providers index](./providers.md), [CLI](./cli.md).

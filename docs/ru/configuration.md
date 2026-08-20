@@ -2,67 +2,67 @@
 
 > **Language:** [English](../en/configuration.md) · [Русский](./configuration.md)
 
-Четыре слоя merge, YAML-поверхность и reload. Полные примеры: [DESIGN.md §7](../../DESIGN.md#7-configuration-schema).
+Четыре слоя, которые **сливаются** (merge) в один эффективный конфиг; поверхность YAML; как работает перезагрузка. Полные примеры: [DESIGN.md §7](../../DESIGN.md#7-configuration-schema).
 
-## Слои (порядок merge)
+## Слои (порядок слияния)
 
-| Порядок | Слой | Расположение |
-|---------|------|--------------|
-| 1 | defaults | в бинарнике |
-| 2 | user | `--config` или `~/.agentd.yaml` |
-| 3 | project | `.agentd.yaml` вверх от CWD / project root |
-| 4 | runtime | overlay демона (approvals, temporary blocks) |
+| Порядок | Слой | Где лежит |
+|---------|------|-----------|
+| 1 | встроенные значения (`defaults`) | внутри бинарника |
+| 2 | пользовательский (`user`) | `--config` или `~/.agentd.yaml` |
+| 3 | проектный (`project`) | `.agentd.yaml`, поиск вверх от текущей директории / корня проекта |
+| 4 | runtime | наложение, которым управляет демон (одобрения, временные блокировки) |
 
-**Путь runtime**
+**Путь runtime-файла**
 
 - Unix: `$XDG_STATE_HOME/agentd/runtime.yaml`, иначе `~/.local/state/agentd/runtime.yaml`
 - Windows: `%LOCALAPPDATA%\agentd\runtime.yaml`
 
-Запись runtime с debounce **500ms**, режим `0600`, атомарный rename. Hot path — только `store.Current()`, без disk I/O на Invoke.
+Запись на диск откладывается на **500 ms** (debounce), права файла `0600`, запись атомарная (временный файл + rename). На горячем пути обработки запроса используется только снимок в памяти (`store.Current()`), без чтения диска на каждый `Invoke`.
 
-## Top-level ключи YAML
+## Ключи верхнего уровня YAML
 
 Из схемы файла: `version`, `policy`, `async`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`.
 
-В project обычно `guards` / `dispatch`. `approvals` и `blocks` чаще попадают в runtime через CLI/gRPC.
+В проектном файле обычно `guards` / `dispatch`. Блоки `approvals` и `blocks` чаще попадают в runtime через CLI или gRPC.
 
-### policy
+### policy (политика ошибок)
 
-| Ключ | Значения | Default |
-|------|----------|---------|
-| `fail` | `fail_open` \| `fail_closed` | `fail_closed` |
-| `unsupported` | `degrade` \| `strict` | `degrade` |
-| `ask_fallback` | `deny` \| `no_decision` | `deny` |
-| `offline` | `fail_open` \| `fail_closed` | `fail_closed` |
+| Ключ | Значения | По умолчанию | Смысл |
+|------|----------|--------------|--------|
+| `fail` | `fail_open` \| `fail_closed` | `fail_closed` | При сбое: пропустить или закрыть |
+| `unsupported` | `degrade` \| `strict` | `degrade` | Неподдерживаемое: смягчить или строго |
+| `ask_fallback` | `deny` \| `no_decision` | `deny` | Если «спросить» недоступно |
+| `offline` | `fail_open` \| `fail_closed` | `fail_closed` | Задумано для офлайна; см. примечание |
 
-> **Note:** Hook CLI при недоступном демоне пишет в stderr `daemon not running` и выходит с кодом `1`; ветвления по `policy.offline` нет.
+> **Важно:** клиент хука (`hook …`) при недоступном демоне пишет в stderr `daemon not running` и выходит с кодом `1`. Ветвления по `policy.offline` в текущем коде **нет**.
 
-### async
+### async (асинхронная очередь)
 
-| Ключ | Default |
-|------|---------|
-| `queue_capacity` | `1024` |
-| `worker_limit` | `8` |
-| `target_timeout` | `30s` |
-| `on_overflow` | `drop` (`drop` \| `log`) |
+| Ключ | По умолчанию | Смысл |
+|------|--------------|--------|
+| `queue_capacity` | `1024` | Ёмкость очереди |
+| `worker_limit` | `8` | Число воркеров |
+| `target_timeout` | `30s` | Таймаут одной асинхронной цели |
+| `on_overflow` | `drop` (`drop` \| `log`) | При переполнении: отбросить; `log` ещё пишет предупреждение |
 
-Overflow всегда дропает job и увеличивает `async_dropped_count` в Status; режим `log` дополнительно пишет warn.
+При переполнении задача **всегда** отбрасывается, счётчик `async_dropped_count` в статусе растёт.
 
-## CLI для конфига
+## Команды для работы с конфигом
 
 | Команда | Роль |
 |---------|------|
-| `agentd config validate [--config] [--cwd]` | Offline parse + compile |
+| `agentd config validate [--config] [--cwd]` | Проверка и компиляция **без** демона |
 | `agentd config show [--merged] [--layer user\|project\|runtime] [--cwd]` | Просмотр слоёв |
-| `agentd config patch --file DELTA.yaml` | Patch runtime (persist) |
-| `agentd config record-decision …` | Upsert approval ([Approvals](./approvals.md)) |
+| `agentd config patch --file DELTA.yaml` | Изменить runtime (с сохранением на диск) |
+| `agentd config record-decision …` | Записать одобрение ([Одобрения](./approvals.md)) |
 
-## Reload
+## Перезагрузка
 
-- Изменения user/project: fsnotify + debounce → re-merge
-- `agentd daemon reload`: принудительный re-merge с диска
-- Runtime patch / RecordDecision: in-memory + debounced flush
+- Изменения user/project: наблюдатель файлов + отложенная пересборка слоёв
+- `agentd daemon reload`: принудительно перечитать диск и слить слои
+- `patch` / `record-decision`: обновление в памяти + отложенная запись runtime
 
-Status после успешного compile показывает `generation` и merged `fingerprint`.
+После успешной компиляции в статусе видны `generation` (поколение) и `fingerprint` (отпечаток слитого конфига).
 
-См. также: [Guards](./guards.md), [Dispatch](./dispatch.md), [CLI](./cli.md).
+См. также: [Охранники](./guards.md), [Маршрутизация](./dispatch.md), [Справочник CLI](./cli.md).

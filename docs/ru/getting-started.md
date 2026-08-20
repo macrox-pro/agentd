@@ -2,11 +2,11 @@
 
 > **Language:** [English](../en/getting-started.md) · [Русский](./getting-started.md)
 
-Поднять user-level демон, задать минимальную политику, установить hooks агента и проверить Status.
+Поднять демон пользователя, задать минимальную политику, установить хуки в агент и проверить статус.
 
-Мотивация и боли: [Зачем нужен agentd](./why.md).
+Зачем это нужно: [Зачем нужен agentd](./why.md).
 
-## 1. Установить бинарник
+## 1. Установить программу
 
 См. [Установка](./installation.md). Быстрый путь:
 
@@ -16,16 +16,16 @@ go install github.com/macrox-pro/agentd@latest
 
 ## 2. Запустить демон
 
-Один экземпляр на пользователя. Сокет по умолчанию зависит от ОС (`--socket` переопределяет).
+Один экземпляр на пользователя. Сокет по умолчанию зависит от ОС (переопределение — `--socket`).
 
 ```bash
 agentd daemon start
 agentd daemon status
 ```
 
-`--foreground` — процесс остаётся в foreground (dev / process manager).
+`--foreground` — не отсоединяться от терминала (удобно при отладке или под process manager).
 
-## 3. Минимальный user-конфиг
+## 3. Минимальный пользовательский конфиг
 
 Путь по умолчанию: `~/.agentd.yaml` (или `--config`).
 
@@ -39,19 +39,19 @@ guards:
     action: ask
 ```
 
-После правки user-файл подхватывается fsnotify; `agentd daemon reload` принудительно пересобирает merge.
+После правки пользовательский файл обычно подхватывается наблюдателем файловой системы (fsnotify); `agentd daemon reload` принудительно заново сливает слои конфига.
 
-## 4. Install hooks для агента
+## 4. Установить хуки в агент
 
-Из каталога проекта (пример: Claude Code, scope project):
+Из каталога проекта (пример: Claude Code, область `project`):
 
 ```bash
 agentd install --provider=claude-code --scope=project
 ```
 
-Сгенерированные конфиги вызывают `agentd agenthooks …` (скрытый алиас `agentd hook …`). В документации предпочтительны `hook run` / `hook serve` / `hook notify`.
+В сгенерированных настройках агента вызывается `agentd agenthooks …` (скрытый алиас тех же `agentd hook …`). В документации удобнее ссылаться на `hook run` / `hook serve` / `hook notify`.
 
-Провайдеры и scope: [Providers](./providers.md).
+Список провайдеров, областей установки и особенностей: [Провайдеры](./providers.md).
 
 ## 5. Проверка
 
@@ -59,20 +59,20 @@ agentd install --provider=claude-code --scope=project
 agentd daemon status --json
 ```
 
-Ожидается `"running": true`, поля `generation`, `fingerprint`, `async_queue_depth`, `async_dropped_count`.
+Ожидается `"running": true` и поля `generation` (поколение конфига), `fingerprint` (отпечаток слияния), `async_queue_depth` (глубина асинхронной очереди), `async_dropped_count` (сколько задач отброшено при переполнении).
 
-Вызовите tool в агенте или прогоните payload через edge:
+Вызовите инструмент в агенте или передайте тестовый JSON на вход:
 
 ```bash
 echo '{"session_id":"s","cwd":"/tmp","hook_event_name":"PreToolUse","tool_name":"Bash","tool_use_id":"t1","tool_input":{"command":"echo ok"}}' \
   | agentd hook run --provider=claude-code
 ```
 
-Чистый tool.pre при defaults обычно даёт provider no-op (Claude: `{}`).
+Безопасный `tool.pre` при настройках по умолчанию обычно даёт «пустой» ответ без решения (для Claude — `{}`).
 
 ## Дальше
 
 - [Конфигурация](./configuration.md) — слои и схема
-- [Guards](./guards.md) / [Dispatch](./dispatch.md) — политика и маршрутизация
-- [Approvals](./approvals.md) — Ask once, затем Allow
-- [CLI](./cli.md) — полный список флагов
+- [Охранники](./guards.md) / [Маршрутизация](./dispatch.md) — политика и маршруты
+- [Одобрения](./approvals.md) — спросить один раз, потом разрешить
+- [Справочник CLI](./cli.md) — полный список флагов

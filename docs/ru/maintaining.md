@@ -1,50 +1,50 @@
-# Актуализация user docs
+# Актуализация документации
 
 > **Language:** [English](../en/maintaining.md) · [Русский](./maintaining.md)
 
-Как держать `docs/en/` и `docs/ru/` в синхроне с кодом. EN — канон; RU зеркалит те же страницы.
+Как держать `docs/en/` и `docs/ru/` в соответствии с кодом. Английская версия — канон; русская зеркалит те же страницы.
 
 ## Когда обновлять
 
-| Изменение | Обновить |
-|-----------|----------|
-| Новая/изменённая CLI-команда или флаг (`cmd/`) | [cli.md](./cli.md), [DESIGN.md §6](../../DESIGN.md#6-cli-reference), связанные how-to при смене UX |
-| YAML-ключ / enum (`internal/config/file.go`, compile) | [configuration.md](./configuration.md), при необходимости [guards.md](./guards.md) / [dispatch.md](./dispatch.md) / [approvals.md](./approvals.md); DESIGN §7 при дрейфе примеров |
-| Поведение guard / Ask / Deny | [guards.md](./guards.md), [approvals.md](./approvals.md), [troubleshooting.md](./troubleshooting.md) |
-| Dispatch mode, target, timeout, async overflow | [dispatch.md](./dispatch.md), [operations.md](./operations.md) |
-| Поля Status / ops демона | [operations.md](./operations.md), [cli.md](./cli.md) |
-| Install providers / scopes / entrypoints | [providers.md](./providers.md), [getting-started.md](./getting-started.md) |
-| Install / Releases / version | [installation.md](./installation.md) |
-| Failure modes / offline / timeouts | [troubleshooting.md](./troubleshooting.md) |
-| User-visible заявления в README | [README.md](../../README.md) + соответствующая страница docs ([why.md](./why.md) при смене позиционирования) |
+| Изменение | Что править |
+|-----------|-------------|
+| Новая или изменённая команда/флаг CLI (`cmd/`) | [cli.md](./cli.md), [DESIGN.md §6](../../DESIGN.md#6-cli-reference), связанные инструкции при смене сценария |
+| Ключ или перечисление YAML (`internal/config/file.go`, compile) | [configuration.md](./configuration.md); при необходимости [guards.md](./guards.md) / [dispatch.md](./dispatch.md) / [approvals.md](./approvals.md); DESIGN §7 при дрейфе примеров |
+| Поведение охранника / Ask / Deny | [guards.md](./guards.md), [approvals.md](./approvals.md), [troubleshooting.md](./troubleshooting.md) |
+| Режим маршрута, цель, таймаут, переполнение async | [dispatch.md](./dispatch.md), [operations.md](./operations.md) |
+| Поля статуса / операции демона | [operations.md](./operations.md), [cli.md](./cli.md) |
+| Провайдеры install / области / точки входа / особенности | [providers.md](./providers.md) + `providers-*.md`, [getting-started.md](./getting-started.md) |
+| Установка / релизы / версия | [installation.md](./installation.md) |
+| Режимы ошибок / offline / таймауты | [troubleshooting.md](./troubleshooting.md) |
+| Формулировки позиционирования в README | [README.md](../../README.md) и [why.md](./why.md) |
 
-Если код и DESIGN расходятся — **документируйте код** и по возможности поправьте DESIGN в том же изменении.
+Если код и DESIGN расходятся — **описывайте поведение кода** и по возможности поправьте DESIGN в том же изменении.
 
 ## Правила
 
-- Сначала **EN**, затем **RU** (то же имя файла, тот же порядок секций). Идентификаторы в RU остаются на английском.
-- Без воды; указывайте команды, ключи и поля Status.
-- Не выдумывайте флаги и YAML-ключи вне `cmd/` / `file.go`.
-- Non-goals (DESIGN §11) не рекламировать как фичи.
-- После правок docs: `make docs-check` (parity имён EN/RU).
+- Сначала **английская** страница, затем **русская** (то же имя файла, тот же порядок разделов). Имена команд, ключей YAML и полей JSON в русской версии оставляйте на английском в `` `коде` ``; в прозе — русские пояснения.
+- Без воды: команды, ключи, поля статуса.
+- Не выдумывайте флаги и ключи вне `cmd/` / `file.go`.
+- Ограничения v1 (DESIGN §11) не выдавайте за возможности продукта.
+- После правок документации: `make docs-check` (одинаковый набор имён файлов EN/RU).
 
-## Карта источников (сверка)
+## Карта источников (для сверки)
 
-| Тема | Источник |
-|------|----------|
+| Тема | Источник в коде |
+|------|-----------------|
 | CLI | `cmd/*.go` |
 | YAML | `internal/config/file.go` |
-| Paths / persist | `internal/config/store.go`, `persist.go` |
-| Guards | `internal/guard/` |
-| Dispatch / timeout | `internal/dispatch/`, `timeout.go` |
-| Approvals / blocks | `internal/config/approvals.go`, `blocks.go` |
-| Status JSON | `internal/daemon/status_write.go`, `api/agentd/v1/daemon.proto` |
-| Install | `internal/install/run.go` |
-| Hook offline | `internal/hookedge/` |
+| Пути / сохранение runtime | `internal/config/store.go`, `persist.go` |
+| Охранники | `internal/guard/` |
+| Маршрутизация / таймауты | `internal/dispatch/`, `timeout.go` |
+| Одобрения / блокировки | `internal/config/approvals.go`, `blocks.go` |
+| JSON статуса | `internal/daemon/status_write.go`, `api/agentd/v1/daemon.proto` |
+| Установка в агент | `internal/install/run.go` |
+| Поведение при офлайне демона | `internal/hookedge/` |
 
-## PR checklist (docs)
+## Чеклист для PR
 
-- [ ] User-visible изменение → обновлён `docs/en/`
-- [ ] Зеркало в `docs/ru/` (или новая страница в обоих locales)
-- [ ] DESIGN §6 / §7 при смене CLI или примеров schema
+- [ ] Изменение, видимое пользователю → обновлён `docs/en/`
+- [ ] Зеркало в `docs/ru/` (или новая страница в обоих языках)
+- [ ] DESIGN §6 / §7 при смене CLI или примеров схемы
 - [ ] `make docs-check` проходит

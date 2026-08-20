@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/macrox-pro/agentd/internal/hookclient"
@@ -20,10 +21,9 @@ func Stop(ctx context.Context, socket string, timeout time.Duration) error {
 	stopCtx, cancel := context.WithDeadline(ctx, deadline)
 	defer cancel()
 
-	if err := requestShutdown(stopCtx, socket); err == nil {
-		if waitUntilStopped(paths, deadline) {
-			return nil
-		}
+	_ = requestShutdown(stopCtx, socket)
+	if waitUntilStopped(paths, deadline) {
+		return nil
 	}
 
 	pid, err := paths.ReadPID()
@@ -33,6 +33,11 @@ func Stop(ctx context.Context, socket string, timeout time.Duration) error {
 	if !processAlive(pid) {
 		paths.RemoveStale()
 		return nil
+	}
+	// Foreground mode records this process in the PID file; never SIGTERM ourselves
+	// (that kills CLI/tests once signal.Notify has been stopped during shutdown).
+	if pid == os.Getpid() {
+		return fmt.Errorf("foreground daemon did not exit within %s", timeout)
 	}
 	if err := signalTerminate(pid); err != nil {
 		return fmt.Errorf("signal: %w", err)
@@ -55,7 +60,13 @@ func requestShutdown(ctx context.Context, socket string) error {
 func waitUntilStopped(paths Paths, deadline time.Time) bool {
 	for time.Now().Before(deadline) {
 		pid, err := paths.ReadPID()
-		if err != nil || !processAlive(pid) {
+		if err != nil {
+			paths.RemoveStale()
+			return true
+		}
+		// Own PID means foreground in this process; only the PID file going away
+		// signals shutdown (processAlive would stay true until the test/CLI exits).
+		if pid != os.Getpid() && !processAlive(pid) {
 			paths.RemoveStale()
 			return true
 		}
