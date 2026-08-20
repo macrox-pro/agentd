@@ -22,12 +22,7 @@ test-short:
 	@go test ./... -race -count=1 -short
 
 e2e:
-	@bash scripts/e2e-m1.sh
-	@bash scripts/e2e-m2.sh
-	@bash scripts/e2e-m3.sh
-	@bash scripts/e2e-m4.sh
-	@bash scripts/e2e-m5.sh
-	@bash scripts/e2e-m6.sh
+	@for s in $$(ls scripts/e2e-m*.sh | sort -V); do bash "$$s" || exit 1; done
 
 start: build
 	@./$(BIN) daemon start

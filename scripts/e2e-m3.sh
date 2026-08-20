@@ -2,20 +2,12 @@
 # M3 acceptance: dispatch YAML + file async + fsnotify reload
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=e2e-common.sh
+source "${SCRIPT_DIR}/e2e-common.sh"
 
-WORKDIR="$(mktemp -d)"
-SOCK="$WORKDIR/agentd.sock"
-BIN="$WORKDIR/agentd"
-CFG="$WORKDIR/agentd.yaml"
+e2e_setup e2e-m3
 AUDIT="$WORKDIR/audit.jsonl"
-
-cleanup() {
-  "$BIN" daemon stop --socket "$SOCK" --timeout 5s >/dev/null 2>&1 || true
-  rm -rf "$WORKDIR"
-}
-trap cleanup EXIT
 
 cat >"$CFG" <<EOF
 version: 1
@@ -35,36 +27,29 @@ dispatch:
         level: info
 EOF
 
-go build -o "$BIN" .
-
-"$BIN" daemon start --socket "$SOCK" --config "$CFG"
-
-for _ in $(seq 1 50); do
-  if "$BIN" daemon status --socket "$SOCK" --json 2>/dev/null | grep -qE '"running"[[:space:]]*:[[:space:]]*true'; then
-    break
-  fi
-  sleep 0.1
-done
+e2e_build
+e2e_daemon_start --config "$CFG"
 
 STATUS="$("$BIN" daemon status --socket "$SOCK" --json)"
-echo "$STATUS" | grep -qE '"running"[[:space:]]*:[[:space:]]*true'
-GEN1="$(echo "$STATUS" | sed -n 's/.*"generation"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p')"
+e2e_assert_matches "$STATUS" '"running"[[:space:]]*:[[:space:]]*true' status
+GEN1="$(e2e_json_field "$STATUS" generation)"
+test -n "$GEN1"
 
 ROUTES="$("$BIN" dispatch routes --config "$CFG")"
-echo "$ROUTES" | grep -q 'gate-and-audit'
-echo "$ROUTES" | grep -q 'file'
+e2e_assert_contains "$ROUTES" 'gate-and-audit' routes
+e2e_assert_contains "$ROUTES" 'file' routes
 
 CLEAN_PAYLOAD='{"session_id":"s","cwd":"/w","hook_event_name":"PreToolUse","tool_name":"Bash","tool_use_id":"t1","tool_input":{"command":"go test ./..."}}'
-OUT="$(echo "$CLEAN_PAYLOAD" | "$BIN" hook run --socket "$SOCK" --provider=claude-code)"
-test "$OUT" = '{}'
+OUT="$(e2e_hook_run claude-code "$CLEAN_PAYLOAD")"
+e2e_assert_eq "$OUT" '{}' clean-hook
 
 for _ in $(seq 1 50); do
-  if [[ -s "$AUDIT" ]]; then
-    break
-  fi
-  sleep 0.05
+	if [[ -s "$AUDIT" ]]; then
+		break
+	fi
+	sleep 0.05
 done
-grep -q 'tool.pre' "$AUDIT"
+e2e_assert_file_contains "$AUDIT" 'tool.pre'
 
 cat >"$CFG" <<EOF
 version: 1
@@ -83,18 +68,16 @@ dispatch:
         path: $AUDIT
 EOF
 
+GEN2=""
 for _ in $(seq 1 80); do
-  STATUS2="$("$BIN" daemon status --socket "$SOCK" --json)"
-  GEN2="$(echo "$STATUS2" | sed -n 's/.*"generation"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p')"
-  if [[ -n "$GEN2" && "$GEN2" -gt "$GEN1" ]]; then
-    break
-  fi
-  sleep 0.05
+	STATUS2="$("$BIN" daemon status --socket "$SOCK" --json)"
+	GEN2="$(e2e_json_field "$STATUS2" generation)"
+	if [[ -n "$GEN2" && "$GEN2" -gt "$GEN1" ]]; then
+		break
+	fi
+	sleep 0.05
 done
-STATUS2="$("$BIN" daemon status --socket "$SOCK" --json)"
-GEN2="$(echo "$STATUS2" | sed -n 's/.*"generation"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p')"
 test "$GEN2" -gt "$GEN1"
 
-"$BIN" daemon stop --socket "$SOCK" --timeout 5s
-
-echo "e2e-m3: ok"
+e2e_daemon_stop
+e2e_pass

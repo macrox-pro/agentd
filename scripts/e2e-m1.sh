@@ -2,42 +2,27 @@
 # M1 acceptance: detached start → status → hook run → reload → already-running → stop
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=e2e-common.sh
+source "${SCRIPT_DIR}/e2e-common.sh"
 
-WORKDIR="$(mktemp -d)"
-SOCK="$WORKDIR/agentd.sock"
-BIN="$WORKDIR/agentd"
+e2e_setup e2e-m1
+e2e_build
 
-cleanup() {
-  "$BIN" daemon stop --socket "$SOCK" --timeout 5s >/dev/null 2>&1 || true
-  rm -rf "$WORKDIR"
-}
-trap cleanup EXIT
+e2e_daemon_start
 
-go build -o "$BIN" .
+STATUS="$("$BIN" daemon status --socket "$SOCK" --json)"
+e2e_assert_matches "$STATUS" '"running"[[:space:]]*:[[:space:]]*true' status
 
-"$BIN" daemon start --socket "$SOCK"
+OUT="$(e2e_hook_run claude-code '{}')"
+e2e_assert_eq "$OUT" '{}' hook-run
 
-for _ in $(seq 1 50); do
-  if "$BIN" daemon status --socket "$SOCK" --json 2>/dev/null | grep -qE '"running"[[:space:]]*:[[:space:]]*true'; then
-    break
-  fi
-  sleep 0.1
-done
-
-"$BIN" daemon status --socket "$SOCK" --json | grep -qE '"running"[[:space:]]*:[[:space:]]*true'
-
-OUT="$(echo '{}' | "$BIN" hook run --socket "$SOCK" --provider=claude-code)"
-test "$OUT" = '{}'
-
-"$BIN" daemon reload --socket "$SOCK" | grep -q generation=
+RELOAD="$("$BIN" daemon reload --socket "$SOCK")"
+e2e_assert_contains "$RELOAD" 'generation=' reload
 
 if "$BIN" daemon start --socket "$SOCK" 2>/dev/null; then
-  echo "expected already-running error" >&2
-  exit 1
+	e2e_fail 'expected already-running error'
 fi
 
-"$BIN" daemon stop --socket "$SOCK" --timeout 5s
-
-echo "e2e-m1: ok"
+e2e_daemon_stop
+e2e_pass

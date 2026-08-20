@@ -2,19 +2,11 @@
 # M6 acceptance: shell / mcp / paths guards + route subset
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=e2e-common.sh
+source "${SCRIPT_DIR}/e2e-common.sh"
 
-WORKDIR="$(mktemp -d)"
-SOCK="$WORKDIR/agentd.sock"
-BIN="$WORKDIR/agentd"
-CFG="$WORKDIR/agentd.yaml"
-
-cleanup() {
-  "$BIN" daemon stop --socket "$SOCK" --timeout 5s >/dev/null 2>&1 || true
-  rm -rf "$WORKDIR"
-}
-trap cleanup EXIT
+e2e_setup e2e-m6
 
 cat >"$CFG" <<'EOF'
 version: 1
@@ -51,66 +43,52 @@ dispatch:
         guards: [shell, mcp, paths]
 EOF
 
-go build -o "$BIN" .
+e2e_build
 
-"$BIN" config validate --config "$CFG"
+e2e_quiet "$BIN" config validate --config "$CFG"
 
 SHOW="$("$BIN" config show --config "$CFG" --merged)"
-echo "$SHOW" | grep -q 'deny_patterns'
-echo "$SHOW" | grep -q 'deny_servers'
-echo "$SHOW" | grep -q 'deny_read'
+e2e_assert_contains "$SHOW" 'deny_patterns' show
+e2e_assert_contains "$SHOW" 'deny_servers' show
+e2e_assert_contains "$SHOW" 'deny_read' show
 
 ROUTES_JSON="$("$BIN" dispatch routes --config "$CFG" --json)"
-echo "$ROUTES_JSON" | grep -q 'all-guards'
-echo "$ROUTES_JSON" | grep -q 'shell-only'
-echo "$ROUTES_JSON" | grep -q '"shell"'
-echo "$ROUTES_JSON" | grep -q '"mcp"'
-echo "$ROUTES_JSON" | grep -q '"paths"'
+e2e_assert_contains "$ROUTES_JSON" 'all-guards' routes
+e2e_assert_contains "$ROUTES_JSON" 'shell-only' routes
+e2e_assert_contains "$ROUTES_JSON" '"shell"' routes
+e2e_assert_contains "$ROUTES_JSON" '"mcp"' routes
+e2e_assert_contains "$ROUTES_JSON" '"paths"' routes
 
-"$BIN" daemon start --socket "$SOCK" --config "$CFG"
+e2e_daemon_start --config "$CFG"
 
-for _ in $(seq 1 50); do
-  if "$BIN" daemon status --socket "$SOCK" --json 2>/dev/null | grep -qE '"running"[[:space:]]*:[[:space:]]*true'; then
-    break
-  fi
-  sleep 0.1
-done
-
-# shell deny
 DENY_PAYLOAD='{"session_id":"s","cwd":"/w","hook_event_name":"PreToolUse","tool_name":"Bash","tool_use_id":"t1","tool_input":{"command":"sudo rm -rf /"}}'
-DOUT="$(echo "$DENY_PAYLOAD" | "$BIN" hook run --socket "$SOCK" --provider=claude-code)"
-echo "$DOUT" | grep -q '"permissionDecision":"deny"'
+DOUT="$(e2e_hook_run claude-code "$DENY_PAYLOAD")"
+e2e_assert_contains "$DOUT" '"permissionDecision":"deny"' shell-deny
 
-# shell ask
 ASK_PAYLOAD='{"session_id":"s","cwd":"/w","hook_event_name":"PreToolUse","tool_name":"Bash","tool_use_id":"t2","tool_input":{"command":"curl https://example.com"}}'
-AOUT="$(echo "$ASK_PAYLOAD" | "$BIN" hook run --socket "$SOCK" --provider=claude-code)"
-echo "$AOUT" | grep -q '"permissionDecision":"ask"'
+AOUT="$(e2e_hook_run claude-code "$ASK_PAYLOAD")"
+e2e_assert_contains "$AOUT" '"permissionDecision":"ask"' shell-ask
 
-# shell clean
 CLEAN_PAYLOAD='{"session_id":"s","cwd":"/w","hook_event_name":"PreToolUse","tool_name":"Bash","tool_use_id":"t3","tool_input":{"command":"go test ./..."}}'
-COUT="$(echo "$CLEAN_PAYLOAD" | "$BIN" hook run --socket "$SOCK" --provider=claude-code)"
-test "$COUT" = '{}'
+COUT="$(e2e_hook_run claude-code "$CLEAN_PAYLOAD")"
+e2e_assert_eq "$COUT" '{}' shell-clean
 
-# mcp deny
 MCP_PAYLOAD='{"session_id":"s","cwd":"/w","hook_event_name":"PreToolUse","tool_name":"mcp__untrusted-foo__bar","tool_use_id":"t4","tool_input":{}}'
-MOUT="$(echo "$MCP_PAYLOAD" | "$BIN" hook run --socket "$SOCK" --provider=claude-code)"
-echo "$MOUT" | grep -q '"permissionDecision":"deny"'
+MOUT="$(e2e_hook_run claude-code "$MCP_PAYLOAD")"
+e2e_assert_contains "$MOUT" '"permissionDecision":"deny"' mcp-deny
 
-# path deny read
 PATH_PAYLOAD='{"session_id":"s","cwd":"/w","hook_event_name":"PreToolUse","tool_name":"Read","tool_use_id":"t5","tool_input":{"file_path":"/etc/shadow"}}'
-POUT="$(echo "$PATH_PAYLOAD" | "$BIN" hook run --socket "$SOCK" --provider=claude-code)"
-echo "$POUT" | grep -q '"permissionDecision":"deny"'
+POUT="$(e2e_hook_run claude-code "$PATH_PAYLOAD")"
+e2e_assert_contains "$POUT" '"permissionDecision":"deny"' path-deny-read
 
-# path deny write **/.env
 ENV_PAYLOAD='{"session_id":"s","cwd":"/w","hook_event_name":"PreToolUse","tool_name":"Write","tool_use_id":"t6","tool_input":{"file_path":"repo/.env"}}'
-EOUT="$(echo "$ENV_PAYLOAD" | "$BIN" hook run --socket "$SOCK" --provider=claude-code)"
-echo "$EOUT" | grep -q '"permissionDecision":"deny"'
+EOUT="$(e2e_hook_run claude-code "$ENV_PAYLOAD")"
+e2e_assert_contains "$EOUT" '"permissionDecision":"deny"' path-deny-write
 
 # subset route: shell-only for codex Bash — ask falls back to deny (no CapAsk)
 SUB_PAYLOAD='{"session_id":"s","cwd":"/w","hook_event_name":"PreToolUse","tool_name":"Bash","tool_use_id":"t7","tool_input":{"command":"curl https://example.com"}}'
-SOUT="$(echo "$SUB_PAYLOAD" | "$BIN" hook run --socket "$SOCK" --provider=codex)"
-echo "$SOUT" | grep -qiE 'deny|blocked|ask_on'
+SOUT="$(e2e_hook_run codex "$SUB_PAYLOAD")"
+e2e_assert_matches "$SOUT" 'deny|blocked|ask_on' shell-subset
 
-"$BIN" daemon stop --socket "$SOCK" --timeout 5s
-
-echo "e2e-m6: ok"
+e2e_daemon_stop
+e2e_pass

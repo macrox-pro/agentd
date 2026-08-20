@@ -91,7 +91,7 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 - AGENTS.md / CONVENTIONS.md read: yes (2026-08-20)
 - M6 complete: shell/mcp/paths schema+compile, `internal/guard/{shell,mcp,paths}.go`, builtin attach by route list, e2e-m6
 - Files: `internal/config/{file,guards,merge,defaults,compile}.go`, `internal/guard/{attach,shell,mcp,paths}.go`, `internal/dispatch/targets/builtin.go`, `scripts/e2e-m6.sh`, `Makefile`
-- **Convention:** `make e2e` runs all `scripts/e2e-mN.sh` — when adding `e2e-m7.sh` (etc.), append to Makefile `e2e` in the same PR
+- **Convention:** `make e2e` discovers `scripts/e2e-m*.sh`; shared setup in `scripts/e2e-common.sh`
 
 ## Verify (last green)
 
