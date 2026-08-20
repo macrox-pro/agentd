@@ -51,7 +51,7 @@ func TestQueueDrain(t *testing.T) {
 		WorkerLimit:   2,
 		TargetTimeout: time.Second,
 	}, nil)
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		require.True(t, q.Enqueue(dispatch.Job{Run: func(context.Context) {
 			mu.Lock()
 			ran.Add(1)

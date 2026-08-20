@@ -15,13 +15,14 @@ import (
 
 // Engine routes hook invocations through sync and async pipelines.
 type Engine struct {
-	queue *Queue
-	log   *slog.Logger
+	queue    *Queue
+	log      *slog.Logger
+	sessions *Sessions
 }
 
 // NewEngine returns a dispatch engine backed by queue.
 func NewEngine(queue *Queue, log *slog.Logger) *Engine {
-	return &Engine{queue: queue, log: log}
+	return &Engine{queue: queue, log: log, sessions: &Sessions{}}
 }
 
 // Queue returns the async queue (may be nil in tests).
@@ -30,6 +31,14 @@ func (e *Engine) Queue() *Queue {
 		return nil
 	}
 	return e.queue
+}
+
+// Sessions returns the per-session lock registry.
+func (e *Engine) Sessions() *Sessions {
+	if e == nil {
+		return nil
+	}
+	return e.sessions
 }
 
 // InvokeInput is one HookService.Invoke.
@@ -69,6 +78,9 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 	providerName, _ := providerName(in.Provider)
 	eventKind := targets.EventKindOf(typed)
 
+	unlock := e.sessions.Lock(SessionIDOf(typed))
+	defer unlock()
+
 	switch mode {
 	case config.ModeAsyncOnly:
 		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
@@ -76,14 +88,14 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 
 	case config.ModeParallel:
 		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
-		d, err := e.runSync(ctx, builtin, route.Sync, typed)
+		d, err := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
 		if err != nil {
 			return InvokeResult{}, err
 		}
 		return InvokeResult{Decision: DecisionToProto(d), AsyncDispatchedCount: n}, nil
 
 	case config.ModeAfterSync:
-		d, err := e.runSync(ctx, builtin, route.Sync, typed)
+		d, err := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
 		if err != nil {
 			return InvokeResult{}, err
 		}
@@ -93,7 +105,7 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		return InvokeResult{Decision: proto, AsyncDispatchedCount: n}, nil
 
 	default: // sync_only
-		d, err := e.runSync(ctx, builtin, route.Sync, typed)
+		d, err := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
 		if err != nil {
 			return InvokeResult{}, err
 		}
@@ -101,13 +113,36 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 	}
 }
 
-func (e *Engine) runSync(ctx context.Context, b *targets.Builtin, syncTargets []config.CompiledTarget, typed any) (agenthooks.Decision, error) {
+func (e *Engine) runSync(ctx context.Context, b *targets.Builtin, syncTargets []config.CompiledTarget, typed any, provider agentdv1.Provider, raw []byte) (agenthooks.Decision, error) {
 	var last agenthooks.Decision = agenthooks.NoDecision()
 	for _, t := range syncTargets {
-		if t.Kind != config.TargetBuiltin {
+		var (
+			d   agenthooks.Decision
+			err error
+		)
+		switch t.Kind {
+		case config.TargetBuiltin:
+			d, err = b.Decide(ctx, typed, t.Guards)
+		case config.TargetGRPC:
+			g := &targets.GRPC{Logger: e.log}
+			d, err = g.InvokeSync(ctx, targets.SyncRequest{
+				Provider: provider,
+				Raw:      raw,
+				Target:   t,
+			})
+			if err != nil {
+				if t.OnError == config.FailOpen {
+					if e.log != nil {
+						e.log.Warn("grpc sync target failed (fail_open)", "error", err)
+					}
+					d, err = agenthooks.NoDecision(), nil
+				} else {
+					d, err = agenthooks.Deny("grpc forward failed"), nil
+				}
+			}
+		default:
 			continue
 		}
-		d, err := b.Decide(ctx, typed, t.Guards)
 		if err != nil {
 			return nil, err
 		}

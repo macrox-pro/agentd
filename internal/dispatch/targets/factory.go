@@ -20,6 +20,8 @@ func NewAsyncInvoker(t config.CompiledTarget, builtin *Builtin, log *slog.Logger
 		return &HTTP{Logger: log}, nil
 	case config.TargetExec:
 		return &Exec{Logger: log}, nil
+	case config.TargetGRPC:
+		return &GRPC{Logger: log}, nil
 	default:
 		return nil, fmt.Errorf("unknown async target %q", t.Kind)
 	}

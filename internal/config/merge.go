@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"time"
 )
 
@@ -27,9 +28,7 @@ func mergeFile(base *fileConfig, user *fileConfig) *fileConfig {
 	}
 	if len(user.DispatchDefaults) > 0 {
 		dd := map[string]fileKindDefault{}
-		for k, v := range out.DispatchDefaults {
-			dd[k] = v
-		}
+		maps.Copy(dd, out.DispatchDefaults)
 		for k, v := range user.DispatchDefaults {
 			cur := dd[k]
 			if v.Mode != "" {
@@ -253,9 +252,7 @@ func parseGuards(fg *fileGuards, def Guards) (Guards, error) {
 
 func parseKindDefaults(in map[string]fileKindDefault, def map[string]KindDefault) (map[string]KindDefault, error) {
 	out := make(map[string]KindDefault, len(def))
-	for k, v := range def {
-		out[k] = v
-	}
+	maps.Copy(out, def)
 	for k, v := range in {
 		cur := out[k]
 		if v.Mode != "" {

@@ -67,6 +67,9 @@ func (d *daemonService) Status(context.Context, *agentdv1.StatusRequest) (*agent
 		if q := d.opts.Engine.Queue(); q != nil {
 			resp.AsyncQueueDepth = uint32(q.Depth())
 		}
+		if s := d.opts.Engine.Sessions(); s != nil {
+			resp.ActiveSessions = s.Active()
+		}
 	}
 	if snap.UserPath != "" {
 		resp.ConfigLayers = []*agentdv1.LayerInfo{{

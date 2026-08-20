@@ -102,6 +102,8 @@ Agents always invoke `agentd hook run|notify|serve`. Hook CLI decode/encodes wir
    - Forward targets in `internal/dispatch/targets/`
 
 3. **OpenCode** — `agentd hook serve` holds stdio; each NDJSON frame → gRPC `Invoke`; session mutex in daemon.
+   Install-generated shims use the agenthooks argv sentinel: `agentd agenthooks serve --provider=opencode`
+   (same behavior as `hook serve`).
 
 4. **Providers:** `claude-code`, `cursor`, `codex`, `gemini`, `opencode`, `kimicode` (+ variants).
 
@@ -342,7 +344,7 @@ Protobuf definitions: `api/agentd/v1/`. Buf rules: [AGENTS.md § Protobuf](./AGE
 - Optional dev fallback: loopback TCP
 - State: socket path in `$XDG_RUNTIME_DIR/agentd/state.json`, PID file, lock file
 
-Implementation: `internal/transport` with `unix.go` / `windows.go` build tags.
+Implementation: `internal/transport` with `listen_*.go` / `dial_*.go` / `path_*.go` platform files (`_unix` / `_windows` / `_other`).
 
 ---
 
@@ -430,15 +432,24 @@ Codex notify path (argv JSON, not stdin). Always async semantics.
 
 **See also:** `hook run`
 
+**Example:**
+
+```bash
+agentd hook notify --provider=codex '{"type":"agent-turn-complete"}'
+```
+
 ### `agentd hook serve --provider=opencode`
 
 Long-lived NDJSON stdio for OpenCode shim; frames → gRPC `Invoke`.
+
+Install may also invoke the hidden sentinel `agentd agenthooks serve --provider=opencode`.
 
 **See also:** `hook run`, DESIGN § OpenCode
 
 ### `agentd install --provider=P --scope=S [--dir PATH]`
 
-Write provider hook configs via `agenthooks/install`. `Command` = `["agentd", "hook", "run", "--provider=P"]`.
+Write provider hook configs via `agenthooks/install`. `Command` = absolute path to the
+`agentd` binary; generated configs append `agenthooks run|serve --provider=…`.
 
 **See also:** `hook run`
 
@@ -446,8 +457,8 @@ Write provider hook configs via `agenthooks/install`. `Command` = `["agentd", "h
 
 ```bash
 agentd install --provider=claude-code --scope=project
+agentd install --provider=opencode --scope=project --dir /path/to/repo
 ```
-
 ### `agentd config validate [--config PATH]`
 
 Validate YAML offline (CI). Parse + schema + dry-compile routes. No daemon required.
@@ -556,6 +567,7 @@ agentd/
 │   │   └── targets/
 │   ├── hookclient/
 │   ├── hookedge/
+│   ├── install/
 │   ├── guard/
 │   ├── config/
 │   └── transport/
@@ -605,10 +617,12 @@ agentd/
 | **M1** | done | daemon start/stop/status/reload; ConfigStore (defaults⊕user, atomic snapshot); HookService.Invoke → NO_DECISION; `hook run` via daemon; user-facing CLI help |
 | **M2** | done | Dispatch Engine; parallel/after_sync; async queue; secrets guard |
 | **M3** | done | Forward targets (exec, http, log, file); full dispatch YAML; fsnotify reload |
-| **M4** | planned | gRPC forward; OpenCode serve bridge; install wrapper; Windows npipe hardening |
+| **M4** | done | gRPC forward; OpenCode serve bridge; install wrapper; Windows npipe hardening |
 
 M1 acceptance: `daemon start|status|reload|stop` and `hook run --provider=…` round-trip; see PROGRESS.md.
 
 M2 acceptance: Dispatch Engine (parallel/after_sync), bounded async queue, secrets guard Ask/Deny on tool.pre, `dispatch routes`, `scripts/e2e-m2.sh`.
 
 M3 acceptance: declarative `dispatch:` + async exec/http/log/file; debounced fsnotify reload; `scripts/e2e-m3.sh`.
+
+M4 acceptance: declarative `target: grpc` (sync+async); `hook serve` / `hook notify` + agenthooks sentinel; `agentd install`; Windows pipe path by SID; `scripts/e2e-m4.sh`.

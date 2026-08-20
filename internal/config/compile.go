@@ -128,26 +128,25 @@ func compileTargets(in []fileTarget, sync bool, routeName string) ([]CompiledTar
 func compileOneTarget(ft fileTarget, sync bool) (CompiledTarget, error) {
 	kind := TargetKind(ft.Target)
 	switch kind {
-	case TargetBuiltin, TargetExec, TargetHTTP, TargetLog, TargetFile:
-	case TargetGRPC:
-		return CompiledTarget{}, fmt.Errorf("target %q is not supported until M4", ft.Target)
+	case TargetBuiltin, TargetExec, TargetHTTP, TargetLog, TargetFile, TargetGRPC:
 	case "":
 		return CompiledTarget{}, fmt.Errorf("target is required")
 	default:
 		return CompiledTarget{}, fmt.Errorf("unknown target %q", ft.Target)
 	}
-	if sync && kind != TargetBuiltin {
-		return CompiledTarget{}, fmt.Errorf("sync target %q not supported in M3 (builtin only)", kind)
+	if sync && kind != TargetBuiltin && kind != TargetGRPC {
+		return CompiledTarget{}, fmt.Errorf("sync target %q not supported (builtin or grpc only)", kind)
 	}
 	ct := CompiledTarget{
-		Kind:    kind,
-		Guards:  append([]string(nil), ft.Guards...),
-		Observe: ft.Observe,
-		URL:     ft.URL,
-		Command: append([]string(nil), ft.Command...),
-		Stdin:   ft.Stdin,
-		Level:   ft.Level,
-		Path:    ft.Path,
+		Kind:     kind,
+		Guards:   append([]string(nil), ft.Guards...),
+		Observe:  ft.Observe,
+		URL:      ft.URL,
+		Command:  append([]string(nil), ft.Command...),
+		Stdin:    ft.Stdin,
+		Level:    ft.Level,
+		Path:     ft.Path,
+		Endpoint: ft.Endpoint,
 	}
 	if ft.Retry != nil {
 		ct.Retry = *ft.Retry
@@ -195,6 +194,26 @@ func compileOneTarget(ft fileTarget, sync bool) (CompiledTarget, error) {
 		case "debug", "info", "warn", "error":
 		default:
 			return CompiledTarget{}, fmt.Errorf("log level unknown %q", ct.Level)
+		}
+	case TargetGRPC:
+		if ct.Endpoint == "" {
+			return CompiledTarget{}, fmt.Errorf("grpc target requires endpoint")
+		}
+		onErr := FailClosed
+		if ft.OnError != "" {
+			switch FailMode(ft.OnError) {
+			case FailOpen, FailClosed:
+				onErr = FailMode(ft.OnError)
+			default:
+				return CompiledTarget{}, fmt.Errorf("grpc on_error unknown %q", ft.OnError)
+			}
+		}
+		ct.OnError = onErr
+		if ft.Merge != "" {
+			if SyncMerge(ft.Merge) != MergeFirstConclusive {
+				return CompiledTarget{}, fmt.Errorf("grpc merge unknown %q (only first_conclusive)", ft.Merge)
+			}
+			ct.Merge = MergeFirstConclusive
 		}
 	}
 	return ct, nil

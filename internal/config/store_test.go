@@ -238,7 +238,7 @@ dispatch:
 			},
 		},
 		{
-			name: "reject grpc",
+			name: "accept grpc async",
 			content: `version: 1
 dispatch:
   - name: fwd
@@ -247,6 +247,68 @@ dispatch:
     mode: async_only
     async:
       - target: grpc
+        endpoint: unix:///tmp/peer.sock
+        timeout: 2s
+`,
+			check: func(t *testing.T, snap *config.Snapshot) {
+				t.Helper()
+				require.GreaterOrEqual(t, len(snap.Routes), 1)
+				r := snap.Routes[0]
+				require.Len(t, r.Async, 1)
+				assert.Equal(t, config.TargetGRPC, r.Async[0].Kind)
+				assert.Equal(t, "unix:///tmp/peer.sock", r.Async[0].Endpoint)
+				assert.Equal(t, 2*time.Second, r.Async[0].Timeout)
+				assert.Equal(t, config.FailClosed, r.Async[0].OnError)
+			},
+		},
+		{
+			name: "accept grpc sync",
+			content: `version: 1
+dispatch:
+  - name: gate
+    match:
+      kind: [tool.pre]
+    mode: sync_only
+    sync:
+      - target: grpc
+        endpoint: /tmp/peer.sock
+        on_error: fail_open
+        merge: first_conclusive
+`,
+			check: func(t *testing.T, snap *config.Snapshot) {
+				t.Helper()
+				r := snap.Routes[0]
+				require.Len(t, r.Sync, 1)
+				assert.Equal(t, config.TargetGRPC, r.Sync[0].Kind)
+				assert.Equal(t, config.FailOpen, r.Sync[0].OnError)
+				assert.Equal(t, config.MergeFirstConclusive, r.Sync[0].Merge)
+			},
+		},
+		{
+			name: "reject grpc without endpoint",
+			content: `version: 1
+dispatch:
+  - name: fwd
+    match:
+      kind: [tool.pre]
+    mode: async_only
+    async:
+      - target: grpc
+`,
+			wantErr: true,
+		},
+		{
+			name: "reject grpc bad on_error",
+			content: `version: 1
+dispatch:
+  - name: fwd
+    match:
+      kind: [tool.pre]
+    mode: sync_only
+    sync:
+      - target: grpc
+        endpoint: /tmp/peer.sock
+        on_error: nope
 `,
 			wantErr: true,
 		},

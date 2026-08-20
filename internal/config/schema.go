@@ -96,7 +96,14 @@ const (
 	TargetHTTP    TargetKind = "http"
 	TargetLog     TargetKind = "log"
 	TargetFile    TargetKind = "file"
-	TargetGRPC    TargetKind = "grpc" // rejected at compile until M4
+	TargetGRPC TargetKind = "grpc"
+)
+
+// SyncMerge is the sync merge policy for a grpc target (engine uses first_conclusive).
+type SyncMerge string
+
+const (
+	MergeFirstConclusive SyncMerge = "first_conclusive"
 )
 
 // RouteMatch is compiled match criteria for a declarative route.
@@ -108,16 +115,19 @@ type RouteMatch struct {
 
 // CompiledTarget is one sync or async target on a route.
 type CompiledTarget struct {
-	Kind    TargetKind
-	Guards  []string // builtin sync
-	Observe bool     // builtin async
-	URL     string   // http
-	Command []string // exec
-	Stdin   string   // exec: "raw" or empty
-	Level   string   // log: info|warn|error|debug
-	Path    string   // file
-	Retry   int      // http (M3: always 0)
-	Timeout time.Duration
+	Kind     TargetKind
+	Guards   []string // builtin sync
+	Observe  bool     // builtin async
+	URL      string   // http
+	Command  []string // exec
+	Stdin    string   // exec: "raw" or empty
+	Level    string   // log: info|warn|error|debug
+	Path     string   // file
+	Retry    int      // http (M3: always 0)
+	Timeout  time.Duration
+	Endpoint string   // grpc
+	OnError  FailMode // grpc sync: fail_closed (default) | fail_open
+	Merge    SyncMerge
 }
 
 // CompiledRoute is a compiled dispatch route.
@@ -185,14 +195,17 @@ type fileMatch struct {
 }
 
 type fileTarget struct {
-	Target  string   `yaml:"target"`
-	Guards  []string `yaml:"guards"`
-	Observe bool     `yaml:"observe"`
-	URL     string   `yaml:"url"`
-	Command []string `yaml:"command"`
-	Stdin   string   `yaml:"stdin"`
-	Level   string   `yaml:"level"`
-	Path    string   `yaml:"path"`
-	Retry   *int     `yaml:"retry"`
-	Timeout string   `yaml:"timeout"`
+	Target   string   `yaml:"target"`
+	Guards   []string `yaml:"guards"`
+	Observe  bool     `yaml:"observe"`
+	URL      string   `yaml:"url"`
+	Command  []string `yaml:"command"`
+	Stdin    string   `yaml:"stdin"`
+	Level    string   `yaml:"level"`
+	Path     string   `yaml:"path"`
+	Retry    *int     `yaml:"retry"`
+	Timeout  string   `yaml:"timeout"`
+	Endpoint string   `yaml:"endpoint"`
+	OnError  string   `yaml:"on_error"`
+	Merge    string   `yaml:"merge"`
 }

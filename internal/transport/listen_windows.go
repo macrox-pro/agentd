@@ -7,7 +7,6 @@ import (
 	"net"
 
 	"github.com/Microsoft/go-winio"
-	"golang.org/x/sys/windows"
 )
 
 // Listen creates a Windows named pipe listener restricted to the current user.
@@ -26,16 +25,10 @@ func Listen(path string) (net.Listener, error) {
 }
 
 func currentUserPipeSDDL() (string, error) {
-	token, err := windows.OpenCurrentProcessToken()
+	sid, err := currentUserSID()
 	if err != nil {
-		return "", fmt.Errorf("open process token: %w", err)
-	}
-	defer token.Close()
-
-	tokUser, err := token.GetTokenUser()
-	if err != nil {
-		return "", fmt.Errorf("token user: %w", err)
+		return "", err
 	}
 	// D:P = protected DACL; (A;;GA;;;SID) = allow generic-all to current user only.
-	return fmt.Sprintf("D:P(A;;GA;;;%s)", tokUser.User.Sid.String()), nil
+	return fmt.Sprintf("D:P(A;;GA;;;%s)", sid), nil
 }

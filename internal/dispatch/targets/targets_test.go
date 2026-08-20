@@ -11,7 +11,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/speakeasy-api/agenthooks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -92,4 +94,81 @@ func TestExecInvokeAsync(t *testing.T) {
 	b, err := os.ReadFile(out)
 	require.NoError(t, err)
 	assert.Equal(t, "hello", string(b))
+}
+
+func TestGRPCInvokeSync(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		peerKind agentdv1.DecisionKind
+		peerErr  bool
+		wantKind agenthooks.DecisionKind
+	}{
+		{
+			name:     "peer deny",
+			peerKind: agentdv1.DecisionKind_DECISION_KIND_DENY,
+			wantKind: agenthooks.DecisionDeny,
+		},
+		{
+			name:     "peer allow",
+			peerKind: agentdv1.DecisionKind_DECISION_KIND_ALLOW,
+			wantKind: agenthooks.DecisionAllow,
+		},
+		{
+			name:    "peer error",
+			peerErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			g := &targets.GRPC{
+				InvokePeer: func(ctx context.Context, endpoint string, req *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
+					assert.Equal(t, "unix:///peer.sock", endpoint)
+					if tt.peerErr {
+						return nil, assert.AnError
+					}
+					return &agentdv1.InvokeResponse{
+						Decision: &agentdv1.Decision{Kind: tt.peerKind, Reason: "from-peer"},
+					}, nil
+				},
+			}
+			d, err := g.InvokeSync(context.Background(), targets.SyncRequest{
+				Provider: agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+				Raw:      []byte(`{}`),
+				Target: config.CompiledTarget{
+					Kind:     config.TargetGRPC,
+					Endpoint: "unix:///peer.sock",
+					Timeout:  time.Second,
+				},
+			})
+			if tt.peerErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, d)
+			assert.Equal(t, tt.wantKind, d.Kind())
+		})
+	}
+}
+
+func TestGRPCInvokeAsync(t *testing.T) {
+	t.Parallel()
+	called := false
+	g := &targets.GRPC{
+		InvokePeer: func(ctx context.Context, endpoint string, req *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
+			called = true
+			assert.Equal(t, agentdv1.Provider_PROVIDER_CLAUDE_CODE, req.GetProvider())
+			return &agentdv1.InvokeResponse{
+				Decision: &agentdv1.Decision{Kind: agentdv1.DecisionKind_DECISION_KIND_ALLOW},
+			}, nil
+		},
+	}
+	require.NoError(t, g.InvokeAsync(context.Background(), targets.AsyncRequest{
+		Provider: "claude-code",
+		Raw:      []byte(`{}`),
+		Target:   config.CompiledTarget{Kind: config.TargetGRPC, Endpoint: "/tmp/x.sock"},
+	}))
+	assert.True(t, called)
 }

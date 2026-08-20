@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/speakeasy-api/agenthooks"
@@ -104,10 +105,5 @@ func toolIdentity(typed any) (name string, canon agenthooks.CanonicalTool) {
 }
 
 func stringIn(ss []string, want string) bool {
-	for _, s := range ss {
-		if s == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ss, want)
 }

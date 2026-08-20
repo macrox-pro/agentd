@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -40,6 +39,8 @@ func init() {
 
 	hookRunCmd.Flags().BoolVar(&hookArgvPayload, "argv-payload", false, "read the hook payload from argv instead of stdin")
 	hookRunCmd.Flags().DurationVar(&hookTimeout, "timeout", 0, "maximum time to wait for a decision (0 uses the agent default)")
+	hookNotifyCmd.Flags().DurationVar(&hookTimeout, "timeout", 0, "maximum time to wait for a decision")
+	hookServeCmd.Flags().DurationVar(&hookTimeout, "timeout", 0, "per-frame deadline override")
 }
 
 var hookRunCmd = &cobra.Command{
@@ -91,11 +92,28 @@ var hookNotifyCmd = &cobra.Command{
 
 Use this only when your Codex settings generate a notify-style command.
 The agent does not wait for side effects from this path.`,
-	Example: `  agentd hook notify --provider=codex`,
+	Example:       `  agentd hook notify --provider=codex '{"type":"agent-turn-complete"}'`,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_ = cmd
-		_ = args
-		return errors.New("hook notify is not implemented")
+		if hookProvider == "" {
+			return fmt.Errorf("provider is required")
+		}
+		if len(args) < 1 {
+			return fmt.Errorf("notify payload required")
+		}
+		code := hookedge.Notify(cmd.Context(), hookedge.Options{
+			Socket:     resolveSocket(),
+			Provider:   hookProvider,
+			Timeout:    hookTimeout,
+			PayloadArg: args[0],
+			Stdout:     cmd.OutOrStdout(),
+			Stderr:     cmd.ErrOrStderr(),
+		})
+		if code != 0 {
+			os.Exit(code)
+		}
+		return nil
 	},
 }
 
@@ -105,11 +123,27 @@ var hookServeCmd = &cobra.Command{
 	Long: `Stay running and exchange hook frames with OpenCode over stdin/stdout.
 
 Use this when OpenCode's plugin starts agentd as a long-lived process.
-Requires --provider=opencode.`,
-	Example: `  agentd hook serve --provider=opencode`,
+Requires --provider=opencode. Install-generated shims may also invoke the
+hidden "agentd agenthooks serve" sentinel with the same behavior.`,
+	Example:       `  agentd hook serve --provider=opencode`,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_ = cmd
 		_ = args
-		return errors.New("hook serve is not implemented")
+		if hookProvider == "" {
+			return fmt.Errorf("provider is required")
+		}
+		code := hookedge.Serve(cmd.Context(), hookedge.Options{
+			Socket:   resolveSocket(),
+			Provider: hookProvider,
+			Timeout:  hookTimeout,
+			Stdin:    cmd.InOrStdin(),
+			Stdout:   cmd.OutOrStdout(),
+			Stderr:   cmd.ErrOrStderr(),
+		})
+		if code != 0 {
+			os.Exit(code)
+		}
+		return nil
 	},
 }
