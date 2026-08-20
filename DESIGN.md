@@ -15,6 +15,7 @@ Contributor and protobuf rules: [AGENTS.md](./AGENTS.md).
 | Sync + async hooks | Dispatch Engine with hybrid modes |
 | Safe defaults | Declarative guards; fail-closed policy option |
 | Cross-platform | gRPC over Unix socket / Windows named pipe |
+| Cross-agent trajectory (post-v1) | Opt-in append-only session ledger + transcript import — §14 / M9+ |
 
 **Decisions:**
 
@@ -22,6 +23,7 @@ Contributor and protobuf rules: [AGENTS.md](./AGENTS.md).
 - Guards and dispatch via declarative YAML
 - Daemon writes runtime overlay only (`$XDG_STATE_HOME/agentd/runtime.yaml`)
 - Hook CLI: decode/encode only; all routing in daemon
+- Trajectory (when enabled) is async side channel — never blocks wire encode; default off (PII)
 
 ---
 
@@ -583,7 +585,8 @@ agentd/
 │   ├── install/
 │   ├── guard/
 │   ├── config/
-│   └── transport/
+│   ├── transport/
+│   └── trajectory/          # post-v1 (M9+) — session ledger; see §14
 ├── DESIGN.md
 ├── AGENTS.md
 ├── PROGRESS.md
@@ -605,7 +608,7 @@ agentd/
 ## 11. Non-goals (v1)
 
 - Auth/login flows for agents
-- Transcript pipelines
+- Transcript / trajectory pipelines (**planned post-v1** — §14 / M9+)
 - Go plugin system (YAML targets only)
 - Standalone hooks DSL
 - Async retry storms (default `retry: 0`)
@@ -619,6 +622,9 @@ agentd/
 3. Async overflow: drop + counter in `DaemonService.Status` — **accepted** (v1; see M8)
 4. Runtime format: YAML, atomic rename — **accepted**
 5. `exec` sync JSON decision — **deferred post-v1**; v1 keeps exec async-only (sync path stays builtin/http/grpc)
+6. Trajectory storage backend (JSONL vs SQLite) — **lean JSONL first** (M9); SQLite/search index in M10 if needed
+7. Default-on vs opt-in trajectory — **opt-in** (PII / secrets in `Raw`); redaction knobs in M9
+8. Agent-level resume/fork (re-drive Claude/Cursor from seq N) — **out of scope** unless a provider exposes resume API or agentd owns a loop; M11 is log/policy replay only
 
 ---
 
@@ -635,6 +641,10 @@ agentd/
 | **M6** | done | Guards: shell, mcp, paths |
 | **M7** | done | Approvals / `RecordDecision`; runtime persist; temporary blocks |
 | **M8 / v1** | done | Ops polish, conformance, docs freeze, release gate |
+| **M9** | planned | Trajectory hub P0 — **L0 live ledger for all six providers** + export (§14 / §14.6) |
+| **M10** | planned | Trajectory P1 — search + Claude import; others L0 + explicit importer status |
+| **M11** | planned | Trajectory P2 — importers where possible; policy replay **all** wire dialects |
+| **M12 / v1.1** | planned | Trajectory P3 — Subscribe; contract freeze; depth = §14.6 matrix; **v1.1 release gate** |
 
 Session checklists and verify commands: [PROGRESS.md](./PROGRESS.md).
 
@@ -679,4 +689,266 @@ M7 acceptance: Approve once → subsequent matching tool.pre allows within TTL; 
 - [x] README/DESIGN match behavior; non-goals §11 unchanged
 - [x] Lint + race tests + e2e-m8 green; release artifact published
 
-**Explicitly not v1** (see §11 + §12.5): agent auth, transcripts, plugins, hooks DSL, async retry storms, exec sync JSON decisions.
+**Explicitly not v1** (see §11 + §12 Q5): agent auth, transcripts (→ §14 / M9+), plugins, hooks DSL, async retry storms, exec sync JSON decisions.
+
+### M9 — Trajectory hub P0 (live ledger)
+
+**Goal:** Opt-in append-only session log of every `Invoke` (hook timeline + sync decision); store and export. Does **not** claim “everything the model sees.”
+
+| Phase | Work |
+|-------|------|
+| A | Event catalog + `internal/trajectory` append-only store (in-memory seq + JSONL under state dir) |
+| B | Engine wiring: enqueue record on `after_sync` / `async_only` path; never block wire response; honor overflow drop + Status counter (or dedicated `trajectory_dropped_count`) |
+| C | Config: `trajectory:` opt-in (enabled, path, include_raw, redaction); defaults off |
+| D | CLI: `session list\|show\|export`; DESIGN §6 + docs en/ru |
+| E | `scripts/e2e-m9.sh` + unit tests |
+
+**M9 acceptance:**
+
+- [ ] With trajectory enabled, **every supported provider** (`claude-code`, `cursor`, `codex`, `gemini`, `opencode`, `kimi-code`) appends contiguous `seq` events for invoked + decided on a fixture `hook run|notify|serve` path (§14.6)
+- [ ] Provider-specific entrypoints covered in e2e or unit fixtures: stdin run, `--argv-payload` (Cursor), `notify` (Codex), `serve` frame (OpenCode)
+- [ ] Sync path latency unchanged when store flush is async (no disk I/O inside Decide)
+- [ ] `session export` writes JSONL consumable by an external Trajectory viewer
+- [ ] Disabled by default; docs state PII + **per-provider coverage matrix** (§14.6) — no claim of full model-visible context
+- [ ] `make lint` + `make test` + `e2e-m9` green
+
+### M10 — Trajectory P1 (search + Claude import)
+
+**Goal:** Search the ledger; enrich with Claude Code session JSONL (thinking blocks, richer assistant turns) merged by `session_id` / `tool_use_id`. **Live path remains required for all six providers**; import is additive and optional per provider.
+
+| Phase | Work |
+|-------|------|
+| A | Search CLI (`session search`) — substring / kind / provider filters; SQLite index optional |
+| B | Claude transcript importer (read-only watch or explicit `session import`) |
+| C | Merge rules + `source` field (`hook` \| `transcript` \| `decision`); document id correlation limits (§14.6) |
+| D | Docs: full §14.6 matrix mirrored in user docs; e2e-m10 (Claude import + search; other providers still live-only) |
+
+**M10 acceptance:**
+
+- [ ] Imported thinking/assistant records appear in the same session stream with `source=transcript` (Claude)
+- [ ] Hook and transcript events correlate when ids match; no rewrite of prior seqs (append-only)
+- [ ] Non-Claude providers: live ledger still works; importer status is `supported` \| `partial` \| `none` per §14.6 (no silent pretend-import)
+- [ ] Search returns hits without full-file scan for moderately large logs (or document O(n) JSONL scan limit)
+
+### M11 — Trajectory P2 (multi-import + policy replay)
+
+**Goal:** Additional provider importers **only where a stable on-disk format exists**; **policy** dry-run replay from a logged payload for **all** providers that can supply `raw` (not agent-loop resume).
+
+| Phase | Work |
+|-------|------|
+| A | Cursor / Codex / others: importer or explicit `none` + docs; never invent thinking/tool-output |
+| B | `session replay --policy` — re-Invoke stored raw through Engine (bufconn); matrix: all six providers’ wire dialects |
+| C | Log fork: copy prefix → new `session_id` (audit lineage only) |
+| D | e2e-m11 |
+
+**M11 acceptance:**
+
+- [ ] Every supported provider has an importer row: implemented **or** documented `none`/`partial` with reason (§14.6)
+- [ ] Policy replay works for fixtures of all six providers (encode/decode via agenthooks); does not talk to a live agent
+- [ ] Fork creates a new ledger with `parent_session` metadata; original immutable
+
+### M12 / v1.1 — Trajectory P3 (stream out)
+
+**Goal:** Live subscribe / push so external Trajectory UIs can tail the same event stream. Still **no** agentd-owned agent loop. Stream includes events from **all** providers under one schema; UI filters by `provider` / `source`. **Ships as v1.1** (M9–M11 must be done).
+
+| Phase | Work |
+|-------|------|
+| A | gRPC `SessionService.Subscribe` (or extend DaemonService) — post-commit firehose |
+| B | Optional async target `trajectory` mirror already covered by store; http webhook of events |
+| C | Public event schema freeze + docs “Trajectory contract” + §14.6 matrix in README/user guide |
+| D | e2e-m12 + changelog / tag **v1.1.0** |
+
+**M12 / v1.1 acceptance:**
+
+- [ ] Subscriber receives events after append without blocking Invoke (any provider)
+- [ ] Schema versioned; unknown `ignorable` types skippable by readers
+- [ ] Product copy: “every **supported agent’s hooks** are traceable on one stream; transcript depth varies by provider” — not “everything the model sees everywhere”
+- [ ] M9–M11 acceptance met; `make lint` + `make test` + e2e-m9…m12 green; release artifact published
+
+---
+
+## 14. Trajectory hub (post-v1)
+
+Optional capability: agentd as a **cross-agent trajectory hub** — collect, store, and expose how coding agents ran (hooks live; provider transcripts for richer “thinking”), so a Trajectory-style viewer can inspect one append-only stream.
+
+Inspiration (UX / event-sourced log, not runtime ownership): [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) “every run is traceable.” agentd remains a **gate + observer outside the agent loop**; it does not become an agent harness in M9–M12.
+
+### 14.1 Problem and positioning
+
+| Pain | Approach |
+|------|----------|
+| Hook audit scattered across scripts / agent-specific files | One normalized append-only ledger keyed by `(provider, session_id, project_root)` |
+| “What did the gate decide?” lost after the fact | Record `hook/invoked` + `hook/decided` (+ async drop) on the async path |
+| Reasoning / system prompt not in hooks | Best-effort **importers** of provider session JSONL; honest coverage gaps per provider |
+| Want Trajectory UI / search / export | Same event stream: CLI + export + later Subscribe |
+
+**Product claim (honest):** *Every supported agent’s hooks are traceable on one stream; transcript/thinking depth varies by provider (§14.6).*  
+**Universal bar (M9+):** live `hook/invoked` + `hook/decided` for **all six** providers via their real entrypoints — not Claude-only.  
+**Not claimed (M9–M12):** byte-identical “everything the model sees” for every vendor; agent-loop resume/fork.
+
+### 14.2 Architecture
+
+```mermaid
+flowchart LR
+  subgraph live [Live path]
+    Hook[Hook CLI Invoke]
+    Eng[Dispatch Engine]
+    Dec[Sync Decision]
+    Hook --> Eng --> Dec
+  end
+  subgraph traj [Trajectory]
+    Append[Append SessionEvent]
+    Mem[In-memory seq log]
+    Disk[JSONL under state dir]
+    Append --> Mem --> Disk
+  end
+  subgraph rich [Rich path M10+]
+    Imp[Transcript importers]
+    Imp --> Append
+  end
+  subgraph out [Out]
+    CLI[session list/show/search/export]
+    Sub[Subscribe / webhook M12]
+    Mem --> CLI
+    Mem --> Sub
+  end
+  Dec -.->|"async enqueue; never blocks wire"| Append
+```
+
+**Hot-path rules (same as ConfigStore):**
+
+- No trajectory disk I/O inside sync `Decide` / encode
+- Append commits in-memory then notifies persistence asynchronously
+- Overflow: drop + counter (mirror async queue policy); must not stall the agent
+
+### 14.3 Event model (draft catalog)
+
+Contiguous `seq` per session; JSON-serializable `data`; optional `ignorable` for forward-compatible readers.
+
+| Type | Source | When | Notes |
+|------|--------|------|-------|
+| `session/open` | `system` | First sighting of session key | Header: provider, cwd, project_root |
+| `hook/invoked` | `hook` | Each `Invoke` | kind, provider, tool ids, cwd; `raw` optional / redacted |
+| `hook/decided` | `decision` | After sync pipeline | DecisionKind, reason, config generation/fingerprint |
+| `async/dispatched` | `hook` | Async jobs enqueued | counts / target names |
+| `async/dropped` | `system` | Queue or trajectory overflow | why |
+| `transcript/message` | `transcript` | Importer (M10+) | role/blocks as normalized subset |
+| `transcript/thinking` | `transcript` | Importer when present | may be absent or redacted by vendor |
+| `session/fork` | `system` | Log fork (M11) | parent_session, boundary seq |
+| `session/end-seed` | `system` | After loading/fork seed | lineage boundary (Harness-like) |
+
+Correlation: prefer provider `session_id` + `tool_use_id` / call ids when present. Missing or unstable ids → synthetic key `(provider, project_root, weak_id)` and document in §14.6 — never silently merge unrelated runs.
+
+### 14.4 Storage and config
+
+**Layout (draft):** `$XDG_STATE_HOME/agentd/sessions/<provider>/<session_id>.jsonl` (Windows: under agentd state dir). Same layout for every provider id (`claude-code`, `cursor`, `codex`, `gemini`, `opencode`, `kimi-code`).
+
+```yaml
+# ~/.agentd.yaml — opt-in
+trajectory:
+  enabled: false
+  include_raw: false          # default off — Raw may hold secrets
+  redact_secret_rules: true   # reuse secrets guard patterns when include_raw
+  max_event_bytes: 262144     # truncate oversized tool results
+  retention_days: 30          # optional GC later
+  # importers (M10+): explicit enable per provider; absent = none
+  import:
+    claude-code: { enabled: false, path: "" }  # default agent home when path empty
+```
+
+Persist: debounced / batched append; atomic rotate if needed. Distinct from `runtime.yaml` (approvals/blocks).
+
+### 14.5 Read / out APIs
+
+| Surface | Milestone | Role |
+|---------|-----------|------|
+| `agentd session list\|show\|export` | M9 | Local inspect (filter `--provider`) |
+| `agentd session search` | M10 | Filter by kind/provider/text |
+| `agentd session import` | M10 | Pull provider transcript into stream |
+| `agentd session replay --policy` | M11 | Dry-run Engine on stored payload |
+| `agentd session fork` | M11 | New ledger from prefix |
+| gRPC Subscribe / http mirror | M12 | External Trajectory viewers |
+
+### 14.6 Provider support matrix (all supported agents)
+
+Trajectory must work for **every** agent agentd already supports. Depth is tiered; gaps are explicit — do not invent events the wire never carried.
+
+**Tiers**
+
+| Tier | Meaning | Milestone |
+|------|---------|-----------|
+| **L0 Live** | Every `Invoke` → `hook/invoked` + `hook/decided` (and async meta) | **M9 — required for all six** |
+| **L1 Correlate** | Stable `session_id` / tool call ids for merge across events | M9 record as-is; quality varies |
+| **L2 Transcript import** | On-disk session/transcript → `transcript/*` on same stream | M10+ per provider |
+| **L3 Thinking / system / inject** | Reasoning blocks, system prompts, context injections | Only if vendor persists them |
+
+#### Summary
+
+| Provider | Entrypoint | L0 Live | L1 Session key | L2 Import | L3 Thinking / rich | Trajectory limits (must document) |
+|----------|------------|---------|----------------|-----------|--------------------|-----------------------------------|
+| **Claude Code** | `hook run` (stdin) | **required** | Strong (`session_id`, `tool_use_id`) | **M10 primary** — `~/.claude` JSONL | Often yes (thinking in session files; **not** in hooks) | Hooks omit thinking; transcript may lag in-memory turn; PromptSubmitted has no Ask (decision surface ≠ trajectory) |
+| **Cursor** | `hook run --argv-payload` | **required** | Present but dialect-specific | **M11 partial** — agent transcript JSONL if path known | Weak — tool **outputs** often absent; thinking may be `[REDACTED]` | Ask only on shell/MCP natives — trajectory still records Ask/fallback **decisions**; async must not alter sync; argv-payload size limits |
+| **Codex** | `hook run` + `hook notify` | **required** (both paths) | run vs notify may differ — record `invocation_mode` | Best-effort / **none** until format confirmed | Unlikely via hooks | **No CapAsk**; notify is **async-only** (no blocking decision); neutral wire = empty stdout (export still stores decision enum, not raw stdout) |
+| **Gemini** | `hook run` (stdin) | **required** | As provided in payload | **none** until stable on-disk format | Unknown | stderr discipline — trajectory never logs via hookedge stderr; timeouts in ms (deadline still on Invoke) |
+| **OpenCode** | `hook serve` (NDJSON) | **required** | Per-frame session; daemon **session mutex** | **none** until plugin/session format documented | Unknown | Long-lived serve; many stop/idle frames observe-only; **no CapAsk** on tool.pre; permission channel ≠ Claude Ask |
+| **Kimi Code** | `hook run` | **required** | As provided | **none** until format confirmed | Unknown | **No CapAsk**; many PostTool/Permission events **observe-only** (still L0-record); user-scope install only; empty stdout no-op |
+
+User-facing quirk index remains [docs/en/providers.md](./docs/en/providers.md); §14.6 is the **trajectory-specific** contract. When provider docs change, update this matrix in the same PR.
+
+#### Per-provider notes
+
+**Claude Code** — Richest L2/L3 candidate. Live hooks: PreToolUse / PostToolUse / PromptSubmitted / Stop (blocking set in default install). Thinking is **not** a hook event today; importer reads session JSONL. Subagents: child session files if present — correlate via parent ids when available; otherwise separate ledger keys.
+
+**Cursor** — L0 must use argv-payload path in tests. Transcript files may list tool inputs without outputs; hooks (esp. post) are the way to capture results when the agent emits them. Do not promise Trajectory “full model context.”
+
+**Codex** — Two live shapes: blocking `run` and `notify`. Trajectory schema must tag `invocation_mode` (`STDIN` / `NOTIFY` / …). Never treat notify events as sync gate outcomes. Trust/hooks path quirks affect install, not ledger format.
+
+**Gemini** — L0 only until an import path is proven. Keep all trajectory I/O off the hook stderr path (daemon state dir / gRPC only).
+
+**OpenCode** — L0 via serve multiplex: one process, many Invokes; session mutex ordering should match append order for that `session_id`. Observe-only frames still append `hook/invoked` + neutral/empty decision.
+
+**Kimi Code** — L0 including observe-only kinds (record capability emptiness in event metadata if useful). Prefer CLI provider id `kimi-code` in ledger keys (accept `kimicode` parse → canonical id).
+
+#### Uniform guarantees (all providers)
+
+1. Same event catalog and JSONL layout (`provider` field discriminates).
+2. Same opt-in config; no per-provider silent default-on.
+3. Same redaction / `include_raw` / `max_event_bytes` controls.
+4. Missing L2/L3 → empty richer timeline, **not** fake `transcript/thinking` events.
+5. Policy replay (M11) uses stored `raw` + provider codec — must be tested per provider fixture.
+6. Coverage matrix status enum for importers: `supported` | `partial` | `none` (exposed in docs and optionally `session list --json`).
+
+### 14.7 Resume / fork / replay — definitions
+
+| Term | In agentd (M9–M12) | Not in scope |
+|------|--------------------|--------------|
+| **Inspect / search** | Read the ledger (all providers) | — |
+| **Export / subscribe** | Same stream to UI/tools | — |
+| **Fork** | Copy event prefix → new session id | Spawning a new live agent with that context |
+| **Replay** | Re-run **policy** (Engine) on stored `raw` for that provider | Re-run the model / tool loop |
+| **Resume** | N/A unless provider API appears | Harness-style continue-from-seq |
+
+### 14.8 Package layout (additive)
+
+```
+internal/trajectory/     # store, append, export, search
+internal/trajectory/import/  # provider importers (M10+); one file/package per provider
+cmd/session_*.go         # list/show/export/search/import/fork/replay
+api/agentd/v1/session.proto  # M12 Subscribe (+ read RPCs as needed)
+```
+
+No edits to `gen/` by hand; `make generate` after proto. Importers stay in-tree; each provider gets an explicit enable flag or `none`.
+
+### 14.9 Explicit non-goals (trajectory)
+
+- Owning or replacing the agent loop (not a DeepSeek Harness clone)
+- Guaranteeing reasoning/system prompts for every provider (see §14.6 L3)
+- Sync-path persistence or blocking the wire on flush
+- Default-on full `Raw` capture without redaction
+- Claude-only trajectory (L0 is **all** supported agents)
+- Go plugin system for importers (in-tree importers + YAML enable flags first)
+- Inventing PostTool results or thinking when the provider never emitted them
+
+### 14.10 Relationship to v1 targets
+
+Existing async `file` / `http` / `log` sinks remain for ad-hoc audit. Trajectory is a **structured session ledger** with identity, seq, and read APIs — complementary, not a replacement for one-off `target: file` routes. An optional dispatch target `trajectory: { enabled: true }` may mirror “always record matched routes” once the store exists (M9); global `trajectory.enabled` records all Invokes for every provider.
