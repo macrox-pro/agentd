@@ -1,4 +1,4 @@
-package config_test
+package cmd
 
 import (
 	"bytes"
@@ -61,13 +61,13 @@ func TestFormatRoutes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			var buf bytes.Buffer
-			err := config.FormatRoutes(&buf, tt.routes, tt.asJSON)
-			require.NoError(t, err, "FormatRoutes(%s)", tt.name)
+			err := formatRoutes(&buf, tt.routes, tt.asJSON)
+			require.NoError(t, err, "formatRoutes(%s)", tt.name)
 			if tt.check != nil {
 				tt.check(t, buf.Bytes())
 				return
 			}
-			assert.Equal(t, tt.want, buf.String(), "FormatRoutes(%s)", tt.name)
+			assert.Equal(t, tt.want, buf.String(), "formatRoutes(%s)", tt.name)
 		})
 	}
 }

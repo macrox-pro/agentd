@@ -294,7 +294,8 @@ Persist: debounced async flush (500 ms) via `runtime.yaml.tmp` → `runtime.yaml
 
 ### Fingerprint
 
-- `fingerprint = sha256(canonical_json(merged_config))`
+- **Current (M1–M4):** `fingerprint = sha256(raw user YAML bytes)` (empty/missing file → hash of empty).
+- **Target (M5+):** `fingerprint = sha256(canonical_json(merged_config))`
 - `generation` — monotonic uint64 on each swap
 - Exposed in `DaemonService.Status`
 

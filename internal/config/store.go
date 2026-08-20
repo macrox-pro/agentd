@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"sync"
 	"sync/atomic"
 
 	"go.yaml.in/yaml/v3"
@@ -16,7 +17,6 @@ type Snapshot struct {
 	Generation  uint64
 	Fingerprint string
 	UserPath    string
-	RawYAML     []byte
 	Policy      Policy
 	Async       AsyncConfig
 	Guards      Guards
@@ -28,13 +28,14 @@ type Store struct {
 	snap     atomic.Pointer[Snapshot]
 	userPath string
 	gen      atomic.Uint64
+	reloadMu sync.Mutex
 }
 
 // Load reads defaults merged with an optional user YAML file.
 // A missing user file is not an error.
 func Load(_ context.Context, userPath string) (*Store, error) {
 	s := &Store{userPath: userPath}
-	if err := s.reloadLocked(); err != nil {
+	if err := s.reload(); err != nil {
 		return nil, err
 	}
 	return s, nil
@@ -48,10 +49,13 @@ func (s *Store) Current() *Snapshot {
 // Reload re-reads the user config file and swaps the snapshot.
 func (s *Store) Reload(ctx context.Context) error {
 	_ = ctx
-	return s.reloadLocked()
+	return s.reload()
 }
 
-func (s *Store) reloadLocked() error {
+func (s *Store) reload() error {
+	s.reloadMu.Lock()
+	defer s.reloadMu.Unlock()
+
 	raw, err := readUserYAML(s.userPath)
 	if err != nil {
 		return err
@@ -68,6 +72,7 @@ func (s *Store) reloadLocked() error {
 	if err != nil {
 		return fmt.Errorf("compile config %q: %w", s.userPath, err)
 	}
+	// Fingerprint is sha256 of raw user YAML; DESIGN canonical merged JSON is deferred.
 	sum := sha256.Sum256(raw)
 	fp := hex.EncodeToString(sum[:])
 	gen := s.gen.Add(1)
@@ -75,7 +80,6 @@ func (s *Store) reloadLocked() error {
 		Generation:  gen,
 		Fingerprint: fp,
 		UserPath:    s.userPath,
-		RawYAML:     append([]byte(nil), raw...),
 		Policy:      pol,
 		Async:       async,
 		Guards:      guards,

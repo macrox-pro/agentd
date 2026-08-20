@@ -1,10 +1,6 @@
 package config
 
-import (
-	"fmt"
-	"maps"
-	"time"
-)
+import "maps"
 
 func mergeFile(base *fileConfig, user *fileConfig) *fileConfig {
 	if user == nil {
@@ -33,9 +29,6 @@ func mergeFile(base *fileConfig, user *fileConfig) *fileConfig {
 			cur := dd[k]
 			if v.Mode != "" {
 				cur.Mode = v.Mode
-			}
-			if v.Blocking != nil {
-				cur.Blocking = v.Blocking
 			}
 			dd[k] = cur
 		}
@@ -124,165 +117,4 @@ func mergeGuardsPtr(base, user *fileGuards) *fileGuards {
 		out.Secrets.Rules = append([]string(nil), user.Secrets.Rules...)
 	}
 	return &out
-}
-
-func parsePolicy(fp *filePolicy, def Policy) (Policy, error) {
-	out := def
-	if fp == nil {
-		return out, nil
-	}
-	if fp.Fail != "" {
-		m, err := parseFailMode(fp.Fail)
-		if err != nil {
-			return Policy{}, fmt.Errorf("policy.fail: %w", err)
-		}
-		out.Fail = m
-	}
-	if fp.Unsupported != "" {
-		m, err := parseUnsupported(fp.Unsupported)
-		if err != nil {
-			return Policy{}, fmt.Errorf("policy.unsupported: %w", err)
-		}
-		out.Unsupported = m
-	}
-	if fp.AskFallback != "" {
-		m, err := parseAskFallback(fp.AskFallback)
-		if err != nil {
-			return Policy{}, fmt.Errorf("policy.ask_fallback: %w", err)
-		}
-		out.AskFallback = m
-	}
-	if fp.Offline != "" {
-		m, err := parseFailMode(fp.Offline)
-		if err != nil {
-			return Policy{}, fmt.Errorf("policy.offline: %w", err)
-		}
-		out.Offline = m
-	}
-	return out, nil
-}
-
-func parseFailMode(s string) (FailMode, error) {
-	switch FailMode(s) {
-	case FailOpen, FailClosed:
-		return FailMode(s), nil
-	default:
-		return "", fmt.Errorf("unknown %q", s)
-	}
-}
-
-func parseUnsupported(s string) (UnsupportedMode, error) {
-	switch UnsupportedMode(s) {
-	case UnsupportedDegrade, UnsupportedStrict:
-		return UnsupportedMode(s), nil
-	default:
-		return "", fmt.Errorf("unknown %q", s)
-	}
-}
-
-func parseAskFallback(s string) (AskFallback, error) {
-	switch AskFallback(s) {
-	case AskFallbackDeny, AskFallbackNoDecision:
-		return AskFallback(s), nil
-	default:
-		return "", fmt.Errorf("unknown %q", s)
-	}
-}
-
-func parseAsync(fa *fileAsync, def AsyncConfig) (AsyncConfig, error) {
-	out := def
-	if fa == nil {
-		return out, nil
-	}
-	if fa.QueueCapacity != 0 {
-		if fa.QueueCapacity < 1 {
-			return AsyncConfig{}, fmt.Errorf("async.queue_capacity must be >= 1")
-		}
-		out.QueueCapacity = fa.QueueCapacity
-	}
-	if fa.WorkerLimit != 0 {
-		if fa.WorkerLimit < 1 {
-			return AsyncConfig{}, fmt.Errorf("async.worker_limit must be >= 1")
-		}
-		out.WorkerLimit = fa.WorkerLimit
-	}
-	if fa.TargetTimeout != "" {
-		d, err := time.ParseDuration(fa.TargetTimeout)
-		if err != nil {
-			return AsyncConfig{}, fmt.Errorf("async.target_timeout: %w", err)
-		}
-		if d <= 0 {
-			return AsyncConfig{}, fmt.Errorf("async.target_timeout must be > 0")
-		}
-		out.TargetTimeout = d
-	}
-	if fa.OnOverflow != "" {
-		switch OverflowMode(fa.OnOverflow) {
-		case OverflowDrop, OverflowLog:
-			out.OnOverflow = OverflowMode(fa.OnOverflow)
-		default:
-			return AsyncConfig{}, fmt.Errorf("async.on_overflow: unknown %q", fa.OnOverflow)
-		}
-	}
-	return out, nil
-}
-
-func parseGuards(fg *fileGuards, def Guards) (Guards, error) {
-	out := def
-	if fg == nil || fg.Secrets == nil {
-		return out, nil
-	}
-	s := fg.Secrets
-	if s.Enabled != nil {
-		out.Secrets.Enabled = *s.Enabled
-	}
-	if s.Action != "" {
-		switch GuardAction(s.Action) {
-		case GuardAsk, GuardDeny:
-			out.Secrets.Action = GuardAction(s.Action)
-		default:
-			return Guards{}, fmt.Errorf("guards.secrets.action: unknown %q", s.Action)
-		}
-	}
-	if s.Rules != nil {
-		out.Secrets.Rules = append([]string(nil), s.Rules...)
-	}
-	return out, nil
-}
-
-func parseKindDefaults(in map[string]fileKindDefault, def map[string]KindDefault) (map[string]KindDefault, error) {
-	out := make(map[string]KindDefault, len(def))
-	maps.Copy(out, def)
-	for k, v := range in {
-		cur := out[k]
-		if v.Mode != "" {
-			m, err := parseDispatchMode(v.Mode)
-			if err != nil {
-				return nil, fmt.Errorf("dispatch_defaults.%s.mode: %w", k, err)
-			}
-			cur.Mode = m
-		}
-		if v.Blocking != nil {
-			cur.Blocking = *v.Blocking
-		}
-		out[k] = cur
-	}
-	return out, nil
-}
-
-func parseDispatchMode(s string) (DispatchMode, error) {
-	switch DispatchMode(s) {
-	case ModeSyncOnly, ModeAsyncOnly, ModeParallel, ModeAfterSync, ModeSyncThenAsync:
-		return DispatchMode(s), nil
-	default:
-		return "", fmt.Errorf("unknown %q", s)
-	}
-}
-
-// NormalizeMode maps aliases to canonical modes.
-func NormalizeMode(m DispatchMode) DispatchMode {
-	if m == ModeSyncThenAsync {
-		return ModeAfterSync
-	}
-	return m
 }

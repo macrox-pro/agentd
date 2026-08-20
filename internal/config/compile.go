@@ -10,11 +10,7 @@ func baseFileConfig() *fileConfig {
 	trueVal := true
 	dd := map[string]fileKindDefault{}
 	for k, v := range defaultKindDefaults() {
-		blocking := v.Blocking
-		dd[k] = fileKindDefault{
-			Mode:     string(v.Mode),
-			Blocking: &blocking,
-		}
+		dd[k] = fileKindDefault{Mode: string(v.Mode)}
 	}
 	async := defaultAsync()
 	pol := defaultPolicy()
@@ -161,7 +157,7 @@ func compileOneTarget(ft fileTarget, sync bool) (CompiledTarget, error) {
 	switch kind {
 	case TargetBuiltin:
 		for _, g := range ct.Guards {
-			if g != "secrets" {
+			if g != guardNameSecrets {
 				return CompiledTarget{}, fmt.Errorf("unknown guard %q (only secrets is implemented)", g)
 			}
 		}
@@ -201,12 +197,11 @@ func compileOneTarget(ft fileTarget, sync bool) (CompiledTarget, error) {
 		}
 		onErr := FailClosed
 		if ft.OnError != "" {
-			switch FailMode(ft.OnError) {
-			case FailOpen, FailClosed:
-				onErr = FailMode(ft.OnError)
-			default:
-				return CompiledTarget{}, fmt.Errorf("grpc on_error unknown %q", ft.OnError)
+			m, err := parseFailMode(ft.OnError)
+			if err != nil {
+				return CompiledTarget{}, fmt.Errorf("grpc on_error: %w", err)
 			}
+			onErr = m
 		}
 		ct.OnError = onErr
 		if ft.Merge != "" {
@@ -242,7 +237,7 @@ func compileDefaultRoutes(kinds map[string]KindDefault, guards Guards) []Compile
 			if guards.Secrets.Enabled {
 				r.Sync = []CompiledTarget{{
 					Kind:   TargetBuiltin,
-					Guards: []string{"secrets"},
+					Guards: []string{guardNameSecrets},
 				}}
 			} else {
 				r.Sync = []CompiledTarget{{Kind: TargetBuiltin}}

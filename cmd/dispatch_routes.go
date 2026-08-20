@@ -1,6 +1,11 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"strings"
+
 	"github.com/spf13/cobra"
 
 	"github.com/macrox-pro/agentd/internal/config"
@@ -29,6 +34,38 @@ Compiles defaults merged with the user config file offline (no daemon required).
 		if err != nil {
 			return err
 		}
-		return config.FormatRoutes(cmd.OutOrStdout(), store.Current().Routes, dispatchRoutesJSON)
+		return formatRoutes(cmd.OutOrStdout(), store.Current().Routes, dispatchRoutesJSON)
 	},
+}
+
+func formatRoutes(w io.Writer, routes []config.CompiledRoute, asJSON bool) error {
+	if asJSON {
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		return enc.Encode(routes)
+	}
+	for _, r := range routes {
+		kinds := r.Kind
+		if len(r.Match.Kinds) > 0 {
+			kinds = strings.Join(r.Match.Kinds, ",")
+		}
+		syncKinds := routeTargetKinds(r.Sync)
+		asyncKinds := routeTargetKinds(r.Async)
+		if _, err := fmt.Fprintf(w, "%s\tmatch.kind=%s\tmode=%s\tsync=[%s]\tasync=[%s]\n",
+			r.Name, kinds, r.Mode, syncKinds, asyncKinds); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func routeTargetKinds(ts []config.CompiledTarget) string {
+	if len(ts) == 0 {
+		return ""
+	}
+	parts := make([]string, len(ts))
+	for i, t := range ts {
+		parts[i] = string(t.Kind)
+	}
+	return strings.Join(parts, ",")
 }

@@ -49,11 +49,11 @@ func defaultGuards() Guards {
 
 func defaultKindDefaults() map[string]KindDefault {
 	return map[string]KindDefault{
-		"tool.pre":         {Mode: ModeParallel, Blocking: true},
-		"prompt.submitted": {Mode: ModeSyncOnly, Blocking: true},
-		"agent.stop":       {Mode: ModeSyncThenAsync, Blocking: true},
-		"tool.post":        {Mode: ModeParallel, Blocking: false},
-		"notification":     {Mode: ModeAsyncOnly, Blocking: false},
-		"other":            {Mode: ModeAsyncOnly, Blocking: false},
+		"tool.pre":         {Mode: ModeParallel},
+		"prompt.submitted": {Mode: ModeSyncOnly},
+		"agent.stop":       {Mode: ModeSyncThenAsync},
+		"tool.post":        {Mode: ModeParallel},
+		"notification":     {Mode: ModeAsyncOnly},
+		"other":            {Mode: ModeAsyncOnly},
 	}
 }

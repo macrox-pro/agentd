@@ -5,7 +5,7 @@
 
 ## Current phase
 
-Phase: m5 | Last: cmd-conventions-refactor | Next: ConfigService (Deferred)
+Phase: m5 | Last: config-conventions-refactor | Next: ConfigService (Deferred)
 
 ## agents_md_ready
 
@@ -16,12 +16,21 @@ true
 - AGENTS.md read: yes (2026-08-20)
 - CONVENTIONS.md read: yes (2026-08-20) — root `CONVENTIONS.md`
 - M4 complete: gRPC forward (sync+async), OpenCode serve + notify, agenthooks sentinel, install wrapper, Windows SID pipe path, e2e-m4
-- cmd/ refactor (AGENTS/CONVENTIONS): one file per subcommand; Cobra-thin; WriteStatus/Reload/FormatRoutes/DefaultUserPath in internal/; hook↔agenthooks builders shared; notimpl.go removed
+- cmd/ refactor (AGENTS/CONVENTIONS): one file per subcommand; Cobra-thin; WriteStatus/Reload/DefaultUserPath in internal/; hook↔agenthooks builders shared; notimpl.go removed
+- config/ refactor (AGENTS/CONVENTIONS): split schema/merge by concern; FormatRoutes folded into cmd/dispatch_routes.go; Store.reloadMu; removed KindDefault.Blocking + Snapshot.RawYAML; fingerprint remains sha256(raw user YAML) until M5
+
+## Files touched (config conventions refactor)
+
+- deleted internal/config/{schema,format_routes}.go (+ format_routes_test)
+- added internal/config/{config,file,policy,async,guards,mode,route}.go + compile_test/mode_test
+- updated internal/config/{merge,compile,store,defaults}.go + store_test
+- cmd/dispatch_routes.go (+ dispatch_routes_test.go); FormatRoutes unexported helper in cmd
+- DESIGN.md §3 fingerprint note; PROGRESS.md
 
 ## Files touched (cmd conventions refactor)
 
 - cmd/{root,daemon,daemon_*,hook,hook_*,agenthooks,agenthooks_*,install,config,config_*,dispatch,dispatch_routes}.go; deleted notimpl.go
-- internal/config/{paths,format_routes}.go + tests
+- internal/config/{paths}.go + tests
 - internal/daemon/{status_write,reload}.go + status_write_test.go
 - DESIGN.md §6 CLI tree (agenthooks/)
 - PROGRESS.md
