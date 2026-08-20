@@ -8,7 +8,7 @@ import (
 )
 
 func (h *hookService) Invoke(ctx context.Context, req *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
-	snap := h.store.Current()
+	snap := h.store.SnapshotFor(req.GetCwd(), req.GetProjectRoot())
 	resp := &agentdv1.InvokeResponse{
 		Config: &agentdv1.ConfigGeneration{
 			Generation:  snap.Generation,

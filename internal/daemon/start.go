@@ -92,7 +92,10 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 
 	cleanStaleUnderLock(paths)
 
-	store, err := config.Load(ctx, opts.ConfigPath)
+	store, err := config.LoadWith(ctx, config.LoadOptions{
+		UserPath:    opts.ConfigPath,
+		RuntimePath: config.DefaultRuntimePath(),
+	})
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}

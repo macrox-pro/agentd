@@ -6,6 +6,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
+	"github.com/macrox-pro/agentd/internal/config"
 )
 
 const healthStatusOK = "ok"
@@ -33,14 +34,35 @@ func (d *daemonService) Status(context.Context, *agentdv1.StatusRequest) (*agent
 			resp.ActiveSessions = s.Active()
 		}
 	}
-	if snap.UserPath != "" {
-		resp.ConfigLayers = []*agentdv1.LayerInfo{{
-			Layer:       agentdv1.ConfigLayer_CONFIG_LAYER_USER,
-			Path:        snap.UserPath,
-			Fingerprint: snap.Fingerprint,
-		}}
-	}
+	resp.ConfigLayers = layerInfos(d.opts.Store, snap)
 	return resp, nil
+}
+
+func layerInfos(store *config.Store, snap *config.Snapshot) []*agentdv1.LayerInfo {
+	if store == nil || snap == nil {
+		return nil
+	}
+	var out []*agentdv1.LayerInfo
+	if p := store.UserPath(); p != "" {
+		out = append(out, &agentdv1.LayerInfo{
+			Layer:       agentdv1.ConfigLayer_CONFIG_LAYER_USER,
+			Path:        p,
+			Fingerprint: snap.Fingerprint,
+		})
+	}
+	if p := store.RuntimePath(); p != "" {
+		out = append(out, &agentdv1.LayerInfo{
+			Layer: agentdv1.ConfigLayer_CONFIG_LAYER_RUNTIME,
+			Path:  p,
+		})
+	}
+	for _, p := range store.ProjectPaths() {
+		out = append(out, &agentdv1.LayerInfo{
+			Layer: agentdv1.ConfigLayer_CONFIG_LAYER_PROJECT,
+			Path:  p,
+		})
+	}
+	return out
 }
 
 func (d *daemonService) ReloadConfig(ctx context.Context, _ *agentdv1.ReloadConfigRequest) (*agentdv1.ReloadConfigResponse, error) {

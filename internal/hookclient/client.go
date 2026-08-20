@@ -15,11 +15,12 @@ import (
 
 const grpcDialTarget = "passthrough:///agentd"
 
-// Client wraps daemon and hook service clients.
+// Client wraps daemon, hook, and config service clients.
 type Client struct {
 	conn   *grpc.ClientConn
 	daemon agentdv1.DaemonServiceClient
 	hook   agentdv1.HookServiceClient
+	config agentdv1.ConfigServiceClient
 }
 
 // Dial connects to the daemon socket.
@@ -41,6 +42,7 @@ func Dial(ctx context.Context, socket string) (*Client, error) {
 		conn:   conn,
 		daemon: agentdv1.NewDaemonServiceClient(conn),
 		hook:   agentdv1.NewHookServiceClient(conn),
+		config: agentdv1.NewConfigServiceClient(conn),
 	}, nil
 }
 
@@ -76,4 +78,14 @@ func (c *Client) Reload(ctx context.Context) (*agentdv1.ReloadConfigResponse, er
 // Invoke sends a hook invocation.
 func (c *Client) Invoke(ctx context.Context, req *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
 	return c.hook.Invoke(ctx, req)
+}
+
+// GetConfig fetches a config layer from the daemon.
+func (c *Client) GetConfig(ctx context.Context, req *agentdv1.GetConfigRequest) (*agentdv1.GetConfigResponse, error) {
+	return c.config.GetConfig(ctx, req)
+}
+
+// PatchConfig applies a runtime overlay patch on the daemon.
+func (c *Client) PatchConfig(ctx context.Context, req *agentdv1.PatchConfigRequest) (*agentdv1.PatchConfigResponse, error) {
+	return c.config.PatchConfig(ctx, req)
 }

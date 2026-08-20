@@ -9,6 +9,8 @@ Architecture: [DESIGN.md](./DESIGN.md) · Deep conventions: [CONVENTIONS.md](./C
 ```bash
 make lint                          # golangci-lint or go vet + buf lint
 make test                          # go test ./... -race -count=1
+make test-short                    # same with -short
+make e2e                           # scripts/e2e-m1.sh … e2e-mN.sh (append new milestone scripts here)
 make build                         # go build -o agentd .
 make start                         # build + agentd daemon start
 make stop                          # agentd daemon stop
@@ -17,6 +19,7 @@ go test ./internal/daemon/... -race -count=1
 go fix ./path/to/changed/...
 ```
 
+When a milestone ships `scripts/e2e-mN.sh`, add it to the `e2e` target in [Makefile](./Makefile) in the same change.
 ## Code style
 
 No unused symbols. No “for later” APIs. No drive-by refactors. Comments only for non-obvious **why**.
@@ -132,4 +135,4 @@ func TestParsePolicy(t *testing.T) {
 
 On stop / context limit: update [PROGRESS.md](./PROGRESS.md) (next todo + files touched).
 
-PR: `make lint` + `make test` on touched packages; `make generate` if `api/` changed; DESIGN.md CLI section if commands changed.
+PR: `make lint` + `make test` on touched packages; `make e2e` when shipping a milestone e2e script (and wire it into Makefile `e2e`); `make generate` if `api/` changed; DESIGN.md CLI section if commands changed.

@@ -294,8 +294,7 @@ Persist: debounced async flush (500 ms) via `runtime.yaml.tmp` → `runtime.yaml
 
 ### Fingerprint
 
-- **Current (M1–M4):** `fingerprint = sha256(raw user YAML bytes)` (empty/missing file → hash of empty).
-- **Target (M5+):** `fingerprint = sha256(canonical_json(merged_config))`
+- **Current (M5+):** `fingerprint = sha256(canonical_json(merged_config))`
 - `generation` — monotonic uint64 on each swap
 - Exposed in `DaemonService.Status`
 
@@ -461,23 +460,23 @@ Write provider hook configs via `agenthooks/install`. `Command` = absolute path 
 agentd install --provider=claude-code --scope=project
 agentd install --provider=opencode --scope=project --dir /path/to/repo
 ```
-### `agentd config validate [--config PATH]`
+### `agentd config validate [--config PATH] [--cwd PATH]`
 
-Validate YAML offline (CI). Parse + schema + dry-compile routes. No daemon required.
+Validate YAML offline (CI). Parse + schema + dry-compile routes. Optional `--cwd` merges project `.agentd.yaml`. No daemon required.
 
 ### `agentd config show [--merged] [--layer user|project|runtime] [--cwd PATH]`
 
-Inspect config layers or merged effective config.
+Inspect config layers or merged effective config (offline).
 
 ### `agentd config patch --file DELTA.yaml`
 
-Patch runtime overlay via gRPC (`ConfigService.PatchConfig`).
+Patch runtime overlay via gRPC (`ConfigService.PatchConfig`). In-memory until M7 disk flush.
 
-### `agentd dispatch routes [--json]`
+### `agentd dispatch routes [--json] [--cwd PATH]`
 
 Show compiled dispatch routes (mode, targets, match order). Debug/ops only.
 
-Compiles defaults ⊕ user config offline (no daemon required). Named `dispatch:`
+Compiles defaults ⊕ user ⊕ optional project offline (no daemon required). Named `dispatch:`
 routes appear before default-kind fallbacks; target kinds are listed for sync/async.
 
 **Hook failure modes:** daemon down → `policy.offline`; timeout → per `policy.fail`; never debug on stdout.
@@ -620,14 +619,14 @@ agentd/
 | **M2** | done | Dispatch Engine; parallel/after_sync; async queue; secrets guard |
 | **M3** | done | Forward targets (exec, http, log, file); full dispatch YAML; fsnotify reload |
 | **M4** | done | gRPC forward; OpenCode serve bridge; install wrapper; Windows npipe hardening |
-| **M5** | planned | Config layers (project + runtime); ConfigService; config CLI; merged fingerprint |
+| **M5** | done | Config layers (project + runtime); ConfigService; config CLI; merged fingerprint |
 | **M6** | planned | Guards: shell, mcp, paths |
 | **M7** | planned | Approvals / `RecordDecision`; runtime persist; temporary blocks |
 | **M8 / v1** | planned | Ops polish, conformance, docs freeze, release gate |
 
 Session checklists and verify commands: [PROGRESS.md](./PROGRESS.md).
 
-### Done (M0–M4)
+### Done (M0–M5)
 
 M1 acceptance: `daemon start|status|reload|stop` and `hook run --provider=…` round-trip.
 
@@ -637,23 +636,7 @@ M3 acceptance: declarative `dispatch:` + async exec/http/log/file; debounced fsn
 
 M4 acceptance: declarative `target: grpc` (sync+async); `hook serve` / `hook notify` + agenthooks sentinel; `agentd install`; Windows pipe path by SID; `scripts/e2e-m4.sh`.
 
-### M5 — Config layers + ConfigService
-
-**Goal:** Match DESIGN §3 merge model and wire the management config surface.
-
-| Phase | Work |
-|-------|------|
-| A | Project layer: resolve `.agentd.yaml` from `cwd` / `project_root`; merge `defaults ⊕ user ⊕ project`; lazy fsnotify on first sighting |
-| B | Runtime overlay path (`$XDG_STATE_HOME/agentd/runtime.yaml`); load on startup; ignore self-writes in watcher |
-| C | Fingerprint → `sha256(canonical_json(merged_config))`; keep monotonic `generation` |
-| D | Implement `ConfigService` (`GetConfig`, `PatchConfig`); register on daemon gRPC server |
-| E | CLI: `config validate`, `config show`, `config patch` (drop `errNotImplemented`) |
-| F | `dispatch routes` / Invoke use project-aware snapshot when `cwd` present |
-| G | `scripts/e2e-m5.sh` + unit tests |
-
-**Out of M5:** `RecordDecision` body can stub/`Unimplemented` until M7 if Get/Patch land first; prefer shipping Get+Patch fully.
-
-**Acceptance:** offline `config validate|show`; live `config patch` updates generation; Invoke with project cwd picks project overrides; fingerprint changes on merge-affecting edits; e2e-m5 green.
+M5 acceptance: four-layer merge; ConfigService Get/Patch; `config validate|show|patch`; merged fingerprint; project-aware Invoke; `scripts/e2e-m5.sh`. (`RecordDecision` body and runtime.yaml disk flush → M7.)
 
 ### M6 — Remaining guards
 

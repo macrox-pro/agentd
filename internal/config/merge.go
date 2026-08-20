@@ -3,6 +3,9 @@ package config
 import "maps"
 
 func mergeFile(base *fileConfig, user *fileConfig) *fileConfig {
+	if base == nil {
+		base = &fileConfig{}
+	}
 	if user == nil {
 		return base
 	}

@@ -112,7 +112,7 @@ Platform split: `{concern}.go` (shared API/types) + `{concern}_unix.go` + `{conc
 | `foo_linux.go` for portable code | `foo.go` |
 | `listener.go` that also dials and encodes | split files or name the real concern |
 
-Non-Go: scripts may use kebab-case (`scripts/e2e-m1.sh`). Root docs keep existing names (`AGENTS.md`, `DESIGN.md`). Generated protobuf stays in `gen/` (`*.pb.go`, `*_grpc.pb.go`) — never hand-name or edit those files.
+Non-Go: scripts may use kebab-case (`scripts/e2e-m1.sh`). Root docs keep existing names (`AGENTS.md`, `DESIGN.md`). Generated protobuf stays in `gen/` (`*.pb.go`, `*_grpc.pb.go`) — never hand-name or edit those files. New milestone e2e scripts must also be listed under the `e2e` target in [Makefile](./Makefile).
 
 ## Error handling
 
@@ -356,5 +356,6 @@ PR checklist:
 - [ ] `buf lint` if `api/` changed
 - [ ] `go test -race` on changed packages
 - [ ] `make generate` if proto changed
+- [ ] New `scripts/e2e-mN.sh` → append to Makefile `e2e` (+ run `make e2e`)
 - [ ] DESIGN.md CLI section if commands changed
 - [ ] PROGRESS.md updated

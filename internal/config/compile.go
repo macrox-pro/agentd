@@ -41,31 +41,40 @@ func baseFileConfig() *fileConfig {
 
 // Compile merges defaults with optional user fileConfig and produces Snapshot fields.
 func Compile(user *fileConfig) (Policy, AsyncConfig, Guards, []CompiledRoute, error) {
+	pol, async, guards, routes, _, err := CompileMerged(user, nil, nil)
+	return pol, async, guards, routes, err
+}
+
+// CompileMerged merges defaults ⊕ user ⊕ project ⊕ runtime and compiles Snapshot fields.
+// merged is the effective fileConfig after layer merge (for fingerprinting / show).
+func CompileMerged(user, project, runtime *fileConfig) (Policy, AsyncConfig, Guards, []CompiledRoute, *fileConfig, error) {
 	merged := mergeFile(baseFileConfig(), user)
+	merged = mergeFile(merged, project)
+	merged = mergeFile(merged, runtime)
 
 	pol, err := parsePolicy(merged.Policy, defaultPolicy())
 	if err != nil {
-		return Policy{}, AsyncConfig{}, Guards{}, nil, err
+		return Policy{}, AsyncConfig{}, Guards{}, nil, nil, err
 	}
 	async, err := parseAsync(merged.Async, defaultAsync())
 	if err != nil {
-		return Policy{}, AsyncConfig{}, Guards{}, nil, err
+		return Policy{}, AsyncConfig{}, Guards{}, nil, nil, err
 	}
 	guards, err := parseGuards(merged.Guards, defaultGuards())
 	if err != nil {
-		return Policy{}, AsyncConfig{}, Guards{}, nil, err
+		return Policy{}, AsyncConfig{}, Guards{}, nil, nil, err
 	}
 	kinds, err := parseKindDefaults(merged.DispatchDefaults, defaultKindDefaults())
 	if err != nil {
-		return Policy{}, AsyncConfig{}, Guards{}, nil, err
+		return Policy{}, AsyncConfig{}, Guards{}, nil, nil, err
 	}
 	userRoutes, err := compileUserRoutes(merged.Dispatch)
 	if err != nil {
-		return Policy{}, AsyncConfig{}, Guards{}, nil, err
+		return Policy{}, AsyncConfig{}, Guards{}, nil, nil, err
 	}
 	defaults := compileDefaultRoutes(kinds, guards)
 	routes := append(userRoutes, defaults...)
-	return pol, async, guards, routes, nil
+	return pol, async, guards, routes, merged, nil
 }
 
 func compileUserRoutes(in []fileRoute) ([]CompiledRoute, error) {

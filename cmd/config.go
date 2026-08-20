@@ -1,12 +1,8 @@
 package cmd
 
 import (
-	"errors"
-
 	"github.com/spf13/cobra"
 )
-
-var errNotImplemented = errors.New("not implemented")
 
 func init() {
 	rootCmd.AddCommand(configCmd)
@@ -21,5 +17,6 @@ var configCmd = &cobra.Command{
 Use validate in CI without a running service. Show prints settings; patch
 updates runtime overrides managed by the service.`,
 	Example: `  agentd config validate
-  agentd config show --merged`,
+  agentd config show --merged
+  agentd config patch --file runtime-delta.yaml`,
 }

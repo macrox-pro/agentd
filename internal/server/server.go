@@ -1,4 +1,4 @@
-// Package server implements thin gRPC mapping for DaemonService and HookService.
+// Package server implements thin gRPC mapping for DaemonService, HookService, and ConfigService.
 package server
 
 import (
@@ -33,7 +33,7 @@ type hookService struct {
 	engine *dispatch.Engine
 }
 
-// New registers DaemonService and HookService on a new gRPC server.
+// New registers DaemonService, HookService, and ConfigService on a new gRPC server.
 func New(opts Options) *grpc.Server {
 	if opts.StartedAt.IsZero() {
 		opts.StartedAt = time.Now().UTC()
@@ -44,5 +44,6 @@ func New(opts Options) *grpc.Server {
 	s := grpc.NewServer()
 	agentdv1.RegisterDaemonServiceServer(s, &daemonService{opts: opts})
 	agentdv1.RegisterHookServiceServer(s, &hookService{store: opts.Store, engine: opts.Engine})
+	agentdv1.RegisterConfigServiceServer(s, &configService{store: opts.Store})
 	return s
 }

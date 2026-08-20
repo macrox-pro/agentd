@@ -2,8 +2,10 @@ package hookedge
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -54,6 +56,7 @@ func Run(ctx context.Context, opts Options) int {
 		Provider:       provider,
 		RawPayload:     payload,
 		InvocationMode: mode,
+		Cwd:            resolveCWD(payload),
 	}
 	if opts.Timeout > 0 {
 		req.Deadline = timestamppb.New(time.Now().Add(opts.Timeout))
@@ -70,4 +73,18 @@ func Run(ctx context.Context, opts Options) int {
 	}
 
 	return encodeDecision(ctx, opts.Provider, opts.ArgvPayload, payload, decision, stdout, stderr)
+}
+
+func resolveCWD(payload []byte) string {
+	var meta struct {
+		CWD string `json:"cwd"`
+	}
+	if err := json.Unmarshal(payload, &meta); err == nil && meta.CWD != "" {
+		return meta.CWD
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	return cwd
 }

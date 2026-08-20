@@ -11,10 +11,14 @@ import (
 	"github.com/macrox-pro/agentd/internal/config"
 )
 
-var dispatchRoutesJSON bool
+var (
+	dispatchRoutesJSON bool
+	dispatchRoutesCWD  string
+)
 
 func init() {
 	dispatchRoutesCmd.Flags().BoolVar(&dispatchRoutesJSON, "json", false, "print routes as JSON")
+	dispatchRoutesCmd.Flags().StringVar(&dispatchRoutesCWD, "cwd", "", "project directory used to find project settings")
 }
 
 var dispatchRoutesCmd = &cobra.Command{
@@ -25,16 +29,22 @@ var dispatchRoutesCmd = &cobra.Command{
 Shows match order and whether each route waits for a decision or runs in the
 background. For operators and debugging; agents do not call this command.
 
-Compiles defaults merged with the user config file offline (no daemon required).`,
+Compiles defaults merged with the user (and optional project) config offline
+(no daemon required).`,
 	Example: `  agentd dispatch routes
-  agentd dispatch routes --json`,
+  agentd dispatch routes --json
+  agentd dispatch routes --cwd /path/to/repo`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_ = args
 		store, err := config.Load(cmd.Context(), resolveConfigPath())
 		if err != nil {
 			return err
 		}
-		return formatRoutes(cmd.OutOrStdout(), store.Current().Routes, dispatchRoutesJSON)
+		snap := store.Current()
+		if dispatchRoutesCWD != "" {
+			snap = store.SnapshotFor(dispatchRoutesCWD, "")
+		}
+		return formatRoutes(cmd.OutOrStdout(), snap.Routes, dispatchRoutesJSON)
 	},
 }
 

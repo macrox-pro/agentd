@@ -190,3 +190,84 @@ func TestReloadConcurrent(t *testing.T) {
 	assert.NotEmpty(t, snap.Routes)
 	assert.Equal(t, config.FailOpen, snap.Policy.Fail)
 }
+
+func TestEnsureProjectOverridesUser(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	userPath := filepath.Join(dir, "user.yaml")
+	projDir := filepath.Join(dir, "proj")
+	require.NoError(t, os.MkdirAll(projDir, 0o700))
+	projPath := filepath.Join(projDir, ".agentd.yaml")
+	require.NoError(t, os.WriteFile(userPath, []byte("version: 1\npolicy:\n  fail: fail_closed\n"), 0o600))
+	require.NoError(t, os.WriteFile(projPath, []byte("version: 1\npolicy:\n  fail: fail_open\n"), 0o600))
+
+	store, err := config.Load(context.Background(), userPath)
+	require.NoError(t, err)
+	assert.Equal(t, config.FailClosed, store.Current().Policy.Fail)
+
+	snap, err := store.EnsureProject(projDir, "")
+	require.NoError(t, err)
+	require.NotNil(t, snap)
+	assert.Equal(t, config.FailOpen, snap.Policy.Fail, "project should override user")
+	assert.Equal(t, config.FailClosed, store.Current().Policy.Fail, "base unchanged")
+	assert.Equal(t, projPath, snap.ProjectPath)
+}
+
+func TestLoadWithRuntimeOverrides(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	userPath := filepath.Join(dir, "user.yaml")
+	runtimePath := filepath.Join(dir, "runtime.yaml")
+	require.NoError(t, os.WriteFile(userPath, []byte("version: 1\npolicy:\n  fail: fail_closed\n"), 0o600))
+	require.NoError(t, os.WriteFile(runtimePath, []byte("version: 1\npolicy:\n  fail: fail_open\n"), 0o600))
+
+	store, err := config.LoadWith(context.Background(), config.LoadOptions{
+		UserPath:    userPath,
+		RuntimePath: runtimePath,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, config.FailOpen, store.Current().Policy.Fail)
+	assert.Equal(t, runtimePath, store.RuntimePath())
+}
+
+func TestPatchRuntime(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	userPath := filepath.Join(dir, "user.yaml")
+	require.NoError(t, os.WriteFile(userPath, []byte("version: 1\npolicy:\n  fail: fail_closed\n"), 0o600))
+
+	store, err := config.Load(context.Background(), userPath)
+	require.NoError(t, err)
+	before := store.Current().Generation
+
+	require.NoError(t, store.PatchRuntime([]byte("version: 1\npolicy:\n  fail: fail_open\n")))
+	snap := store.Current()
+	assert.Equal(t, config.FailOpen, snap.Policy.Fail)
+	assert.Greater(t, snap.Generation, before)
+}
+
+func TestSnapshotFor(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	userPath := filepath.Join(dir, "user.yaml")
+	projDir := filepath.Join(dir, "repo")
+	require.NoError(t, os.MkdirAll(projDir, 0o700))
+	require.NoError(t, os.WriteFile(userPath, []byte("version: 1\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(projDir, ".agentd.yaml"), []byte("version: 1\npolicy:\n  fail: fail_open\n"), 0o600))
+
+	store, err := config.Load(context.Background(), userPath)
+	require.NoError(t, err)
+
+	base := store.SnapshotFor("", "")
+	assert.Equal(t, config.FailClosed, base.Policy.Fail)
+
+	proj := store.SnapshotFor(projDir, "")
+	assert.Equal(t, config.FailOpen, proj.Policy.Fail)
+
+	again := store.SnapshotFor(projDir, "")
+	assert.Equal(t, proj.Generation, again.Generation)
+}
