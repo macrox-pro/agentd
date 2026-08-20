@@ -5,6 +5,20 @@ import (
 	"regexp"
 )
 
+const (
+	ruleAWSKey            = "aws_key"
+	ruleGitHubPAT         = "github_pat"
+	ruleGitHubFineGrained = "github_fine_grained"
+	ruleSlackToken        = "slack_token"
+	ruleStripeLive        = "stripe_live"
+	ruleAnthropicKey      = "anthropic_key"
+	ruleOpenAIKey         = "openai_key"
+	ruleGoogleAPIKey      = "google_api_key"
+	rulePrivateKey        = "private_key"
+	ruleJWT               = "jwt"
+	ruleAssignedSecret    = "assigned_secret"
+)
+
 // Finding is one detected credential-shaped string. The value itself is never
 // carried — only a masked preview safe for prompts and logs.
 type Finding struct {
@@ -20,17 +34,26 @@ type rule struct {
 
 // Order matters where prefixes overlap (Anthropic keys before OpenAI sk-).
 var allRules = []rule{
-	{id: "aws_key", name: "AWS access key ID", re: regexp.MustCompile(`\b(?:AKIA|ASIA)[0-9A-Z]{16}\b`)},
-	{id: "github_pat", name: "GitHub token", re: regexp.MustCompile(`\bgh[opusr]_[A-Za-z0-9]{36,}\b`)},
-	{id: "github_fine_grained", name: "GitHub fine-grained PAT", re: regexp.MustCompile(`\bgithub_pat_[A-Za-z0-9_]{22,}\b`)},
-	{id: "slack_token", name: "Slack token", re: regexp.MustCompile(`\bxox[baprs]-[A-Za-z0-9-]{10,}\b`)},
-	{id: "stripe_live", name: "Stripe live key", re: regexp.MustCompile(`\b[sr]k_live_[A-Za-z0-9]{16,}\b`)},
-	{id: "anthropic_key", name: "Anthropic API key", re: regexp.MustCompile(`\bsk-ant-[A-Za-z0-9-]{20,}\b`)},
-	{id: "openai_key", name: "OpenAI API key", re: regexp.MustCompile(`\bsk-[A-Za-z0-9_-]{20,}\b`)},
-	{id: "google_api_key", name: "Google API key", re: regexp.MustCompile(`\bAIza[0-9A-Za-z_-]{35}\b`)},
-	{id: "private_key", name: "private key block", re: regexp.MustCompile(`-----BEGIN [A-Z ]*PRIVATE KEY-----`)},
-	{id: "jwt", name: "JWT", re: regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b`)},
-	{id: "assigned_secret", name: "assigned secret literal", re: regexp.MustCompile(`(?i)(?:api[_-]?key|secret|token|password|passwd)["']?\s*[:=]\s*["'][^"']{8,}["']`)},
+	{id: ruleAWSKey, name: "AWS access key ID", re: regexp.MustCompile(`\b(?:AKIA|ASIA)[0-9A-Z]{16}\b`)},
+	{id: ruleGitHubPAT, name: "GitHub token", re: regexp.MustCompile(`\bgh[opusr]_[A-Za-z0-9]{36,}\b`)},
+	{id: ruleGitHubFineGrained, name: "GitHub fine-grained PAT", re: regexp.MustCompile(`\bgithub_pat_[A-Za-z0-9_]{22,}\b`)},
+	{id: ruleSlackToken, name: "Slack token", re: regexp.MustCompile(`\bxox[baprs]-[A-Za-z0-9-]{10,}\b`)},
+	{id: ruleStripeLive, name: "Stripe live key", re: regexp.MustCompile(`\b[sr]k_live_[A-Za-z0-9]{16,}\b`)},
+	{id: ruleAnthropicKey, name: "Anthropic API key", re: regexp.MustCompile(`\bsk-ant-[A-Za-z0-9-]{20,}\b`)},
+	{id: ruleOpenAIKey, name: "OpenAI API key", re: regexp.MustCompile(`\bsk-[A-Za-z0-9_-]{20,}\b`)},
+	{id: ruleGoogleAPIKey, name: "Google API key", re: regexp.MustCompile(`\bAIza[0-9A-Za-z_-]{35}\b`)},
+	{id: rulePrivateKey, name: "private key block", re: regexp.MustCompile(`-----BEGIN [A-Z ]*PRIVATE KEY-----`)},
+	{id: ruleJWT, name: "JWT", re: regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b`)},
+	{id: ruleAssignedSecret, name: "assigned secret literal", re: regexp.MustCompile(`(?i)(?:api[_-]?key|secret|token|password|passwd)["']?\s*[:=]\s*["'][^"']{8,}["']`)},
+}
+
+// RuleIDs returns built-in credential rule ids in scan order.
+func RuleIDs() []string {
+	out := make([]string, len(allRules))
+	for i, r := range allRules {
+		out[i] = r.id
+	}
+	return out
 }
 
 // Scan walks string values in tool-input JSON and reports credential-shaped matches.

@@ -74,47 +74,8 @@ func Serve(ctx context.Context, opts Options) int {
 		if err != nil {
 			return nil, fmt.Errorf("daemon invoke: %w", err)
 		}
-		return protoToDecision(resp.GetDecision()), nil
+		return fromProto(resp.GetDecision()), nil
 	})
 
 	return r.Run(ctx, []string{"serve", "--provider=opencode"}, stdin, stdout, stderr)
-}
-
-func protoToDecision(d *agentdv1.Decision) agenthooks.Decision {
-	if d == nil {
-		return agenthooks.NoDecision()
-	}
-	switch d.GetKind() {
-	case agentdv1.DecisionKind_DECISION_KIND_DENY:
-		out := agenthooks.Deny(d.GetReason())
-		if msg := d.GetSystemMessage(); msg != "" {
-			out = out.WithSystemMessage(msg)
-		}
-		if c := d.GetContext(); c != "" {
-			out = out.WithContext(c)
-		}
-		return out
-	case agentdv1.DecisionKind_DECISION_KIND_ASK:
-		out := agenthooks.AskUser(d.GetReason())
-		if msg := d.GetSystemMessage(); msg != "" {
-			out = out.WithSystemMessage(msg)
-		}
-		if c := d.GetContext(); c != "" {
-			out = out.WithContext(c)
-		}
-		return out
-	case agentdv1.DecisionKind_DECISION_KIND_ALLOW:
-		out := agenthooks.Allow()
-		if msg := d.GetSystemMessage(); msg != "" {
-			out = out.WithSystemMessage(msg)
-		}
-		if c := d.GetContext(); c != "" {
-			out = out.WithContext(c)
-		}
-		return out
-	case agentdv1.DecisionKind_DECISION_KIND_BLOCK_PROMPT:
-		return agenthooks.BlockPrompt(d.GetReason())
-	default:
-		return agenthooks.NoDecision()
-	}
 }

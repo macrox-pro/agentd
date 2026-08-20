@@ -56,28 +56,3 @@ func TestServeRejectsNonOpenCode(t *testing.T) {
 	assert.Equal(t, 1, code)
 	assert.Contains(t, stderr.String(), "opencode")
 }
-
-func TestNotify(t *testing.T) {
-	dir := t.TempDir()
-	socket := filepath.Join(dir, "agentd.sock")
-
-	ln, err := transport.Listen(socket)
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = ln.Close() })
-
-	gs := grpc.NewServer()
-	agentdv1.RegisterHookServiceServer(gs, denyHook{})
-	agentdv1.RegisterDaemonServiceServer(gs, okDaemon{})
-	go func() { _ = gs.Serve(ln) }()
-	t.Cleanup(gs.Stop)
-	waitForSocket(t, socket)
-
-	var stderr bytes.Buffer
-	code := hookedge.Notify(context.Background(), hookedge.Options{
-		Socket:     socket,
-		Provider:   "codex",
-		PayloadArg: `{"type":"agent-turn-complete","thread_id":"t1"}`,
-		Stderr:     &stderr,
-	})
-	assert.Equal(t, 0, code, "Notify(): %s", stderr.String())
-}

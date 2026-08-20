@@ -126,7 +126,6 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 		StartedAt:  time.Now().UTC(),
 		Version:    opts.Version,
 		OnShutdown: cancel,
-		Log:        log,
 	})
 
 	errCh := make(chan error, 1)

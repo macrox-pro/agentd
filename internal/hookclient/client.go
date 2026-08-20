@@ -1,3 +1,4 @@
+// Package hookclient provides a gRPC client for the local agentd daemon.
 package hookclient
 
 import (
@@ -5,17 +6,20 @@ import (
 	"fmt"
 	"net"
 
-	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
-	"github.com/macrox-pro/agentd/internal/transport"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
+	"github.com/macrox-pro/agentd/internal/transport"
 )
+
+const grpcDialTarget = "passthrough:///agentd"
 
 // Client wraps daemon and hook service clients.
 type Client struct {
 	conn   *grpc.ClientConn
-	Daemon agentdv1.DaemonServiceClient
-	Hook   agentdv1.HookServiceClient
+	daemon agentdv1.DaemonServiceClient
+	hook   agentdv1.HookServiceClient
 }
 
 // Dial connects to the daemon socket.
@@ -24,7 +28,7 @@ func Dial(ctx context.Context, socket string) (*Client, error) {
 		socket = transport.DefaultSocketPath()
 	}
 	path := socket
-	conn, err := grpc.NewClient("passthrough:///agentd",
+	conn, err := grpc.NewClient(grpcDialTarget,
 		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
 			return transport.Dial(ctx, path)
 		}),
@@ -35,8 +39,8 @@ func Dial(ctx context.Context, socket string) (*Client, error) {
 	}
 	return &Client{
 		conn:   conn,
-		Daemon: agentdv1.NewDaemonServiceClient(conn),
-		Hook:   agentdv1.NewHookServiceClient(conn),
+		daemon: agentdv1.NewDaemonServiceClient(conn),
+		hook:   agentdv1.NewHookServiceClient(conn),
 	}, nil
 }
 
@@ -50,26 +54,26 @@ func (c *Client) Close() error {
 
 // Health returns daemon health.
 func (c *Client) Health(ctx context.Context) (*agentdv1.HealthResponse, error) {
-	return c.Daemon.Health(ctx, &agentdv1.HealthRequest{})
+	return c.daemon.Health(ctx, &agentdv1.HealthRequest{})
 }
 
 // Status returns daemon status.
 func (c *Client) Status(ctx context.Context) (*agentdv1.StatusResponse, error) {
-	return c.Daemon.Status(ctx, &agentdv1.StatusRequest{})
+	return c.daemon.Status(ctx, &agentdv1.StatusRequest{})
 }
 
 // Shutdown requests daemon shutdown.
 func (c *Client) Shutdown(ctx context.Context) error {
-	_, err := c.Daemon.Shutdown(ctx, &agentdv1.ShutdownRequest{})
+	_, err := c.daemon.Shutdown(ctx, &agentdv1.ShutdownRequest{})
 	return err
 }
 
 // Reload reloads config on the daemon.
 func (c *Client) Reload(ctx context.Context) (*agentdv1.ReloadConfigResponse, error) {
-	return c.Daemon.ReloadConfig(ctx, &agentdv1.ReloadConfigRequest{})
+	return c.daemon.ReloadConfig(ctx, &agentdv1.ReloadConfigRequest{})
 }
 
 // Invoke sends a hook invocation.
 func (c *Client) Invoke(ctx context.Context, req *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
-	return c.Hook.Invoke(ctx, req)
+	return c.hook.Invoke(ctx, req)
 }

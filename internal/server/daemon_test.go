@@ -2,7 +2,6 @@ package server_test
 
 import (
 	"context"
-	"encoding/json"
 	"net"
 	"path/filepath"
 	"testing"
@@ -39,20 +38,6 @@ func dialBuf(t *testing.T, srv *grpc.Server) *grpc.ClientConn {
 	return conn
 }
 
-func claudeToolPre(t *testing.T, command string) []byte {
-	t.Helper()
-	b, err := json.Marshal(map[string]any{
-		"session_id":      "s",
-		"cwd":             "/w",
-		"hook_event_name": "PreToolUse",
-		"tool_name":       "Bash",
-		"tool_use_id":     "t1",
-		"tool_input":      map[string]any{"command": command},
-	})
-	require.NoError(t, err)
-	return b
-}
-
 func TestDaemonService(t *testing.T) {
 	t.Parallel()
 
@@ -80,7 +65,6 @@ func TestDaemonService(t *testing.T) {
 	})
 	conn := dialBuf(t, srv)
 	daemon := agentdv1.NewDaemonServiceClient(conn)
-	hook := agentdv1.NewHookServiceClient(conn)
 
 	tests := []struct {
 		name string
@@ -103,47 +87,6 @@ func TestDaemonService(t *testing.T) {
 				require.NoError(t, err, "Status()")
 				assert.GreaterOrEqual(t, resp.GetConfig().GetGeneration(), uint64(1), "Status()")
 				assert.Greater(t, resp.GetCompiledRouteCount(), uint32(0), "compiled_route_count")
-			},
-		},
-		{
-			name: "invoke clean no decision",
-			run: func(t *testing.T) {
-				t.Helper()
-				resp, err := hook.Invoke(ctx, &agentdv1.InvokeRequest{
-					Provider:       agentdv1.Provider_PROVIDER_CLAUDE_CODE,
-					RawPayload:     claudeToolPre(t, "go test"),
-					InvocationMode: agentdv1.InvocationMode_INVOCATION_MODE_STDIN,
-				})
-				require.NoError(t, err, "Invoke()")
-				assert.Equal(t, agentdv1.DecisionKind_DECISION_KIND_NO_DECISION, resp.GetDecision().GetKind(), "Invoke()")
-				assert.GreaterOrEqual(t, resp.GetAsyncDispatchedCount(), uint32(1), "async")
-			},
-		},
-		{
-			name: "invoke secret ask",
-			run: func(t *testing.T) {
-				t.Helper()
-				resp, err := hook.Invoke(ctx, &agentdv1.InvokeRequest{
-					Provider:       agentdv1.Provider_PROVIDER_CLAUDE_CODE,
-					RawPayload:     claudeToolPre(t, "export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"),
-					InvocationMode: agentdv1.InvocationMode_INVOCATION_MODE_STDIN,
-				})
-				require.NoError(t, err, "Invoke()")
-				assert.Equal(t, agentdv1.DecisionKind_DECISION_KIND_ASK, resp.GetDecision().GetKind(), "Invoke()")
-				assert.NotContains(t, resp.GetDecision().GetReason(), "AKIAIOSFODNN7EXAMPLE")
-			},
-		},
-		{
-			name: "invoke undecodable is neutral",
-			run: func(t *testing.T) {
-				t.Helper()
-				resp, err := hook.Invoke(ctx, &agentdv1.InvokeRequest{
-					Provider:       agentdv1.Provider_PROVIDER_CLAUDE_CODE,
-					RawPayload:     []byte(`{}`),
-					InvocationMode: agentdv1.InvocationMode_INVOCATION_MODE_STDIN,
-				})
-				require.NoError(t, err, "Invoke()")
-				assert.Equal(t, agentdv1.DecisionKind_DECISION_KIND_NO_DECISION, resp.GetDecision().GetKind(), "Invoke()")
 			},
 		},
 		{

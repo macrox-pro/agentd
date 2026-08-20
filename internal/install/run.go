@@ -1,3 +1,4 @@
+// Package install writes provider hook configs via agenthooks/install.
 package install
 
 import (
@@ -5,10 +6,20 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/speakeasy-api/agenthooks"
 	ahinstall "github.com/speakeasy-api/agenthooks/install"
+)
+
+const (
+	identityName        = "agentd"
+	identityVersion     = "0.1.0"
+	identityDescription = "agentd hook proxy"
+
+	toolPreTimeout   = 30 * time.Second
+	shortHookTimeout = 5 * time.Second
 )
 
 // Options configures an install into a provider's hook settings.
@@ -46,10 +57,14 @@ func Run(ctx context.Context, opts Options) error {
 	}
 
 	m := ahinstall.Manifest{
-		Command:  append([]string(nil), opts.Command...),
-		Hooks:    defaultHooks(),
-		Identity: ahinstall.Identity{Name: "agentd", Version: "0.1.0", Description: "agentd hook proxy"},
-		Fail:     agenthooks.FailClosed,
+		Command: append([]string(nil), opts.Command...),
+		Hooks:   defaultHooks(),
+		Identity: ahinstall.Identity{
+			Name:        identityName,
+			Version:     identityVersion,
+			Description: identityDescription,
+		},
+		Fail: agenthooks.FailClosed,
 	}
 	return ahinstall.Install(ctx, m, ahinstall.Target{
 		Provider: provider,
@@ -59,7 +74,7 @@ func Run(ctx context.Context, opts Options) error {
 }
 
 func parseProvider(s string) (agenthooks.Provider, error) {
-	switch s {
+	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "claude-code":
 		return agenthooks.ProviderClaudeCode, nil
 	case "cursor":
@@ -80,7 +95,7 @@ func parseProvider(s string) (agenthooks.Provider, error) {
 }
 
 func parseScope(s string) (ahinstall.Scope, error) {
-	switch s {
+	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "", "project":
 		return ahinstall.ScopeProject, nil
 	case "user":
@@ -94,12 +109,12 @@ func parseScope(s string) (ahinstall.Scope, error) {
 
 func defaultHooks() []ahinstall.HookSpec {
 	return []ahinstall.HookSpec{
-		{Kind: agenthooks.KindToolPre, Blocking: true, Timeout: 30 * time.Second},
-		{Kind: agenthooks.KindToolPost, Blocking: false, Timeout: 5 * time.Second},
-		{Kind: agenthooks.KindPromptSubmitted, Blocking: true, Timeout: 30 * time.Second},
-		{Kind: agenthooks.KindStop, Blocking: true, Timeout: 5 * time.Second},
-		{Kind: agenthooks.KindSessionStart, Blocking: false, Timeout: 5 * time.Second},
-		{Kind: agenthooks.KindSessionEnd, Blocking: false, Timeout: 5 * time.Second},
-		{Kind: agenthooks.KindNotification, Blocking: false, Timeout: 5 * time.Second},
+		{Kind: agenthooks.KindToolPre, Blocking: true, Timeout: toolPreTimeout},
+		{Kind: agenthooks.KindToolPost, Blocking: false, Timeout: shortHookTimeout},
+		{Kind: agenthooks.KindPromptSubmitted, Blocking: true, Timeout: toolPreTimeout},
+		{Kind: agenthooks.KindStop, Blocking: true, Timeout: shortHookTimeout},
+		{Kind: agenthooks.KindSessionStart, Blocking: false, Timeout: shortHookTimeout},
+		{Kind: agenthooks.KindSessionEnd, Blocking: false, Timeout: shortHookTimeout},
+		{Kind: agenthooks.KindNotification, Blocking: false, Timeout: shortHookTimeout},
 	}
 }

@@ -5,7 +5,7 @@
 
 ## Current phase
 
-Phase: m5 | Last: config-conventions-refactor | Next: ConfigService (Deferred)
+Phase: m5 | Last: packages-conventions-refactor | Next: ConfigService (Deferred)
 
 ## agents_md_ready
 
@@ -15,9 +15,20 @@ true
 
 - AGENTS.md read: yes (2026-08-20)
 - CONVENTIONS.md read: yes (2026-08-20) — root `CONVENTIONS.md`
+- packages conventions refactor: install/hookedge/hookclient/server/guard — concern files, named consts, dead API removed, test layout
 - M4 complete: gRPC forward (sync+async), OpenCode serve + notify, agenthooks sentinel, install wrapper, Windows SID pipe path, e2e-m4
 - cmd/ refactor (AGENTS/CONVENTIONS): one file per subcommand; Cobra-thin; WriteStatus/Reload/DefaultUserPath in internal/; hook↔agenthooks builders shared; notimpl.go removed
 - config/ refactor (AGENTS/CONVENTIONS): split schema/merge by concern; FormatRoutes folded into cmd/dispatch_routes.go; Store.reloadMu; removed KindDefault.Blocking + Snapshot.RawYAML; fingerprint remains sha256(raw user YAML) until M5
+
+## Files touched (packages conventions refactor)
+
+- internal/install: install.go→run.go (+ run_test.go); identity/timeout consts; provider normalize; table TestRun
+- internal/hookedge: split options/provider/payload/decision/encode; hookedge.go package doc; notify_test.go; unified fromProto
+- internal/hookclient: unexport daemon/hook; grpcDialTarget; client_test.go
+- internal/server: split server.go / daemon.go / invoke.go; drop Options.Log; daemon_test.go + invoke_test.go
+- internal/daemon/start.go: remove Log from server.Options
+- internal/guard: rule-id consts; RuleIDs(); attach_test.go; align test vs config.DefaultSecretsRules
+- PROGRESS.md
 
 ## Files touched (config conventions refactor)
 
@@ -104,12 +115,8 @@ true
 ## Verify (last green)
 
 ```bash
-bash scripts/e2e-m4.sh
-bash scripts/e2e-m3.sh
-bash scripts/e2e-m2.sh
-bash scripts/e2e-m1.sh
-go test ./internal/config/... ./internal/transport/... ./internal/dispatch/... ./internal/hookedge/... ./internal/install/... ./internal/server/... ./internal/daemon/... -race -count=1
-golangci-lint run ./internal/config/... ./internal/transport/... ./internal/dispatch/... ./internal/hookedge/... ./internal/install/... ./internal/server/... ./internal/daemon/... ./cmd/...
+go test ./internal/install/... ./internal/hookedge/... ./internal/hookclient/... ./internal/server/... ./internal/guard/... ./internal/daemon/... ./internal/dispatch/... -race -count=1
+golangci-lint run ./internal/install/... ./internal/hookedge/... ./internal/hookclient/... ./internal/server/... ./internal/guard/... ./internal/daemon/... ./cmd/...
 ```
 
 ## Blockers
