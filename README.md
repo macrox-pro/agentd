@@ -16,7 +16,7 @@ agentd sits between your AI coding agents (Claude Code, Cursor, Codex, Gemini CL
 - [Руководство (русский)](./docs/ru/) ([зачем нужен](./docs/ru/why.md))
 - Keeping docs current: [docs/en/maintaining.md](./docs/en/maintaining.md)
 
-Contributor design and conventions: [DESIGN.md](./DESIGN.md), [AGENTS.md](./AGENTS.md), [CONVENTIONS.md](./CONVENTIONS.md).
+Contributor design and conventions: [DESIGN.md](./DESIGN.md), [AGENTS.md](./AGENTS.md), [CONVENTIONS.md](./CONVENTIONS.md). How to contribute: [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Why agentd?
 
@@ -175,11 +175,11 @@ make lint       # golangci-lint + buf lint
 go test -tags=integration ./...   # optional daemon↔hook integration
 ```
 
-Contributor conventions: [AGENTS.md](./AGENTS.md)
+See [CONTRIBUTING.md](./CONTRIBUTING.md) and [AGENTS.md](./AGENTS.md).
 
 ## Contributing
 
-Issues and pull requests are welcome. Please read [AGENTS.md](./AGENTS.md) before submitting code changes.
+Issues and pull requests are welcome. Please read [CONTRIBUTING.md](./CONTRIBUTING.md) (and [AGENTS.md](./AGENTS.md) before submitting code).
 
 ## License
 
