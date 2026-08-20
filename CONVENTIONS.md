@@ -1,6 +1,6 @@
 # Coding conventions (encyclopedia)
 
-Deep reference for contributors. Agents: prefer [AGENTS.md](../AGENTS.md); open this file when naming files, writing tests, or changing proto. Architecture: [DESIGN.md](../DESIGN.md).
+Deep reference for contributors. Agents: prefer [AGENTS.md](./AGENTS.md); open this file when naming files, writing tests, or changing proto. Architecture: [DESIGN.md](./DESIGN.md).
 
 ## Code quality
 
@@ -340,14 +340,14 @@ Platform I/O: `{concern}_unix.go` / `{concern}_windows.go` / `{concern}_other.go
 Every new subcommand:
 
 1. Cobra Short, Long, Example (English)
-2. Matching section in [DESIGN.md § CLI Reference](../DESIGN.md#6-cli-reference)
+2. Matching section in [DESIGN.md § CLI Reference](./DESIGN.md#6-cli-reference)
 
 ## Session handoff & PR
 
 On stop or context limit:
 
-1. Update [PROGRESS.md](../PROGRESS.md) with next todo and files touched
-2. Confirm [AGENTS.md](../AGENTS.md) was read this session
+1. Update [PROGRESS.md](./PROGRESS.md) with next todo and files touched
+2. Confirm [AGENTS.md](./AGENTS.md) was read this session
 
 PR checklist:
 

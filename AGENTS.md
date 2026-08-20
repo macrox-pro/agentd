@@ -2,7 +2,7 @@
 
 Go **1.26.7** daemon that proxies coding-agent hooks via [agenthooks](https://github.com/speakeasy-api/agenthooks). Cobra CLI; gRPC over unix/npipe; Buf + protovalidate; testify.
 
-Architecture: [DESIGN.md](./DESIGN.md) · Deep conventions: [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) · Session: [PROGRESS.md](./PROGRESS.md)
+Architecture: [DESIGN.md](./DESIGN.md) · Deep conventions: [CONVENTIONS.md](./CONVENTIONS.md) · Session: [PROGRESS.md](./PROGRESS.md)
 
 ## Commands
 

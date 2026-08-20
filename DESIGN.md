@@ -300,7 +300,7 @@ Persist: debounced async flush (500 ms) via `runtime.yaml.tmp` → `runtime.yaml
 
 ## 4. gRPC API
 
-Protobuf definitions: `api/agentd/v1/`. Buf rules: [AGENTS.md § Protobuf](./AGENTS.md#protobuf); details: [docs/CONVENTIONS.md](./docs/CONVENTIONS.md#protobuf--buf).
+Protobuf definitions: `api/agentd/v1/`. Buf rules: [AGENTS.md § Protobuf](./AGENTS.md#protobuf); details: [CONVENTIONS.md](./CONVENTIONS.md#protobuf--buf).
 
 ### HookService
 
@@ -562,14 +562,14 @@ agentd/
 ├── DESIGN.md
 ├── AGENTS.md
 ├── PROGRESS.md
-└── docs/CONVENTIONS.md
+└── CONVENTIONS.md
 ```
 
 ---
 
 ## 10. Testing
 
-- Unit tests: `package foo_test` only; table-driven ([Go Wiki](https://go.dev/wiki/TableDrivenTests)); full rules in [docs/CONVENTIONS.md](./docs/CONVENTIONS.md#testing)
+- Unit tests: `package foo_test` only; table-driven ([Go Wiki](https://go.dev/wiki/TableDrivenTests)); full rules in [CONVENTIONS.md](./CONVENTIONS.md#testing)
 - Integration: bufconn / in-memory socket; hook CLI round-trip
 - Conformance: `agenthooks/agenthookstest` fixtures
 - `go test ./... -race`
