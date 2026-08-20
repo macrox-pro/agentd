@@ -9,6 +9,9 @@ Architecture: [DESIGN.md](./DESIGN.md) · Deep conventions: [docs/CONVENTIONS.md
 ```bash
 make lint                          # golangci-lint or go vet + buf lint
 make test                          # go test ./... -race -count=1
+make build                         # go build -o agentd .
+make start                         # build + agentd daemon start
+make stop                          # agentd daemon stop
 make generate                      # buf lint + buf generate
 go test ./internal/daemon/... -race -count=1
 go fix ./path/to/changed/...
