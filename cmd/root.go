@@ -30,20 +30,20 @@ import (
 )
 
 var (
-	cfgFile   string
+	cfgFile    string
 	socketPath string
-	verbose   bool
+	verbose    bool
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "agentd",
-	Short: "Proxy, guard, and observe coding-agent hooks",
-	Long: `agentd is a user-level daemon for coding-agent hooks.
+	Short: "Control coding-agent hooks from one background service",
+	Long: `agentd runs a background service that applies your hook policies when
+coding agents (Claude Code, Cursor, Codex, Gemini CLI, OpenCode, Kimi Code)
+fire hooks.
 
-Agents invoke the hook CLI (agentd hook run); the daemon applies policies,
-dispatch routes, and returns provider-correct responses via gRPC.
-
-See DESIGN.md for architecture and AGENTS.md for contributor rules.`,
+Use "agentd daemon" to start and manage the service, and "agentd hook" as the
+command agents call from their hook settings.`,
 }
 
 func Execute() {
@@ -55,9 +55,9 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default $HOME/.agentd.yaml)")
-	rootCmd.PersistentFlags().StringVar(&socketPath, "socket", "", "daemon gRPC socket or named pipe path")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output to stderr (never hook stdout)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "path to config file (default $HOME/.agentd.yaml)")
+	rootCmd.PersistentFlags().StringVar(&socketPath, "socket", "", "path to the daemon socket")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "print extra messages to stderr")
 
 	_ = viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
 	_ = viper.BindPFlag("socket", rootCmd.PersistentFlags().Lookup("socket"))

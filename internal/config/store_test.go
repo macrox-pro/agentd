@@ -1,0 +1,119 @@
+package config_test
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/macrox-pro/agentd/internal/config"
+)
+
+func TestLoad(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name    string
+		content string
+		write   bool
+		wantErr bool
+		check   func(t *testing.T, store *config.Store)
+	}{
+		{
+			name:  "missing file ok",
+			write: false,
+			check: func(t *testing.T, store *config.Store) {
+				t.Helper()
+				snap := store.Current()
+				assert.Equal(t, uint64(1), snap.Generation, "Load(missing)")
+				assert.NotEmpty(t, snap.Fingerprint, "Load(missing)")
+			},
+		},
+		{
+			name:    "invalid yaml",
+			write:   true,
+			content: ":\tinvalid",
+			wantErr: true,
+		},
+		{
+			name:    "valid yaml",
+			write:   true,
+			content: "version: 1\n",
+			check: func(t *testing.T, store *config.Store) {
+				t.Helper()
+				snap := store.Current()
+				assert.GreaterOrEqual(t, snap.Generation, uint64(1), "Load(valid)")
+				assert.NotEmpty(t, snap.Fingerprint, "Load(valid)")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			path := filepath.Join(dir, "agentd.yaml")
+			if tt.write {
+				require.NoError(t, os.WriteFile(path, []byte(tt.content), 0o600), "WriteFile(%q)", path)
+			}
+
+			store, err := config.Load(ctx, path)
+			if tt.wantErr {
+				require.Error(t, err, "Load(%q)", path)
+				return
+			}
+			require.NoError(t, err, "Load(%q)", path)
+			if tt.check != nil {
+				tt.check(t, store)
+			}
+		})
+	}
+}
+
+func TestReload(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "agentd.yaml")
+	require.NoError(t, os.WriteFile(path, []byte("version: 1\n"), 0o600), "WriteFile(%q)", path)
+
+	store, err := config.Load(ctx, path)
+	require.NoError(t, err, "Load(%q)", path)
+
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{
+			name:    "policy edit bumps generation",
+			content: "version: 1\npolicy:\n  fail: fail_closed\n",
+		},
+		{
+			name:    "second reload bumps again",
+			content: "version: 1\npolicy:\n  fail: fail_open\n",
+		},
+	}
+
+	var prevGen uint64
+	var prevFP string
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, os.WriteFile(path, []byte(tt.content), 0o600), "WriteFile(%q)", path)
+			require.NoError(t, store.Reload(ctx), "Reload(%q)", path)
+
+			snap := store.Current()
+			if prevGen > 0 {
+				assert.Greater(t, snap.Generation, prevGen, "Reload(%q)", tt.name)
+				assert.NotEqual(t, prevFP, snap.Fingerprint, "Reload(%q)", tt.name)
+			}
+			prevGen = snap.Generation
+			prevFP = snap.Fingerprint
+		})
+	}
+}

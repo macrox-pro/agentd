@@ -5,88 +5,97 @@
 
 ## Current phase
 
-Phase: **complete (doc + scaffold)** | Last todo: p4-checkpoint | Next: **M1 implementation**
+Phase: m2 | Last: m1-h-checkpoint | Next: dispatch-engine (M2)
 
 ## agents_md_ready
 
 true
 
-## Todo checklist
+## Session notes
+
+- AGENTS.md read: yes (2026-08-20)
+
+## M1 checklist
 
 ### Phase 0
-- [x] p0-progress-file
+- [x] m1-p0-progress
+- [x] m1-p0-read-agents
 
-### Phase 1 — Documentation
-- [x] p1-readme
-- [x] p1-design-skeleton
-- [x] p1-design-dispatch
-- [x] p1-design-configstore
-- [x] p1-design-grpc
-- [x] p1-design-transport
-- [x] p1-design-cli
-- [x] p1-design-config-schema
-- [x] p1-design-ops
-- [x] p1-agents-md
-- [x] p1-agents-gate
-- [x] p1-doc-crosslinks
-- [x] p1-checkpoint
+### Phase A — CLI help
+- [x] m1-a-cli-root
+- [x] m1-a-cli-daemon
+- [x] m1-a-cli-hook
+- [x] m1-a-cli-config
+- [x] m1-a-cli-install
+- [x] m1-a-cli-dispatch
+- [x] m1-a-checkpoint
 
-### Phase 2 — Protobuf
-- [x] p2-buf-config
-- [x] p2-proto-common
-- [x] p2-proto-hook
-- [x] p2-proto-daemon
-- [x] p2-proto-config
-- [x] p2-buf-lint-breaking (lint clean; breaking skipped — no baseline on main)
-- [x] p2-buf-generate
-- [x] p2-design-proto-sync
-- [x] p2-checkpoint
+### Phase B — Transport
+- [x] m1-b-socket-path
+- [x] m1-b-dial
+- [x] m1-b-transport-test
+- [x] m1-b-checkpoint
 
-### Phase 3 — Skeleton
-- [x] p3-deps
-- [x] p3-internal-layout
-- [x] p3-transport-stub
-- [x] p3-config-stub
-- [x] p3-dispatch-stub
-- [x] p3-cli-root
-- [x] p3-cli-daemon
-- [x] p3-cli-hook
-- [x] p3-cli-config
-- [x] p3-cli-install
-- [x] p3-cli-dispatch
-- [x] p3-checkpoint
+### Phase C — Config
+- [x] m1-c-load
+- [x] m1-c-reload
+- [x] m1-c-config-test
+- [x] m1-c-checkpoint
 
-### Phase 4 — Verify
-- [x] p4-makefile
-- [x] p4-final-review
-- [x] p4-checkpoint
+### Phase D — Server
+- [x] m1-d-daemon-svc
+- [x] m1-d-hook-svc
+- [x] m1-d-server-test
+- [x] m1-d-checkpoint
 
-## Files touched (scaffold phase)
+### Phase E — Daemon lifecycle
+- [x] m1-e-paths-lock
+- [x] m1-e-pid
+- [x] m1-e-start-fg
+- [x] m1-e-detach
+- [x] m1-e-stop
+- [x] m1-e-daemon-test
+- [x] m1-e-checkpoint
 
-- PROGRESS.md, README.md, DESIGN.md, AGENTS.md
-- api/agentd/v1/*.proto, gen/agentd/v1/*.pb.go
-- buf.gen.yaml, buf.lock, go.mod, go.sum, Makefile, .gitignore
-- cmd/*.go, internal/**
+### Phase F — Client + edge
+- [x] m1-f-hookclient
+- [x] m1-f-hookedge
+- [x] m1-f-hookedge-test
+- [x] m1-f-checkpoint
 
-## Verify commands (last green)
+### Phase G — Wire CLI
+- [x] m1-g-wire-daemon
+- [x] m1-g-wire-hook-run
+- [x] m1-g-checkpoint
+
+### Phase H — Close
+- [x] m1-h-e2e
+- [x] m1-h-lint-fix
+- [x] m1-h-design-milestones
+- [x] m1-h-checkpoint
+
+## Files touched (this session)
+
+- internal/hookedge/run.go, run_test.go
+- cmd/daemon.go, cmd/hook.go
+- internal/daemon/start.go (ensureNotRunning)
+- scripts/e2e-m1.sh
+- DESIGN.md §13
+- go.mod, go.sum (agenthooks)
+- PROGRESS.md
+
+## Verify (last green)
 
 ```bash
-go build ./...
-./agentd --help
-buf lint api/
-make lint
-make test
+bash scripts/e2e-m1.sh
+go test ./... -race -count=1
+golangci-lint run ./internal/hookedge/... ./cmd/... ./internal/daemon/... ./internal/hookclient/... ./internal/server/... ./internal/config/... ./internal/transport/...
 ```
 
-## Blockers / notes
+## Blockers
 
 (none)
 
-## Deferred (M1–M4)
+## Deferred (M2+)
 
-See [DESIGN.md § Milestones](./DESIGN.md#13-milestones):
-
-- **M1** — daemon start/stop/status; ConfigStore wiring; `Invoke` stub
-- **M2** — Dispatch Engine; hybrid modes; async queue; secrets guard
-- **M3** — forward targets; full dispatch YAML; fsnotify reload
-- **M4** — gRPC forward; OpenCode serve bridge; install wrapper; Windows npipe hardening
+Dispatch Engine, guards, fsnotify, hook notify/serve, install, ConfigService

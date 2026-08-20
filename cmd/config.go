@@ -10,11 +10,11 @@ func init() {
 
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Inspect and validate configuration",
-	Long: `Offline and online configuration operations.
+	Short: "Validate and inspect agentd settings",
+	Long: `Validate and inspect agentd configuration files.
 
-Validation runs without a daemon. Show and patch may contact the daemon
-for merged views and runtime overlay updates.`,
+Use validate in CI without a running service. Show prints settings; patch
+updates runtime overrides managed by the service.`,
 }
 
 var (
@@ -27,21 +27,20 @@ var (
 func init() {
 	configCmd.AddCommand(configValidateCmd, configShowCmd, configPatchCmd)
 
-	configShowCmd.Flags().BoolVar(&configMerged, "merged", false, "show merged effective config")
-	configShowCmd.Flags().StringVar(&configLayer, "layer", "", "show one layer: user, project, runtime")
-	configShowCmd.Flags().StringVar(&configCWD, "cwd", "", "project root for layer resolution")
+	configShowCmd.Flags().BoolVar(&configMerged, "merged", false, "show the effective merged settings")
+	configShowCmd.Flags().StringVar(&configLayer, "layer", "", "show one layer: user, project, or runtime")
+	configShowCmd.Flags().StringVar(&configCWD, "cwd", "", "project directory used to find project settings")
 
-	configPatchCmd.Flags().StringVar(&configPatch, "file", "", "runtime overlay patch YAML file (required)")
+	configPatchCmd.Flags().StringVar(&configPatch, "file", "", "YAML file with runtime overrides to apply (required)")
 	_ = configPatchCmd.MarkFlagRequired("file")
 }
 
 var configValidateCmd = &cobra.Command{
 	Use:   "validate",
-	Short: "Validate configuration YAML offline",
-	Long: `Parse and validate agentd YAML without a running daemon.
+	Short: "Check that configuration files are valid",
+	Long: `Check that agentd configuration YAML is valid.
 
-Suitable for CI and pre-commit hooks. Checks schema, policy, guards, and
-dispatch route compilation.`,
+Runs without a background service, so it is safe for CI and pre-commit hooks.`,
 	Example: `  agentd config validate
   agentd config validate --config ~/.agentd.yaml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -53,11 +52,11 @@ dispatch route compilation.`,
 
 var configShowCmd = &cobra.Command{
 	Use:   "show",
-	Short: "Show configuration layers or merged config",
-	Long: `Display user, project, runtime, or merged effective configuration.
+	Short: "Print configuration settings",
+	Long: `Print agentd configuration settings.
 
-Use --layer to inspect a single layer. Use --merged for the compiled view
-(requires a running daemon unless --cwd is set for offline merge preview).`,
+Use --layer to show one source file. Use --merged for the effective settings
+after combining sources.`,
 	Example: `  agentd config show --merged
   agentd config show --layer user`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -69,11 +68,11 @@ Use --layer to inspect a single layer. Use --merged for the compiled view
 
 var configPatchCmd = &cobra.Command{
 	Use:   "patch",
-	Short: "Patch runtime configuration overlay",
-	Long: `Apply a YAML patch to the daemon-managed runtime overlay via gRPC.
+	Short: "Apply temporary runtime setting overrides",
+	Long: `Apply temporary overrides to the running service without editing your
+user or project config files.
 
-Used for learned approvals and temporary blocks. Does not modify
-~/.agentd.yaml or project .agentd.yaml files.`,
+Requires a running agentd service.`,
 	Example: `  agentd config patch --file runtime-delta.yaml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_ = cmd

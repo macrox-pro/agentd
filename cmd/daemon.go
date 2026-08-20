@@ -1,7 +1,18 @@
 package cmd
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
 	"github.com/spf13/cobra"
+
+	"github.com/macrox-pro/agentd/internal/daemon"
+	"github.com/macrox-pro/agentd/internal/hookclient"
+	"github.com/macrox-pro/agentd/internal/transport"
 )
 
 func init() {
@@ -10,92 +21,165 @@ func init() {
 
 var daemonCmd = &cobra.Command{
 	Use:   "daemon",
-	Short: "Manage the user-level agentd daemon",
-	Long: `Lifecycle commands for the agentd daemon process.
+	Short: "Start and manage the agentd background service",
+	Long: `Commands to start, stop, check, and reload the agentd background service.
 
-The daemon holds the gRPC server, ConfigStore, Dispatch Engine, and async
-queue. Hook events are handled by "agentd hook", not by daemon subcommands.`,
+Start the service once per user, then use "agentd hook" from your agent
+settings. Management commands talk to the running service.`,
 }
 
 var (
-	daemonForeground bool
+	daemonForeground  bool
 	daemonStopTimeout string
-	daemonStatusJSON bool
+	daemonStatusJSON  bool
 )
 
 func init() {
 	daemonCmd.AddCommand(daemonStartCmd, daemonStopCmd, daemonStatusCmd, daemonReloadCmd)
 
-	daemonStartCmd.Flags().BoolVar(&daemonForeground, "foreground", false, "run in foreground (no detach)")
+	daemonStartCmd.Flags().BoolVar(&daemonForeground, "foreground", false, "keep the service attached to this terminal")
 
-	daemonStopCmd.Flags().StringVar(&daemonStopTimeout, "timeout", "10s", "shutdown wait timeout")
+	daemonStopCmd.Flags().StringVar(&daemonStopTimeout, "timeout", "10s", "how long to wait for a clean shutdown")
 
-	daemonStatusCmd.Flags().BoolVar(&daemonStatusJSON, "json", false, "JSON output")
+	daemonStatusCmd.Flags().BoolVar(&daemonStatusJSON, "json", false, "print status as JSON")
 }
 
 var daemonStartCmd = &cobra.Command{
 	Use:   "start",
-	Short: "Start the user-level daemon",
-	Long: `Start the agentd daemon (one instance per user).
+	Short: "Start the agentd background service",
+	Long: `Start the agentd background service for this user.
 
-By default the process detaches from the terminal. Use --foreground for
-development or when supervised by systemd/launchd.
+By default the service runs in the background. Use --foreground to keep it
+attached to the terminal (useful while developing or under a process manager).
 
-The daemon listens on a Unix domain socket (Linux/macOS) or named pipe
-(Windows) for gRPC from hook and management CLI commands.`,
+Only one instance should run per user. If a service is already running, start
+reports an error instead of replacing it.`,
 	Example: `  agentd daemon start
   agentd daemon start --foreground`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_ = cmd
 		_ = args
-		return errNotImplemented
+		return daemon.Start(cmd.Context(), daemon.StartOptions{
+			Socket:     resolveSocket(),
+			ConfigPath: resolveConfigPath(),
+			Foreground: daemonForeground,
+			Version:    "dev",
+		})
 	},
 }
 
 var daemonStopCmd = &cobra.Command{
 	Use:   "stop",
-	Short: "Stop the daemon gracefully",
-	Long: `Request graceful shutdown of the running daemon.
+	Short: "Stop the running agentd service",
+	Long: `Ask the running agentd service to shut down cleanly.
 
-Drains in-flight hook Invoke calls and the async queue, then removes the
-socket and PID files. Uses gRPC Shutdown when available; SIGTERM as fallback.`,
+The command waits up to --timeout for the service to exit. If the service
+does not respond, stop may force termination.`,
 	Example: `  agentd daemon stop
   agentd daemon stop --timeout 30s`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_ = cmd
 		_ = args
-		return errNotImplemented
+		timeout, err := time.ParseDuration(daemonStopTimeout)
+		if err != nil {
+			return fmt.Errorf("invalid --timeout: %w", err)
+		}
+		return daemon.Stop(cmd.Context(), resolveSocket(), timeout)
 	},
 }
 
 var daemonStatusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Show daemon runtime status",
-	Long: `Print daemon health, uptime, config generation, and queue depth.
+	Short: "Show whether the service is running",
+	Long: `Print whether the agentd service is running and basic health details.
 
-Use --json for machine-readable output in scripts and CI.
-
-This shows runtime state, not declarative config (see "agentd config show").`,
+Use --json for machine-readable output in scripts. For configuration contents,
+use "agentd config show".`,
 	Example: `  agentd daemon status
   agentd daemon status --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_ = cmd
 		_ = args
-		return errNotImplemented
+		return runDaemonStatus(cmd.Context())
 	},
 }
 
 var daemonReloadCmd = &cobra.Command{
 	Use:   "reload",
-	Short: "Reload configuration from disk",
-	Long: `Force a config re-merge from user and project YAML files.
+	Short: "Reload settings from disk",
+	Long: `Reload agentd settings from the config file without restarting the service.
 
-Normally fsnotify reloads config automatically. Use this when the watcher
-is unavailable (NFS, some containers) or after bulk edits.`,
+Use this after editing your config by hand when you want changes applied
+immediately.`,
 	Example: `  agentd daemon reload`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_ = cmd
 		_ = args
-		return errNotImplemented
+		cli, err := hookclient.Dial(cmd.Context(), resolveSocket())
+		if err != nil {
+			return fmt.Errorf("daemon not running: %w", err)
+		}
+		defer cli.Close()
+		resp, err := cli.Reload(cmd.Context())
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "reloaded generation=%d fingerprint=%s\n",
+			resp.GetConfig().GetGeneration(), resp.GetConfig().GetFingerprint())
+		return nil
 	},
+}
+
+func resolveSocket() string {
+	if socketPath != "" {
+		return socketPath
+	}
+	return transport.DefaultSocketPath()
+}
+
+func resolveConfigPath() string {
+	if cfgFile != "" {
+		return cfgFile
+	}
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return ""
+	}
+	return filepath.Join(home, ".agentd.yaml")
+}
+
+func runDaemonStatus(ctx context.Context) error {
+	socket := resolveSocket()
+	printStopped := func() error {
+		if daemonStatusJSON {
+			return json.NewEncoder(os.Stdout).Encode(map[string]any{
+				"running": false,
+				"socket":  socket,
+			})
+		}
+		fmt.Println("agentd: not running")
+		return nil
+	}
+
+	cli, err := hookclient.Dial(ctx, socket)
+	if err != nil {
+		return printStopped()
+	}
+	defer cli.Close()
+
+	resp, err := cli.Status(ctx)
+	if err != nil {
+		return printStopped()
+	}
+
+	if daemonStatusJSON {
+		return json.NewEncoder(os.Stdout).Encode(map[string]any{
+			"running":     true,
+			"socket":      socket,
+			"version":     resp.GetVersion(),
+			"started_at":  resp.GetStartedAt().AsTime().UTC().Format(time.RFC3339),
+			"generation":  resp.GetConfig().GetGeneration(),
+			"fingerprint": resp.GetConfig().GetFingerprint(),
+		})
+	}
+
+	fmt.Printf("agentd: running (version %s, generation %d)\n",
+		resp.GetVersion(), resp.GetConfig().GetGeneration())
+	return nil
 }

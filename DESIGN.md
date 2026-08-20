@@ -300,7 +300,7 @@ Persist: debounced async flush (500 ms) via `runtime.yaml.tmp` → `runtime.yaml
 
 ## 4. gRPC API
 
-Protobuf definitions: `api/agentd/v1/`. Buf rules: [AGENTS.md § Protobuf](./AGENTS.md#protobuf--buf-2026).
+Protobuf definitions: `api/agentd/v1/`. Buf rules: [AGENTS.md § Protobuf](./AGENTS.md#protobuf); details: [docs/CONVENTIONS.md](./docs/CONVENTIONS.md#protobuf--buf).
 
 ### HookService
 
@@ -557,14 +557,15 @@ agentd/
 │   └── transport/
 ├── DESIGN.md
 ├── AGENTS.md
-└── PROGRESS.md
+├── PROGRESS.md
+└── docs/CONVENTIONS.md
 ```
 
 ---
 
 ## 10. Testing
 
-- Unit tests: `package foo_test` only; table-driven ([Go Wiki](https://go.dev/wiki/TableDrivenTests))
+- Unit tests: `package foo_test` only; table-driven ([Go Wiki](https://go.dev/wiki/TableDrivenTests)); full rules in [docs/CONVENTIONS.md](./docs/CONVENTIONS.md#testing)
 - Integration: bufconn / in-memory socket; hook CLI round-trip
 - Conformance: `agenthooks/agenthookstest` fixtures
 - `go test ./... -race`
@@ -594,11 +595,12 @@ agentd/
 
 ## 13. Milestones
 
-| Milestone | Scope |
-|-----------|--------|
-| **M1** | daemon start/stop/status; ConfigStore; `Invoke` stub (sync_only noop) |
-| **M2** | Dispatch Engine; parallel/after_sync; async queue; secrets guard |
-| **M3** | Forward targets (exec, http, log, file); full dispatch YAML; fsnotify |
-| **M4** | gRPC forward; OpenCode serve bridge; install wrapper; Windows npipe |
+| Milestone | Status | Scope |
+|-----------|--------|--------|
+| **M0** | done | Docs (README, DESIGN, AGENTS), proto (`api/agentd/v1`), CLI/internal scaffold |
+| **M1** | done | daemon start/stop/status/reload; ConfigStore (defaults⊕user, atomic snapshot); HookService.Invoke → NO_DECISION; `hook run` via daemon; user-facing CLI help |
+| **M2** | planned | Dispatch Engine; parallel/after_sync; async queue; secrets guard |
+| **M3** | planned | Forward targets (exec, http, log, file); full dispatch YAML; fsnotify reload |
+| **M4** | planned | gRPC forward; OpenCode serve bridge; install wrapper; Windows npipe hardening |
 
-Current repo state completes **doc + proto + scaffold** (pre-M1).
+M1 acceptance: `daemon start|status|reload|stop` and `hook run --provider=…` round-trip; see PROGRESS.md.

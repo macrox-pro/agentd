@@ -3,6 +3,7 @@
 package transport
 
 import (
+	"context"
 	"errors"
 	"net"
 )
@@ -14,5 +15,10 @@ func DefaultSocketPath() string {
 
 // Listen is unsupported on this platform.
 func Listen(string) (net.Listener, error) {
+	return nil, errors.New("transport: unsupported platform")
+}
+
+// Dial is unsupported on this platform.
+func Dial(context.Context, string) (net.Conn, error) {
 	return nil, errors.New("transport: unsupported platform")
 }
