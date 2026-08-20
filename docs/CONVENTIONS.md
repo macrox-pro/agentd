@@ -28,6 +28,23 @@ Deep reference for contributors. Agents: prefer [AGENTS.md](../AGENTS.md); open 
 
 Change only files required by the current todo. Do not drive-by refactor unrelated code.
 
+### No magic literals
+
+Name domain strings and non-obvious numbers/durations. Put `const` next to the concern that owns them — not in a catch-all `consts.go` (see [Files](#files)).
+
+```go
+// CORRECT — typed domain string + named timeout beside Start
+const readyTimeout = 5 * time.Second
+type FailMode string
+const FailOpen FailMode = "fail_open"
+
+// WRONG — bare wire/config values and unexplained numbers
+if mode == "fail_open" { ... }
+time.After(5 * time.Second)
+```
+
+Leave obvious literals alone: `0`, `1`, `-1`, `""`, `nil`, loop bounds, and test table inputs that appear once. Prefer a typed string (`FailMode`) when the value is part of config/wire/protocol vocabulary.
+
 ## Naming
 
 ### Identifiers

@@ -29,6 +29,20 @@ return fmt.Errorf("acquire lock: %w", ErrAlreadyRunning)
 return fmt.Errorf("Failed to Acquire Lock: %v", err)
 ```
 
+Name domain strings and non-obvious numbers. Keep them next to the concern (never a kitchen-sink `consts.go`). `0` / `1` / `""` / `-1` are fine when the meaning is obvious.
+
+```go
+// CORRECT
+const readyTimeout = 5 * time.Second
+type FailMode string
+const FailOpen FailMode = "fail_open"
+if mode == FailOpen { ... }
+
+// WRONG
+time.After(5 * time.Second)
+if mode == "fail_open" { ... }
+```
+
 Imports: std → third-party → `github.com/macrox-pro/agentd/...`.
 
 ### Files
