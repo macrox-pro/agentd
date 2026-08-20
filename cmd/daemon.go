@@ -112,6 +112,8 @@ use "agentd config show".`,
 				payload["started_at"] = rep.StartedAt.UTC().Format(time.RFC3339)
 				payload["generation"] = rep.Generation
 				payload["fingerprint"] = rep.Fingerprint
+				payload["async_queue_depth"] = rep.AsyncQueueDepth
+				payload["compiled_route_count"] = rep.CompiledRouteCount
 			}
 			return json.NewEncoder(out).Encode(payload)
 		}

@@ -17,6 +17,10 @@ type Snapshot struct {
 	Fingerprint string
 	UserPath    string
 	RawYAML     []byte
+	Policy      Policy
+	Async       AsyncConfig
+	Guards      Guards
+	Routes      []CompiledRoute
 }
 
 // Store holds the current config snapshot for lock-free reads on the hot path.
@@ -24,10 +28,6 @@ type Store struct {
 	snap     atomic.Pointer[Snapshot]
 	userPath string
 	gen      atomic.Uint64
-}
-
-type fileConfig struct {
-	Version int `yaml:"version"`
 }
 
 // Load reads defaults merged with an optional user YAML file.
@@ -56,11 +56,17 @@ func (s *Store) reloadLocked() error {
 	if err != nil {
 		return err
 	}
+	var user *fileConfig
 	if len(raw) > 0 {
 		var fc fileConfig
 		if err := yaml.Unmarshal(raw, &fc); err != nil {
 			return fmt.Errorf("parse config %q: %w", s.userPath, err)
 		}
+		user = &fc
+	}
+	pol, async, guards, routes, err := Compile(user)
+	if err != nil {
+		return fmt.Errorf("compile config %q: %w", s.userPath, err)
 	}
 	sum := sha256.Sum256(raw)
 	fp := hex.EncodeToString(sum[:])
@@ -70,6 +76,10 @@ func (s *Store) reloadLocked() error {
 		Fingerprint: fp,
 		UserPath:    s.userPath,
 		RawYAML:     append([]byte(nil), raw...),
+		Policy:      pol,
+		Async:       async,
+		Guards:      guards,
+		Routes:      routes,
 	}
 	s.snap.Store(snap)
 	return nil

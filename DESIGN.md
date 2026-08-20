@@ -464,6 +464,8 @@ Patch runtime overlay via gRPC (`ConfigService.PatchConfig`).
 
 Show compiled dispatch routes (mode, targets, match order). Debug/ops only.
 
+Compiles defaults ⊕ user config offline (no daemon required in M2).
+
 **Hook failure modes:** daemon down → `policy.offline`; timeout → per `policy.fail`; never debug on stdout.
 
 ---
@@ -600,8 +602,10 @@ agentd/
 |-----------|--------|--------|
 | **M0** | done | Docs (README, DESIGN, AGENTS), proto (`api/agentd/v1`), CLI/internal scaffold |
 | **M1** | done | daemon start/stop/status/reload; ConfigStore (defaults⊕user, atomic snapshot); HookService.Invoke → NO_DECISION; `hook run` via daemon; user-facing CLI help |
-| **M2** | planned | Dispatch Engine; parallel/after_sync; async queue; secrets guard |
+| **M2** | done | Dispatch Engine; parallel/after_sync; async queue; secrets guard |
 | **M3** | planned | Forward targets (exec, http, log, file); full dispatch YAML; fsnotify reload |
 | **M4** | planned | gRPC forward; OpenCode serve bridge; install wrapper; Windows npipe hardening |
 
 M1 acceptance: `daemon start|status|reload|stop` and `hook run --provider=…` round-trip; see PROGRESS.md.
+
+M2 acceptance: Dispatch Engine (parallel/after_sync), bounded async queue, secrets guard Ask/Deny on tool.pre, `dispatch routes`, `scripts/e2e-m2.sh`.

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"google.golang.org/grpc"
@@ -9,14 +10,17 @@ import (
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/dispatch"
 )
 
 // Options configures the gRPC services.
 type Options struct {
 	Store      *config.Store
+	Engine     *dispatch.Engine
 	StartedAt  time.Time
 	Version    string
 	OnShutdown func()
+	Log        *slog.Logger
 }
 
 type daemonService struct {
@@ -26,7 +30,8 @@ type daemonService struct {
 
 type hookService struct {
 	agentdv1.UnimplementedHookServiceServer
-	store *config.Store
+	store  *config.Store
+	engine *dispatch.Engine
 }
 
 // New registers DaemonService and HookService on a new gRPC server.
@@ -39,7 +44,7 @@ func New(opts Options) *grpc.Server {
 	}
 	s := grpc.NewServer()
 	agentdv1.RegisterDaemonServiceServer(s, &daemonService{opts: opts})
-	agentdv1.RegisterHookServiceServer(s, &hookService{store: opts.Store})
+	agentdv1.RegisterHookServiceServer(s, &hookService{store: opts.Store, engine: opts.Engine})
 	return s
 }
 
@@ -56,6 +61,12 @@ func (d *daemonService) Status(context.Context, *agentdv1.StatusRequest) (*agent
 			Generation:  snap.Generation,
 			Fingerprint: snap.Fingerprint,
 		},
+		CompiledRouteCount: uint32(len(snap.Routes)),
+	}
+	if d.opts.Engine != nil {
+		if q := d.opts.Engine.Queue(); q != nil {
+			resp.AsyncQueueDepth = uint32(q.Depth())
+		}
 	}
 	if snap.UserPath != "" {
 		resp.ConfigLayers = []*agentdv1.LayerInfo{{
@@ -87,16 +98,32 @@ func (d *daemonService) Shutdown(context.Context, *agentdv1.ShutdownRequest) (*a
 	return &agentdv1.ShutdownResponse{}, nil
 }
 
-func (h *hookService) Invoke(_ context.Context, _ *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
+func (h *hookService) Invoke(ctx context.Context, req *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
 	snap := h.store.Current()
-	return &agentdv1.InvokeResponse{
-		Decision: &agentdv1.Decision{
-			Kind: agentdv1.DecisionKind_DECISION_KIND_NO_DECISION,
-		},
+	resp := &agentdv1.InvokeResponse{
 		Config: &agentdv1.ConfigGeneration{
 			Generation:  snap.Generation,
 			Fingerprint: snap.Fingerprint,
 		},
-		AsyncDispatchedCount: 0,
-	}, nil
+		Decision: dispatch.NeutralDecision(),
+	}
+	if h.engine == nil {
+		return resp, nil
+	}
+	in := dispatch.InvokeInput{
+		Provider:   req.GetProvider(),
+		RawPayload: req.GetRawPayload(),
+		Snap:       snap,
+	}
+	if dl := req.GetDeadline(); dl != nil {
+		in.Deadline = dl.AsTime()
+	}
+	result, err := h.engine.Invoke(ctx, in)
+	if err != nil {
+		// Match agenthooks wire: undecodable payloads become a neutral no-op.
+		return resp, nil
+	}
+	resp.Decision = result.Decision
+	resp.AsyncDispatchedCount = result.AsyncDispatchedCount
+	return resp, nil
 }

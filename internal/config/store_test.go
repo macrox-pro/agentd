@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,6 +33,9 @@ func TestLoad(t *testing.T) {
 				snap := store.Current()
 				assert.Equal(t, uint64(1), snap.Generation, "Load(missing)")
 				assert.NotEmpty(t, snap.Fingerprint, "Load(missing)")
+				assert.True(t, snap.Guards.Secrets.Enabled, "Load(missing) secrets")
+				assert.NotEmpty(t, snap.Routes, "Load(missing) routes")
+				assert.Equal(t, 1024, snap.Async.QueueCapacity, "Load(missing) async")
 			},
 		},
 		{
@@ -50,6 +54,38 @@ func TestLoad(t *testing.T) {
 				assert.GreaterOrEqual(t, snap.Generation, uint64(1), "Load(valid)")
 				assert.NotEmpty(t, snap.Fingerprint, "Load(valid)")
 			},
+		},
+		{
+			name:  "override policy and secrets",
+			write: true,
+			content: `version: 1
+policy:
+  fail: fail_open
+guards:
+  secrets:
+    enabled: false
+    action: deny
+async:
+  queue_capacity: 16
+  worker_limit: 2
+  target_timeout: 5s
+`,
+			check: func(t *testing.T, store *config.Store) {
+				t.Helper()
+				snap := store.Current()
+				assert.Equal(t, config.FailOpen, snap.Policy.Fail, "policy.fail")
+				assert.False(t, snap.Guards.Secrets.Enabled, "secrets.enabled")
+				assert.Equal(t, config.GuardDeny, snap.Guards.Secrets.Action, "secrets.action")
+				assert.Equal(t, 16, snap.Async.QueueCapacity, "async.queue_capacity")
+				assert.Equal(t, 2, snap.Async.WorkerLimit, "async.worker_limit")
+				assert.Equal(t, 5*time.Second, snap.Async.TargetTimeout, "async.target_timeout")
+			},
+		},
+		{
+			name:    "bad policy fail",
+			write:   true,
+			content: "version: 1\npolicy:\n  fail: nope\n",
+			wantErr: true,
 		},
 	}
 
@@ -116,4 +152,53 @@ func TestReload(t *testing.T) {
 			prevFP = snap.Fingerprint
 		})
 	}
+}
+
+func TestCompile(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		wantMode  map[string]config.DispatchMode
+		wantSync  bool
+	}{
+		{
+			name: "defaults",
+			wantMode: map[string]config.DispatchMode{
+				"tool.pre":     config.ModeParallel,
+				"notification": config.ModeAsyncOnly,
+				"agent.stop":   config.ModeAfterSync, // normalized from sync_then_async
+			},
+			wantSync: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			pol, async, guards, routes, err := config.Compile(nil)
+			require.NoError(t, err, "Compile(nil)")
+			assert.Equal(t, config.FailClosed, pol.Fail, "Compile policy")
+			assert.Equal(t, 1024, async.QueueCapacity, "Compile async")
+			assert.True(t, guards.Secrets.Enabled, "Compile secrets")
+			byKind := map[string]config.CompiledRoute{}
+			for _, r := range routes {
+				byKind[r.Kind] = r
+			}
+			for kind, mode := range tt.wantMode {
+				r, ok := byKind[kind]
+				require.True(t, ok, "route %q", kind)
+				assert.Equal(t, mode, r.Mode, "route %q mode", kind)
+				if tt.wantSync && mode != config.ModeAsyncOnly {
+					assert.NotEmpty(t, r.Sync, "route %q sync", kind)
+				}
+			}
+		})
+	}
+}
+
+func TestNormalizeMode(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, config.ModeAfterSync, config.NormalizeMode(config.ModeSyncThenAsync))
+	assert.Equal(t, config.ModeParallel, config.NormalizeMode(config.ModeParallel))
 }

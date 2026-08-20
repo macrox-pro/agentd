@@ -10,12 +10,14 @@ import (
 
 // StatusReport is a snapshot of daemon liveness for CLI status.
 type StatusReport struct {
-	Running     bool
-	Socket      string
-	Version     string
-	StartedAt   time.Time
-	Generation  uint64
-	Fingerprint string
+	Running            bool
+	Socket             string
+	Version            string
+	StartedAt          time.Time
+	Generation         uint64
+	Fingerprint        string
+	AsyncQueueDepth    uint32
+	CompiledRouteCount uint32
 }
 
 // Status probes the daemon and returns a StatusReport. When the daemon is
@@ -46,5 +48,7 @@ func Status(ctx context.Context, socket string) (StatusReport, error) {
 		rep.Generation = cfg.GetGeneration()
 		rep.Fingerprint = cfg.GetFingerprint()
 	}
+	rep.AsyncQueueDepth = resp.GetAsyncQueueDepth()
+	rep.CompiledRouteCount = resp.GetCompiledRouteCount()
 	return rep, nil
 }

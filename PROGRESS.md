@@ -5,7 +5,7 @@
 
 ## Current phase
 
-Phase: m2 | Last: m1-defect-refactor | Next: dispatch-engine (M2)
+Phase: m3 | Last: m2-complete | Next: forward-targets (M3)
 
 ## agents_md_ready
 
@@ -14,90 +14,96 @@ true
 ## Session notes
 
 - AGENTS.md read: yes (2026-08-20)
-- M1 defect refactor: detach wait-for-ready, lock-first stale cleanup, hookedge NoDecision encode, Windows pipe ACL, Status moved to internal/daemon
+- CONVENTIONS.md read: yes (2026-08-20)
+- M2 complete: Dispatch Engine, async queue, secrets guard, hookedge decision encode, e2e-m2
 
-## M1 checklist
+## M2 checklist
 
 ### Phase 0
-- [x] m1-p0-progress
-- [x] m1-p0-read-agents
+- [x] m2-p0-agents
 
-### Phase A — CLI help
-- [x] m1-a-cli-root
-- [x] m1-a-cli-daemon
-- [x] m1-a-cli-hook
-- [x] m1-a-cli-config
-- [x] m1-a-cli-install
-- [x] m1-a-cli-dispatch
-- [x] m1-a-checkpoint
+### Phase A — Config compile
+- [x] m2-a-config-schema
+- [x] m2-a-config-defaults
+- [x] m2-a-config-compile
+- [x] m2-a-config-test
+- [x] m2-a-checkpoint
 
-### Phase B — Transport
-- [x] m1-b-socket-path
-- [x] m1-b-dial
-- [x] m1-b-transport-test
-- [x] m1-b-checkpoint
+### Phase B — Secrets guard
+- [x] m2-b-secrets-scan
+- [x] m2-b-secrets-attach
+- [x] m2-b-secrets-test
+- [x] m2-b-checkpoint
 
-### Phase C — Config
-- [x] m1-c-load
-- [x] m1-c-reload
-- [x] m1-c-config-test
-- [x] m1-c-checkpoint
+### Phase C — Builtin target
+- [x] m2-c-decision-map
+- [x] m2-c-builtin-sync
+- [x] m2-c-builtin-async
+- [x] m2-c-builtin-test
+- [x] m2-c-checkpoint
 
-### Phase D — Server
-- [x] m1-d-daemon-svc
-- [x] m1-d-hook-svc
-- [x] m1-d-server-test
-- [x] m1-d-checkpoint
+### Phase D — Async queue
+- [x] m2-d-queue
+- [x] m2-d-queue-overflow
+- [x] m2-d-queue-test
+- [x] m2-d-checkpoint
 
-### Phase E — Daemon lifecycle
-- [x] m1-e-paths-lock
-- [x] m1-e-pid
-- [x] m1-e-start-fg
-- [x] m1-e-detach
-- [x] m1-e-stop
-- [x] m1-e-daemon-test
-- [x] m1-e-checkpoint
+### Phase E — Dispatch Engine
+- [x] m2-e-decode
+- [x] m2-e-route-match
+- [x] m2-e-modes
+- [x] m2-e-engine-api
+- [x] m2-e-engine-test
+- [x] m2-e-checkpoint
 
-### Phase F — Client + edge
-- [x] m1-f-hookclient
-- [x] m1-f-hookedge
-- [x] m1-f-hookedge-test
-- [x] m1-f-checkpoint
+### Phase F — Server + daemon
+- [x] m2-f-server-invoke
+- [x] m2-f-status-metrics
+- [x] m2-f-daemon-wire
+- [x] m2-f-server-test
+- [x] m2-f-checkpoint
 
-### Phase G — Wire CLI
-- [x] m1-g-wire-daemon
-- [x] m1-g-wire-hook-run
-- [x] m1-g-checkpoint
+### Phase G — hookedge encode
+- [x] m2-g-hookedge-encode
+- [x] m2-g-hookedge-test
+- [x] m2-g-checkpoint
 
-### Phase H — Close
-- [x] m1-h-e2e
-- [x] m1-h-lint-fix
-- [x] m1-h-design-milestones
-- [x] m1-h-checkpoint
+### Phase H — dispatch routes CLI
+- [x] m2-h-dispatch-routes
+
+### Phase I — Close
+- [x] m2-i-e2e
+- [x] m2-i-lint-test
+- [x] m2-i-docs
+- [x] m2-i-checkpoint
 
 ## Files touched (this session)
 
-- internal/daemon/start.go, detach.go, status.go, start_test.go
-- internal/hookedge/run.go
-- internal/transport/listener_windows.go
-- internal/server/server.go (imports)
-- cmd/daemon.go
-- scripts/e2e-m1.sh
-- DESIGN.md §6 daemon start
+- internal/config/{schema,defaults,merge,compile,store}.go + store_test.go
+- internal/guard/{secrets,attach}.go + secrets_test.go
+- internal/dispatch/{engine,queue,decode,route,decision}.go + tests
+- internal/dispatch/targets/builtin.go + builtin_test.go
+- internal/server/server.go + server_test.go
+- internal/daemon/{start,status}.go
+- internal/hookedge/run.go + run_test.go
+- cmd/{dispatch,daemon}.go
+- scripts/e2e-m2.sh
+- DESIGN.md §13
 - PROGRESS.md
 
 ## Verify (last green)
 
 ```bash
+bash scripts/e2e-m2.sh
 bash scripts/e2e-m1.sh
-go test ./internal/daemon/... ./internal/hookedge/... ./internal/transport/... ./internal/server/... ./internal/config/... -race -count=1
-golangci-lint run ./internal/daemon/... ./internal/hookedge/... ./internal/transport/... ./internal/server/... ./cmd/...
+go test ./internal/config/... ./internal/guard/... ./internal/dispatch/... ./internal/server/... ./internal/hookedge/... ./internal/daemon/... -race -count=1
+golangci-lint run ./internal/config/... ./internal/guard/... ./internal/dispatch/... ./internal/server/... ./internal/hookedge/... ./internal/daemon/... ./cmd/...
 ```
 
 ## Blockers
 
 (none)
 
-## Deferred (M2+)
+## Deferred (M3+)
 
-Dispatch Engine, guards, fsnotify, hook notify/serve, install, ConfigService
+Full dispatch YAML, fsnotify, forward targets (exec/http/log/file), gRPC forward, OpenCode serve, install, ConfigService

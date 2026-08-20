@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,6 +12,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/dispatch"
 	"github.com/macrox-pro/agentd/internal/hookclient"
 	"github.com/macrox-pro/agentd/internal/server"
 	"github.com/macrox-pro/agentd/internal/transport"
@@ -107,11 +109,18 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	log := slog.Default()
+	queue := dispatch.NewQueue(store.Current().Async, log)
+	engine := dispatch.NewEngine(queue, log)
+	defer queue.Close(5 * time.Second)
+
 	gs := server.New(server.Options{
 		Store:      store,
+		Engine:     engine,
 		StartedAt:  time.Now().UTC(),
 		Version:    opts.Version,
 		OnShutdown: cancel,
+		Log:        log,
 	})
 
 	errCh := make(chan error, 1)

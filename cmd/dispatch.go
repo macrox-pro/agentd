@@ -1,7 +1,12 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/spf13/cobra"
+
+	"github.com/macrox-pro/agentd/internal/config"
 )
 
 func init() {
@@ -29,12 +34,27 @@ var dispatchRoutesCmd = &cobra.Command{
 	Long: `List the active hook routes loaded by the running service.
 
 Shows match order and whether each route waits for a decision or runs in the
-background. For operators and debugging; agents do not call this command.`,
+background. For operators and debugging; agents do not call this command.
+
+Compiles defaults merged with the user config file offline (no daemon required).`,
 	Example: `  agentd dispatch routes
   agentd dispatch routes --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_ = cmd
 		_ = args
-		return errNotImplemented
+		store, err := config.Load(cmd.Context(), resolveConfigPath())
+		if err != nil {
+			return err
+		}
+		routes := store.Current().Routes
+		if dispatchRoutesJSON {
+			enc := json.NewEncoder(cmd.OutOrStdout())
+			enc.SetIndent("", "  ")
+			return enc.Encode(routes)
+		}
+		for _, r := range routes {
+			fmt.Fprintf(cmd.OutOrStdout(), "%s\tkind=%s\tmode=%s\tsync=%d\tasync=%d\n",
+				r.Name, r.Kind, r.Mode, len(r.Sync), len(r.Async))
+		}
+		return nil
 	},
 }

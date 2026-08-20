@@ -3,8 +3,10 @@ package hookedge_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,10 +16,25 @@ import (
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/dispatch"
 	"github.com/macrox-pro/agentd/internal/hookedge"
 	"github.com/macrox-pro/agentd/internal/server"
 	"github.com/macrox-pro/agentd/internal/transport"
 )
+
+func claudeToolPre(t *testing.T, command string) []byte {
+	t.Helper()
+	b, err := json.Marshal(map[string]any{
+		"session_id":      "s",
+		"cwd":             "/w",
+		"hook_event_name": "PreToolUse",
+		"tool_name":       "Bash",
+		"tool_use_id":     "t1",
+		"tool_input":      map[string]any{"command": command},
+	})
+	require.NoError(t, err)
+	return b
+}
 
 func TestRun(t *testing.T) {
 	dir := t.TempDir()
@@ -27,62 +44,73 @@ func TestRun(t *testing.T) {
 	store, err := config.Load(context.Background(), cfg)
 	require.NoError(t, err, "Load(%q)", cfg)
 
+	q := dispatch.NewQueue(store.Current().Async, nil)
+	t.Cleanup(func() { q.Close(2 * time.Second) })
+	eng := dispatch.NewEngine(q, nil)
+
 	ln, err := transport.Listen(socket)
 	require.NoError(t, err, "Listen(%q)", socket)
 	t.Cleanup(func() { _ = ln.Close() })
 
-	gs := server.New(server.Options{Store: store, Version: "test"})
+	gs := server.New(server.Options{Store: store, Engine: eng, Version: "test"})
 	go func() { _ = gs.Serve(ln) }()
 	t.Cleanup(gs.Stop)
 
 	waitForSocket(t, socket)
 
 	tests := []struct {
-		name     string
-		socket   string
-		provider string
-		payload  string
-		stdin    io.Reader
-		wantOut  string
-		wantCode int
-		wantErr  string
+		name       string
+		provider   string
+		payload    []byte
+		wantCode   int
+		wantSubstr string
+		wantExact  string
+		denySecret bool
 	}{
 		{
-			name:     "claude no decision",
-			socket:   socket,
-			provider: "claude-code",
-			payload:  `{}`,
-			wantOut:  `{}`,
-			wantCode: 0,
+			name:      "claude clean no decision",
+			provider:  "claude-code",
+			payload:   claudeToolPre(t, "go test ./..."),
+			wantExact: `{}`,
+			wantCode:  0,
 		},
 		{
-			name:     "codex no decision",
-			socket:   socket,
-			provider: "codex",
-			payload:  `{}`,
-			wantOut:  ``,
-			wantCode: 0,
+			name:       "claude secret ask",
+			provider:   "claude-code",
+			payload:    claudeToolPre(t, "export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"),
+			wantSubstr: `"permissionDecision":"ask"`,
+			wantCode:   0,
+			denySecret: true,
+		},
+		{
+			name:      "undecodable no-op",
+			provider:  "claude-code",
+			payload:   []byte(`{}`),
+			wantExact: `{}`,
+			wantCode:  0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
-			stdin := tt.stdin
-			if stdin == nil {
-				stdin = bytes.NewReader([]byte(tt.payload))
-			}
 			code := hookedge.Run(context.Background(), hookedge.Options{
-				Socket:   tt.socket,
+				Socket:   socket,
 				Provider: tt.provider,
-				Stdin:    stdin,
+				Stdin:    bytes.NewReader(tt.payload),
 				Stdout:   &stdout,
 				Stderr:   &stderr,
 			})
 			assert.Equal(t, tt.wantCode, code, "Run(%q)", tt.name)
-			assert.Equal(t, tt.wantOut, stdout.String(), "Run(%q)", tt.name)
-			if tt.wantErr != "" {
-				assert.Contains(t, stderr.String(), tt.wantErr, "Run(%q)", tt.name)
+			out := stdout.String()
+			if tt.wantExact != "" {
+				assert.Equal(t, tt.wantExact, out, "Run(%q)", tt.name)
+			}
+			if tt.wantSubstr != "" {
+				assert.Contains(t, out, tt.wantSubstr, "Run(%q)", tt.name)
+			}
+			if tt.denySecret {
+				assert.NotContains(t, out, "AKIAIOSFODNN7EXAMPLE", "Run(%q)", tt.name)
 			}
 		})
 	}
@@ -142,7 +170,7 @@ func TestRunErrors(t *testing.T) {
 	}
 }
 
-func TestRunUnsupportedDecision(t *testing.T) {
+func TestRunDenyDecision(t *testing.T) {
 	dir := t.TempDir()
 	socket := filepath.Join(dir, "agentd.sock")
 
@@ -161,13 +189,13 @@ func TestRunUnsupportedDecision(t *testing.T) {
 	code := hookedge.Run(context.Background(), hookedge.Options{
 		Socket:   socket,
 		Provider: "claude-code",
-		Stdin:    bytes.NewReader([]byte(`{}`)),
+		Stdin:    bytes.NewReader(claudeToolPre(t, "echo")),
 		Stdout:   &stdout,
 		Stderr:   &stderr,
 	})
-	assert.Equal(t, 1, code, "Run(unsupported)")
-	assert.Empty(t, stdout.String(), "Run(unsupported)")
-	assert.Contains(t, stderr.String(), "unsupported decision", "Run(unsupported)")
+	assert.Equal(t, 0, code, "Run(deny)")
+	assert.Contains(t, stdout.String(), `"permissionDecision":"deny"`, "Run(deny)")
+	assert.True(t, strings.Contains(stdout.String(), "blocked") || strings.Contains(stdout.String(), "deny"), "Run(deny) reason")
 }
 
 type denyHook struct {
@@ -176,7 +204,10 @@ type denyHook struct {
 
 func (denyHook) Invoke(context.Context, *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
 	return &agentdv1.InvokeResponse{
-		Decision: &agentdv1.Decision{Kind: agentdv1.DecisionKind_DECISION_KIND_DENY},
+		Decision: &agentdv1.Decision{
+			Kind:   agentdv1.DecisionKind_DECISION_KIND_DENY,
+			Reason: "blocked by test",
+		},
 	}, nil
 }
 
