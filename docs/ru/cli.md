@@ -62,4 +62,14 @@
 
 Компиляция маршрутов из defaults ⊕ user ⊕ (опционально) project **без** работающего демона.
 
+## session (журнал trajectory)
+
+Просмотр и экспорт JSONL ([Trajectory](./trajectory.md)). Offline — читает `$XDG_STATE_HOME/agentd/sessions/`.
+
+| Команда | Флаги |
+|---------|-------|
+| `session list` | `--provider`, `--json` |
+| `session show SESSION_ID` | `--provider` (обязателен), `--json` |
+| `session export` | `--provider`, `--session`, `--out` |
+
 См. также: [Быстрый старт](./getting-started.md), [Провайдеры](./providers.md).

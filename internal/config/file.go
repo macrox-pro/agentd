@@ -10,6 +10,7 @@ type fileConfig struct {
 	Blocks           *fileBlocks                `yaml:"blocks"`
 	DispatchDefaults map[string]fileKindDefault `yaml:"dispatch_defaults"`
 	Dispatch         []fileRoute                `yaml:"dispatch"`
+	Trajectory       *fileTrajectory            `yaml:"trajectory"`
 }
 
 type fileApprovals struct {

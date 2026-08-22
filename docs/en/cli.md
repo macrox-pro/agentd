@@ -62,4 +62,14 @@ Install writes `agentd agenthooks run|notify|serve --provider=…`. Same behavio
 
 Offline compile of defaults ⊕ user ⊕ optional project (no daemon required).
 
+## session
+
+Trajectory ledger inspect/export ([Trajectory](./trajectory.md)). Offline — reads `$XDG_STATE_HOME/agentd/sessions/`.
+
+| Command | Flags |
+|---------|-------|
+| `session list` | `--provider`, `--json` |
+| `session show SESSION_ID` | `--provider` (required), `--json` |
+| `session export` | `--provider`, `--session`, `--out` |
+
 See also: [Getting started](./getting-started.md), [Providers](./providers.md).

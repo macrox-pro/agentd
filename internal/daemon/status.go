@@ -17,8 +17,9 @@ type StatusReport struct {
 	Generation         uint64
 	Fingerprint        string
 	AsyncQueueDepth    uint32
-	AsyncDroppedCount  uint64
-	CompiledRouteCount uint32
+	AsyncDroppedCount      uint64
+	TrajectoryDroppedCount uint64
+	CompiledRouteCount     uint32
 }
 
 // Status probes the daemon and returns a StatusReport. When the daemon is
@@ -51,6 +52,7 @@ func Status(ctx context.Context, socket string) (StatusReport, error) {
 	}
 	rep.AsyncQueueDepth = resp.GetAsyncQueueDepth()
 	rep.AsyncDroppedCount = resp.GetAsyncDroppedCount()
+	rep.TrajectoryDroppedCount = resp.GetTrajectoryDroppedCount()
 	rep.CompiledRouteCount = resp.GetCompiledRouteCount()
 	return rep, nil
 }

@@ -1,3 +1,4 @@
+// Daemon lifecycle and ops RPCs (health, status, reload, shutdown).
 syntax = "proto3";
 
 package agentd.v1;
@@ -8,40 +9,47 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/macrox-pro/agentd/gen/agentd/v1;agentdv1";
 
+// DaemonService exposes process health and operator controls (not on the hook hot path).
 service DaemonService {
+  // Health is a cheap liveness probe used by daemon start and hook client dial checks.
   rpc Health(HealthRequest) returns (HealthResponse);
+  // Status returns runtime snapshot: version, config generation, queue depth, drop counters.
   rpc Status(StatusRequest) returns (StatusResponse);
+  // ReloadConfig re-reads user/project/runtime YAML and swaps the in-memory config snapshot.
   rpc ReloadConfig(ReloadConfigRequest) returns (ReloadConfigResponse);
+  // Shutdown stops accepting RPCs, drains async work up to timeout, then exits the process.
   rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
 }
 
 message HealthRequest {}
 
 message HealthResponse {
-  string status = 1;
+  string status = 1; // "ok" when the gRPC server is serving
 }
 
 message StatusRequest {}
 
+// StatusResponse is the daemon ops snapshot (mirrors agentd daemon status --json).
 message StatusResponse {
   string version = 1;
   google.protobuf.Timestamp started_at = 2;
   ConfigGeneration config = 3;
-  uint32 active_sessions = 4;
-  uint32 async_queue_depth = 5;
-  uint32 compiled_route_count = 6;
+  uint32 active_sessions = 4;        // sync Invoke locks currently held
+  uint32 async_queue_depth = 5;      // jobs waiting for async workers
+  uint32 compiled_route_count = 6;   // routes in the active snapshot
   repeated LayerInfo config_layers = 7;
-  uint64 async_dropped_count = 8;
+  uint64 async_dropped_count = 8;         // dispatch async queue overflow (monotonic)
+  uint64 trajectory_dropped_count = 9;    // trajectory ledger queue overflow (monotonic)
 }
 
 message ReloadConfigRequest {}
 
 message ReloadConfigResponse {
-  ConfigGeneration config = 1;
+  ConfigGeneration config = 1; // generation/fingerprint after reload
 }
 
 message ShutdownRequest {
-  google.protobuf.Duration timeout = 1;
+  google.protobuf.Duration timeout = 1; // max wait for sync + async drain; zero = default
 }
 
 message ShutdownResponse {}

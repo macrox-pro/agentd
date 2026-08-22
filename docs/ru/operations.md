@@ -27,6 +27,7 @@ agentd daemon status --json
 | `fingerprint` | отпечаток слитого конфига |
 | `async_queue_depth` | сколько задач ждёт в асинхронной очереди |
 | `async_dropped_count` | сколько задач отброшено из‑за переполнения (растёт только вверх) |
+| `trajectory_dropped_count` | overflow очереди trajectory (если ledger включён) |
 | `compiled_route_count` | число скомпилированных маршрутов |
 
 Человекочитаемая строка: `agentd: running (version …, generation …)` — без глубины очереди и drops (для них нужен `--json`).

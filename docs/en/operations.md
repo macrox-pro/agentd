@@ -27,6 +27,7 @@ JSON when running:
 | `fingerprint` | merged config fingerprint |
 | `async_queue_depth` | queued async jobs |
 | `async_dropped_count` | overflow drops (monotonic) |
+| `trajectory_dropped_count` | trajectory queue overflow (monotonic; when ledger enabled) |
 | `compiled_route_count` | routes in snapshot |
 
 Human line: `agentd: running (version …, generation …)` — does not print depth/drops (use `--json`).

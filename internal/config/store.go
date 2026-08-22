@@ -23,6 +23,7 @@ type Snapshot struct {
 	Guards          Guards
 	Approvals       Approvals
 	TemporaryBlocks []TemporaryBlock
+	Trajectory      TrajectoryConfig
 	Routes          []CompiledRoute
 }
 
@@ -418,6 +419,7 @@ func snapshotFrom(res CompileResult, gen uint64, fp, userPath, runtimePath, proj
 		Guards:          res.Guards,
 		Approvals:       res.Approvals,
 		TemporaryBlocks: res.TemporaryBlocks,
+		Trajectory:      res.Trajectory,
 		Routes:          res.Routes,
 	}
 }

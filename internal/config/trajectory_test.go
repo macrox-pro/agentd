@@ -1,0 +1,72 @@
+package config_test
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/macrox-pro/agentd/internal/config"
+)
+
+func TestCompileTrajectoryDefaultsOff(t *testing.T) {
+	t.Parallel()
+	res, err := config.CompileMerged(nil, nil, nil)
+	require.NoError(t, err)
+	assert.False(t, res.Trajectory.Enabled, "default off")
+	assert.False(t, res.Trajectory.IncludeRaw)
+	assert.True(t, res.Trajectory.RedactSecretRules)
+	assert.Equal(t, 262144, res.Trajectory.MaxEventBytes)
+}
+
+func TestCompileTrajectoryFromYAML(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "agentd.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`version: 1
+trajectory:
+  enabled: true
+  include_raw: true
+  max_event_bytes: 4096
+`), 0o600))
+	store, err := config.Load(context.Background(), path)
+	require.NoError(t, err)
+	snap := store.Current()
+	assert.True(t, snap.Trajectory.Enabled)
+	assert.True(t, snap.Trajectory.IncludeRaw)
+	assert.Equal(t, 4096, snap.Trajectory.MaxEventBytes)
+}
+
+func TestCompileTrajectoryInvalidMaxBytes(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "agentd.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`version: 1
+trajectory:
+  max_event_bytes: -1
+`), 0o600))
+	_, err := config.Load(context.Background(), path)
+	require.Error(t, err)
+}
+
+func TestFingerprintIncludesTrajectory(t *testing.T) {
+	t.Parallel()
+	a, err := config.CompileMerged(nil, nil, nil)
+	require.NoError(t, err)
+	fpA, err := config.Fingerprint(a.Merged)
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "agentd.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`version: 1
+trajectory:
+  enabled: true
+`), 0o600))
+	store, err := config.Load(context.Background(), path)
+	require.NoError(t, err)
+	fpB := store.Current().Fingerprint
+	assert.NotEqual(t, fpA, fpB)
+}

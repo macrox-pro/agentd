@@ -5,6 +5,7 @@ import (
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/dispatch"
+	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
 func (h *hookService) Invoke(ctx context.Context, req *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
@@ -20,9 +21,12 @@ func (h *hookService) Invoke(ctx context.Context, req *agentdv1.InvokeRequest) (
 		return resp, nil
 	}
 	in := dispatch.InvokeInput{
-		Provider:   req.GetProvider(),
-		RawPayload: req.GetRawPayload(),
-		Snap:       snap,
+		Provider:       req.GetProvider(),
+		RawPayload:     req.GetRawPayload(),
+		Snap:           snap,
+		InvocationMode: req.GetInvocationMode(),
+		CWD:            req.GetCwd(),
+		ProjectRoot:    req.GetProjectRoot(),
 	}
 	if dl := req.GetDeadline(); dl != nil {
 		in.Deadline = dl.AsTime()
@@ -34,5 +38,16 @@ func (h *hookService) Invoke(ctx context.Context, req *agentdv1.InvokeRequest) (
 	}
 	resp.Decision = result.Decision
 	resp.AsyncDispatchedCount = result.AsyncDispatchedCount
+	if h.recorder != nil {
+		h.recorder.Record(trajectory.RecordInput{
+			Provider:       req.GetProvider(),
+			InvocationMode: req.GetInvocationMode(),
+			CWD:            req.GetCwd(),
+			ProjectRoot:    req.GetProjectRoot(),
+			RawPayload:     req.GetRawPayload(),
+			Result:         result,
+			Snap:           snap,
+		})
+	}
 	return resp, nil
 }

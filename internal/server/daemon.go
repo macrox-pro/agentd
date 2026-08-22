@@ -35,6 +35,11 @@ func (d *daemonService) Status(context.Context, *agentdv1.StatusRequest) (*agent
 			resp.ActiveSessions = s.Active()
 		}
 	}
+	if d.opts.Recorder != nil {
+		if q := d.opts.Recorder.Queue(); q != nil {
+			resp.TrajectoryDroppedCount = q.Dropped()
+		}
+	}
 	resp.ConfigLayers = layerInfos(d.opts.Store, snap)
 	return resp, nil
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/macrox-pro/agentd/internal/hookclient"
 	"github.com/macrox-pro/agentd/internal/server"
 	"github.com/macrox-pro/agentd/internal/transport"
+	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
 const (
@@ -117,6 +118,10 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	engine := dispatch.NewEngine(queue, log)
 	defer queue.Close(5 * time.Second)
 
+	trajCfg := store.Current().Trajectory
+	recorder := trajectory.NewRecorder(trajectory.DefaultSessionsDir(), trajCfg.QueueCapacity, log)
+	defer recorder.Close(5 * time.Second)
+
 	watcher, err := store.Watch(config.WatchOptions{Log: log})
 	if err != nil {
 		return fmt.Errorf("watch config: %w", err)
@@ -126,6 +131,7 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	gs := server.New(server.Options{
 		Store:      store,
 		Engine:     engine,
+		Recorder:   recorder,
 		StartedAt:  time.Now().UTC(),
 		Version:    opts.Version,
 		OnShutdown: cancel,

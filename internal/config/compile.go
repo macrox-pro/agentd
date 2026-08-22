@@ -46,6 +46,7 @@ type CompileResult struct {
 	Guards          Guards
 	Approvals       Approvals
 	TemporaryBlocks []TemporaryBlock
+	Trajectory      TrajectoryConfig
 	Routes          []CompiledRoute
 	Merged          *fileConfig
 }
@@ -96,12 +97,17 @@ func CompileMerged(user, project, runtime *fileConfig) (CompileResult, error) {
 	}
 	defaults := compileDefaultRoutes(kinds, guards)
 	routes := append(userRoutes, defaults...)
+	traj, err := parseTrajectory(merged.Trajectory, defaultTrajectory())
+	if err != nil {
+		return CompileResult{}, err
+	}
 	return CompileResult{
 		Policy:          pol,
 		Async:           async,
 		Guards:          guards,
 		Approvals:       approvals,
 		TemporaryBlocks: blocks,
+		Trajectory:      traj,
 		Routes:          routes,
 		Merged:          merged,
 	}, nil

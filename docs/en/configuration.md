@@ -22,7 +22,7 @@ Runtime writes are debounced (**500ms**), mode `0600`, atomic rename. Hot path u
 
 ## Top-level YAML keys
 
-From the file schema: `version`, `policy`, `async`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`.
+From the file schema: `version`, `policy`, `async`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`, `trajectory`.
 
 Project files typically carry `guards` / `dispatch`. `approvals` and `blocks` usually land in runtime via CLI/gRPC.
 
@@ -47,6 +47,20 @@ Project files typically carry `guards` / `dispatch`. `approvals` and `blocks` us
 | `on_overflow` | `drop` (`drop` \| `log`) |
 
 Overflow always drops the job and increments `async_dropped_count` on Status; `log` also emits a warn log.
+
+### trajectory
+
+Opt-in session ledger ([Trajectory](./trajectory.md)). Default **off**.
+
+| Key | Default |
+|-----|---------|
+| `enabled` | `false` |
+| `include_raw` | `false` |
+| `redact_secret_rules` | `true` |
+| `max_event_bytes` | `262144` |
+| `queue_capacity` | `1024` |
+
+Overflow increments `trajectory_dropped_count` on Status.
 
 ## CLI against config
 

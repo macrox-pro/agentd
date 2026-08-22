@@ -3,6 +3,7 @@ package server_test
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/dispatch"
 	"github.com/macrox-pro/agentd/internal/server"
+	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
 func claudeToolPre(t *testing.T, command string) []byte {
@@ -102,5 +104,60 @@ func TestHookServiceInvoke(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.run(t)
 		})
+	}
+}
+
+func TestHookServiceInvokeTrajectory(t *testing.T) {
+	ctx := context.Background()
+	stateDir := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", stateDir)
+
+	path := filepath.Join(t.TempDir(), "agentd.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`version: 1
+trajectory:
+  enabled: true
+`), 0o600))
+	store, err := config.Load(ctx, path)
+	require.NoError(t, err)
+
+	q := dispatch.NewQueue(store.Current().Async, nil)
+	t.Cleanup(func() { q.Close(2 * time.Second) })
+	recorder := trajectory.NewRecorder(trajectory.DefaultSessionsDir(), store.Current().Trajectory.QueueCapacity, nil)
+	t.Cleanup(func() { recorder.Close(2 * time.Second) })
+
+	srv := server.New(server.Options{
+		Store:     store,
+		Engine:    dispatch.NewEngine(q, nil),
+		Recorder:  recorder,
+		StartedAt: time.Now().UTC(),
+		Version:   "test",
+	})
+	conn := dialBuf(t, srv)
+	hook := agentdv1.NewHookServiceClient(conn)
+
+	_, err = hook.Invoke(ctx, &agentdv1.InvokeRequest{
+		Provider:       agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+		RawPayload:     claudeToolPre(t, "go test"),
+		InvocationMode: agentdv1.InvocationMode_INVOCATION_MODE_STDIN,
+		Cwd:            "/w",
+	})
+	require.NoError(t, err)
+
+	time.Sleep(150 * time.Millisecond)
+	summaries, err := trajectory.ListSessions(trajectory.DefaultSessionsDir(), "claude-code")
+	require.NoError(t, err)
+	require.NotEmpty(t, summaries)
+	events, err := trajectory.ReadEvents(summaries[0].Path)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(events), 3)
+	types := map[string]bool{}
+	for _, e := range events {
+		types[e.Type] = true
+	}
+	assert.True(t, types[trajectory.TypeSessionOpen])
+	assert.True(t, types[trajectory.TypeHookInvoked])
+	assert.True(t, types[trajectory.TypeHookDecided])
+	for i, e := range events {
+		assert.Equal(t, uint64(i+1), e.Seq)
 	}
 }

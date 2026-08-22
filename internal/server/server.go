@@ -15,6 +15,7 @@ import (
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/dispatch"
+	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
 const defaultVersion = "dev"
@@ -23,6 +24,7 @@ const defaultVersion = "dev"
 type Options struct {
 	Store      *config.Store
 	Engine     *dispatch.Engine
+	Recorder   *trajectory.Recorder
 	StartedAt  time.Time
 	Version    string
 	OnShutdown func()
@@ -35,8 +37,9 @@ type daemonService struct {
 
 type hookService struct {
 	agentdv1.UnimplementedHookServiceServer
-	store  *config.Store
-	engine *dispatch.Engine
+	store    *config.Store
+	engine   *dispatch.Engine
+	recorder *trajectory.Recorder
 }
 
 // New registers DaemonService, HookService, and ConfigService on a new gRPC server.
@@ -49,7 +52,7 @@ func New(opts Options) *grpc.Server {
 	}
 	s := grpc.NewServer()
 	agentdv1.RegisterDaemonServiceServer(s, &daemonService{opts: opts})
-	agentdv1.RegisterHookServiceServer(s, &hookService{store: opts.Store, engine: opts.Engine})
+	agentdv1.RegisterHookServiceServer(s, &hookService{store: opts.Store, engine: opts.Engine, recorder: opts.Recorder})
 	agentdv1.RegisterConfigServiceServer(s, &configService{store: opts.Store})
 	return s
 }

@@ -125,6 +125,7 @@ Rules:
 | `internal/hookedge` | Provider codecs + wire I/O ([§1.5 invoke_sync](./DESIGN.md#15-hot-paths)) | policy, `Runner.Decide` |
 | `internal/config` | Config merge/compile ([§1.5 config_reload](./DESIGN.md#15-hot-paths)) | dispatch, wire decode |
 | `internal/dispatch` | Routing; new targets → `targets/` ([§1.5 invoke_sync, async_side](./DESIGN.md#15-hot-paths)) | wire decode, YAML compile |
+| `internal/trajectory` | Session ledger append, persist, list/export ([§1.5 async_side](./DESIGN.md#15-hot-paths), §14) | wire decode, route match, config compile |
 | `internal/guard` | secrets/shell/mcp/paths checks | routing, encode |
 | `internal/daemon` | start/stop, lock, status, reload signal | dispatch, config compile |
 | `internal/server` | Thin gRPC mapping | policy, dispatch logic |

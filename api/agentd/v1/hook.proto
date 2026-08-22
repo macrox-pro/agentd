@@ -1,3 +1,4 @@
+// Hook hot path: one Invoke per agent hook event (blocking sync decision).
 syntax = "proto3";
 
 package agentd.v1;
@@ -8,22 +9,24 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/macrox-pro/agentd/gen/agentd/v1;agentdv1";
 
+// HookService runs the dispatch engine for a single provider hook payload.
 service HookService {
+  // Invoke decodes raw_payload, runs sync/async pipelines, returns the sync Decision.
   rpc Invoke(InvokeRequest) returns (InvokeResponse);
 }
 
 message InvokeRequest {
   Provider provider = 1 [(buf.validate.field).enum.defined_only = true];
-  string variant = 2;
-  bytes raw_payload = 3 [(buf.validate.field).bytes.min_len = 1];
+  string variant = 2; // optional provider sub-variant (cli/ide/cloud); often empty
+  bytes raw_payload = 3 [(buf.validate.field).bytes.min_len = 1]; // verbatim agent wire JSON
   InvocationMode invocation_mode = 4 [(buf.validate.field).enum.defined_only = true];
-  google.protobuf.Timestamp deadline = 5;
-  string cwd = 6;
-  string project_root = 7;
+  google.protobuf.Timestamp deadline = 5; // agent hook timeout; bounds sync pipeline budget
+  string cwd = 6;                         // event working directory (project layer lookup)
+  string project_root = 7;                // optional explicit project root for .agentd.yaml
 }
 
 message InvokeResponse {
   Decision decision = 1;
-  ConfigGeneration config = 2;
-  uint32 async_dispatched_count = 3;
+  ConfigGeneration config = 2;     // generation/fingerprint used for this Invoke
+  uint32 async_dispatched_count = 3; // async jobs accepted (not yet completed)
 }

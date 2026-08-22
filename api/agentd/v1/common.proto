@@ -1,3 +1,4 @@
+// Shared types for agentd v1 gRPC (hook, daemon, config services).
 syntax = "proto3";
 
 package agentd.v1;
@@ -6,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/macrox-pro/agentd/gen/agentd/v1;agentdv1";
 
+// Provider identifies which coding agent sent the hook payload.
 enum Provider {
   PROVIDER_UNSPECIFIED = 0;
   PROVIDER_CLAUDE_CODE = 1;
@@ -16,6 +18,7 @@ enum Provider {
   PROVIDER_KIMI_CODE = 6;
 }
 
+// EventKind is the unified hook event taxonomy (agenthooks Kind*).
 enum EventKind {
   EVENT_KIND_UNSPECIFIED = 0;
   EVENT_KIND_SESSION_START = 1;
@@ -30,22 +33,25 @@ enum EventKind {
   EVENT_KIND_OTHER = 10;
 }
 
+// DecisionKind is the sync gate outcome returned to the agent.
 enum DecisionKind {
   DECISION_KIND_UNSPECIFIED = 0;
-  DECISION_KIND_NO_DECISION = 1;
+  DECISION_KIND_NO_DECISION = 1; // neutral / no-op wire
   DECISION_KIND_DENY = 2;
   DECISION_KIND_ASK = 3;
   DECISION_KIND_ALLOW = 4;
   DECISION_KIND_BLOCK_PROMPT = 5;
 }
 
+// InvocationMode describes how the hook CLI delivered raw_payload to the daemon.
 enum InvocationMode {
   INVOCATION_MODE_UNSPECIFIED = 0;
-  INVOCATION_MODE_STDIN = 1;
-  INVOCATION_MODE_ARGV = 2;
-  INVOCATION_MODE_NOTIFY = 3;
+  INVOCATION_MODE_STDIN = 1;  // hook run (stdin)
+  INVOCATION_MODE_ARGV = 2;   // hook run --argv-payload (Cursor)
+  INVOCATION_MODE_NOTIFY = 3; // hook notify (Codex)
 }
 
+// ConfigLayer selects which YAML source GetConfig reads or RecordDecision targets.
 enum ConfigLayer {
   CONFIG_LAYER_UNSPECIFIED = 0;
   CONFIG_LAYER_USER = 1;
@@ -54,23 +60,25 @@ enum ConfigLayer {
   CONFIG_LAYER_MERGED = 4;
 }
 
-// Decision is encoded by hookedge into provider wire format.
+// Decision is the sync pipeline result; hookedge encodes it into provider wire format.
 message Decision {
   DecisionKind kind = 1;
-  string reason = 2;
-  string context = 3;
-  string system_message = 4;
-  bytes updated_input = 5;
+  string reason = 2;           // human-readable deny/ask explanation
+  string context = 3;          // optional agent-visible context (provider-specific)
+  string system_message = 4;   // e.g. approval_fingerprint= for Ask flows
+  bytes updated_input = 5;     // optional modified tool input (rare)
 }
 
+// ConfigGeneration identifies the compiled config snapshot active for an Invoke.
 message ConfigGeneration {
-  uint64 generation = 1;
-  string fingerprint = 2;
+  uint64 generation = 1;  // monotonic; bumps on every successful reload/compile
+  string fingerprint = 2; // sha256 of merged YAML (config identity)
 }
 
+// LayerInfo describes one on-disk config source contributing to the merged snapshot.
 message LayerInfo {
   ConfigLayer layer = 1;
-  string path = 2;
-  google.protobuf.Timestamp modified_at = 3;
-  string fingerprint = 4;
+  string path = 2;                              // absolute file path when known
+  google.protobuf.Timestamp modified_at = 3;    // file mtime when available
+  string fingerprint = 4;                       // layer hash when computed
 }

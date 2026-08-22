@@ -22,7 +22,7 @@
 
 ## Ключи верхнего уровня YAML
 
-Из схемы файла: `version`, `policy`, `async`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`.
+Из схемы файла: `version`, `policy`, `async`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`, `trajectory`.
 
 В проектном файле обычно `guards` / `dispatch`. Блоки `approvals` и `blocks` чаще попадают в runtime через CLI или gRPC.
 
@@ -47,6 +47,20 @@
 | `on_overflow` | `drop` (`drop` \| `log`) | При переполнении: отбросить; `log` ещё пишет предупреждение |
 
 При переполнении задача **всегда** отбрасывается, счётчик `async_dropped_count` в статусе растёт.
+
+### trajectory (журнал сессий)
+
+Опциональный ledger ([Trajectory](./trajectory.md)). По умолчанию **выключен**.
+
+| Ключ | По умолчанию |
+|------|--------------|
+| `enabled` | `false` |
+| `include_raw` | `false` |
+| `redact_secret_rules` | `true` |
+| `max_event_bytes` | `262144` |
+| `queue_capacity` | `1024` |
+
+Переполнение очереди увеличивает `trajectory_dropped_count` в Status.
 
 ## Команды для работы с конфигом
 

@@ -43,16 +43,20 @@ func (e *Engine) Sessions() *Sessions {
 
 // InvokeInput is one HookService.Invoke.
 type InvokeInput struct {
-	Provider   agentdv1.Provider
-	RawPayload []byte
-	Deadline   time.Time
-	Snap       *config.Snapshot
+	Provider       agentdv1.Provider
+	RawPayload     []byte
+	Deadline       time.Time
+	Snap           *config.Snapshot
+	InvocationMode agentdv1.InvocationMode
+	CWD            string
+	ProjectRoot    string
 }
 
 // InvokeResult is the sync decision plus async enqueue count.
 type InvokeResult struct {
 	Decision             *agentdv1.Decision
 	AsyncDispatchedCount uint32
+	Meta                 InvokeMeta
 }
 
 // Invoke decodes, matches a route, runs sync/async pipelines per mode.
@@ -64,9 +68,13 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 	if err != nil {
 		return InvokeResult{}, err
 	}
+	providerName, _ := providerName(in.Provider)
 	route := MatchRoute(in.Snap.Routes, typed)
 	if route == nil {
-		return InvokeResult{Decision: NeutralDecision()}, nil
+		return InvokeResult{
+			Decision: NeutralDecision(),
+			Meta:     MetaFromTyped(providerName, typed, false),
+		}, nil
 	}
 
 	mode := config.NormalizeMode(route.Mode)
@@ -78,7 +86,6 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		ProjectRoot:     targets.ProjectRootOf(in.Snap),
 		Log:             e.log,
 	}
-	providerName, _ := providerName(in.Provider)
 	eventKind := targets.EventKindOf(typed)
 
 	unlock := e.sessions.Lock(SessionIDOf(typed))
@@ -91,10 +98,12 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		defer cancel()
 	}
 
+	meta := MetaFromTyped(providerName, typed, true)
+
 	switch mode {
 	case config.ModeAsyncOnly:
 		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
-		return InvokeResult{Decision: NeutralDecision(), AsyncDispatchedCount: n}, nil
+		return InvokeResult{Decision: NeutralDecision(), AsyncDispatchedCount: n, Meta: meta}, nil
 
 	case config.ModeParallel:
 		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
@@ -102,7 +111,7 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		if err != nil {
 			return InvokeResult{}, err
 		}
-		return InvokeResult{Decision: DecisionToProto(d), AsyncDispatchedCount: n}, nil
+		return InvokeResult{Decision: DecisionToProto(d), AsyncDispatchedCount: n, Meta: meta}, nil
 
 	case config.ModeAfterSync:
 		d, err := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
@@ -112,14 +121,14 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		proto := DecisionToProto(d)
 		outcome := &targets.SyncOutcome{Kind: proto.GetKind(), Reason: proto.GetReason()}
 		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, outcome)
-		return InvokeResult{Decision: proto, AsyncDispatchedCount: n}, nil
+		return InvokeResult{Decision: proto, AsyncDispatchedCount: n, Meta: meta}, nil
 
 	default: // sync_only
 		d, err := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
 		if err != nil {
 			return InvokeResult{}, err
 		}
-		return InvokeResult{Decision: DecisionToProto(d), AsyncDispatchedCount: 0}, nil
+		return InvokeResult{Decision: DecisionToProto(d), AsyncDispatchedCount: 0, Meta: meta}, nil
 	}
 }
 

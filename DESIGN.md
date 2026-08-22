@@ -154,6 +154,8 @@ Telemetry and observers; never blocks wire response.
 
 Flow: `parallel` / `after_sync` / `async_only` modes → `Queue.Enqueue` (non-blocking; drops when full per `on_overflow`) → worker pool → async targets (log, file, http, exec, grpc). Overflow increments Status drop counter.
 
+When `trajectory.enabled`, `HookService.Invoke` also enqueues session ledger records (non-blocking; separate bounded queue; JSONL persist async). Overflow increments `trajectory_dropped_count` on Status.
+
 Sync pipeline returns before async workers finish. Async failure does not change sync decision.
 
 ---
@@ -537,6 +539,18 @@ routes appear before default-kind fallbacks; target kinds are listed for sync/as
 
 **Hook failure modes:** daemon down → `policy.offline`; timeout → per `policy.fail`; never debug on stdout.
 
+### `agentd session list|show|export`
+
+Inspect local trajectory session ledgers (JSONL under `$XDG_STATE_HOME/agentd/sessions/`). Offline — no daemon required.
+
+| Command | Role |
+|---------|------|
+| `session list [--provider ID] [--json]` | List `(provider, session_id)` keys |
+| `session show SESSION_ID --provider ID [--json]` | Print events for one session |
+| `session export [--provider ID] [--session ID] [--out PATH]` | Export JSONL for external viewers |
+
+Requires `trajectory.enabled` in config and prior hook Invokes while the daemon was running.
+
 ---
 
 ## 7. Configuration schema
@@ -590,6 +604,13 @@ guards:
     enabled: true
     deny_read: ["/etc/shadow"]
     deny_write: ["**/.env"]
+
+trajectory:
+  enabled: false
+  include_raw: false
+  redact_secret_rules: true
+  max_event_bytes: 262144
+  queue_capacity: 1024
 
 # Runtime layer ($XDG_STATE_HOME/agentd/runtime.yaml) may also carry:
 # approvals: { project: [...], session: [...] }
@@ -688,7 +709,7 @@ agentd/
 | **M6** | done | Guards: shell, mcp, paths |
 | **M7** | done | Approvals / `RecordDecision`; runtime persist; temporary blocks |
 | **M8 / v1** | done | Ops polish, conformance, docs freeze, release gate |
-| **M9** | planned | Trajectory hub P0 — **L0 live ledger for all six providers** + export (§14 / §14.6) |
+| **M9** | done | Trajectory hub P0 — **L0 live ledger for all six providers** + export (§14 / §14.6) |
 | **M10** | planned | Trajectory P1 — search + Claude import; others L0 + explicit importer status |
 | **M11** | planned | Trajectory P2 — importers where possible; policy replay **all** wire dialects |
 | **M12 / v1.1** | planned | Trajectory P3 — Subscribe; contract freeze; depth = §14.6 matrix; **v1.1 release gate** |
@@ -752,12 +773,12 @@ M7 acceptance: Approve once → subsequent matching tool.pre allows within TTL; 
 
 **M9 acceptance:**
 
-- [ ] With trajectory enabled, **every supported provider** (`claude-code`, `cursor`, `codex`, `gemini`, `opencode`, `kimi-code`) appends contiguous `seq` events for invoked + decided on a fixture `hook run|notify|serve` path (§14.6)
-- [ ] Provider-specific entrypoints covered in e2e or unit fixtures: stdin run, `--argv-payload` (Cursor), `notify` (Codex), `serve` frame (OpenCode)
-- [ ] Sync path latency unchanged when store flush is async (no disk I/O inside Decide)
-- [ ] `session export` writes JSONL consumable by an external Trajectory viewer
-- [ ] Disabled by default; docs state PII + **per-provider coverage matrix** (§14.6) — no claim of full model-visible context
-- [ ] `make lint` + `make test` + `e2e-m9` green
+- [x] With trajectory enabled, **every supported provider** (`claude-code`, `cursor`, `codex`, `gemini`, `opencode`, `kimi-code`) appends contiguous `seq` events for invoked + decided on a fixture `hook run|notify|serve` path (§14.6)
+- [x] Provider-specific entrypoints covered in e2e or unit fixtures: stdin run, `--argv-payload` (Cursor), `notify` (Codex), `serve` frame (OpenCode)
+- [x] Sync path latency unchanged when store flush is async (no disk I/O inside Decide)
+- [x] `session export` writes JSONL consumable by an external Trajectory viewer
+- [x] Disabled by default; docs state PII + **per-provider coverage matrix** (§14.6) — no claim of full model-visible context
+- [x] `make lint` + `make test` + `e2e-m9` green
 
 ### M10 — Trajectory P1 (search + Claude import)
 

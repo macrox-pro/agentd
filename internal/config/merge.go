@@ -46,6 +46,9 @@ func mergeFile(base *fileConfig, user *fileConfig) *fileConfig {
 	if user.Dispatch != nil {
 		out.Dispatch = append([]fileRoute(nil), user.Dispatch...)
 	}
+	if user.Trajectory != nil {
+		out.Trajectory = mergeTrajectoryPtr(out.Trajectory, user.Trajectory)
+	}
 	return &out
 }
 

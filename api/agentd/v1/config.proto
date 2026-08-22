@@ -1,3 +1,4 @@
+// Config inspection and runtime overlay RPCs (not on the Invoke hot path).
 syntax = "proto3";
 
 package agentd.v1;
@@ -9,26 +10,30 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/macrox-pro/agentd/gen/agentd/v1;agentdv1";
 
+// ConfigService reads YAML layers and patches the daemon-managed runtime overlay.
 service ConfigService {
+  // GetConfig returns YAML bytes for one layer (user, project, runtime, or merged).
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
+  // PatchConfig merges yaml_patch into the runtime layer and recompiles the snapshot.
   rpc PatchConfig(PatchConfigRequest) returns (PatchConfigResponse);
+  // RecordDecision upserts a runtime approval after the user answers Ask (M7 approvals).
   rpc RecordDecision(RecordDecisionRequest) returns (RecordDecisionResponse);
 }
 
 message GetConfigRequest {
   ConfigLayer layer = 1;
-  string cwd = 2;
+  string cwd = 2; // resolves project layer when layer is project or merged
 }
 
 message GetConfigResponse {
   ConfigLayer layer = 1;
   bytes yaml_content = 2;
-  ConfigGeneration config = 3;
+  ConfigGeneration config = 3; // merged snapshot generation when applicable
 }
 
 message PatchConfigRequest {
-  bytes yaml_patch = 1 [(buf.validate.field).bytes.min_len = 1];
-  google.protobuf.FieldMask field_mask = 2;
+  bytes yaml_patch = 1 [(buf.validate.field).bytes.min_len = 1]; // partial runtime YAML
+  google.protobuf.FieldMask field_mask = 2; // reserved; patch is merge-at-root today
 }
 
 message PatchConfigResponse {
@@ -36,11 +41,11 @@ message PatchConfigResponse {
 }
 
 message RecordDecisionRequest {
-  string approval_fingerprint = 1 [(buf.validate.field).string.min_len = 1];
-  ConfigLayer scope = 2;
-  string project_root = 3;
-  string session_id = 4;
-  google.protobuf.Timestamp expires_at = 5;
+  string approval_fingerprint = 1 [(buf.validate.field).string.min_len = 1]; // from Ask system_message
+  ConfigLayer scope = 2;        // CONFIG_LAYER_PROJECT or CONFIG_LAYER_RUNTIME (session)
+  string project_root = 3;      // required for project scope
+  string session_id = 4;        // required for session scope
+  google.protobuf.Timestamp expires_at = 5; // optional; project scope defaults to 24h TTL
 }
 
 message RecordDecisionResponse {
