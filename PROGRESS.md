@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase: **R3 done** | Last: r3-importer-registry | Next: **R4 cmd coverage**
+Phase: **R4 done** | Last: r4-cmd-coverage | Next: **R5 daemon + hookclient**
 
 > Milestones M0–M12: **done**. Post-release work is the **R-series** refactor below — one phase = one PR or agent session, one package or one hot path ([AGENTS.md](./AGENTS.md) intent rules).
 
@@ -27,7 +27,7 @@ true
 
 | Package | Statements | Priority |
 |---------|------------|----------|
-| `cmd` | 35.8% | **P0** — session/hook RunE mostly untested |
+| `cmd` | 60.7% | maintain — R4 table tests done |
 | `internal/daemon` | 47.1% | **P1** — start/stop/reload lifecycle |
 | `internal/hookclient` | 52.4% | **P1** — gRPC client helpers |
 | `internal/dispatch/targets` | 60.1% | P2 |
@@ -48,7 +48,7 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 - **`provider.Parse` on hot paths** — Invoke already carries proto enum; use `provider.FromProto` / `Lookup` where id was validated upstream; reserve `Parse` for CLI and strict entrypoints.
 - **`SessionKey.Provider` is still `string`** — migrate call sites to `provider.ID` gradually; do not change `weakSessionID` hash inputs without a migration test.
 - **Table-driven hub/subscribe tests** — shared `Hub` + channel state: parallelize subtests only when each row uses disjoint hubs ([CONVENTIONS § Parallelism](./CONVENTIONS.md#parallelism)).
-- **`cmd` table tests** — reset Cobra flags between rows (`resetCommandFlags`); stale `Changed` bits cause flaky cross-row pollution.
+- **`cmd` table tests** — reset Cobra flags between rows (`resetCommandFlags`); stale `Changed` bits cause flaky cross-row pollution. For `stringSlice`/`stringArray`, reset with `Set("")` not `Set(DefValue)` — nil defaults use DefValue `"[]"`, which parses as one element `"[]"`.
 - **`internal/` errors** — no `--provider` / flag names in sentinels; map in `cmd/RunE` only.
 - **Importer registry** — must not pull `dispatch.InvokeInput` (PolicyInvoker still out of scope); registry returns `(ImportResult, error)` only.
 - **No drive-by refactors** — one R-phase touches one boundary; unrelated cleanups → separate PR.
@@ -62,8 +62,8 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 | **R1** | **done** | `internal/provider` — single source for ids, proto/agenthooks mapping |
 | **R2** | **done** | Trajectory domain — typed ids at boundaries, errors, grpc event mapping |
 | **R3** | **done** | Importer registry — `registry.go` + `ImportSession` facade |
-| **R4** | **next** | `cmd/` coverage — table-driven session + config CLI |
-| **R5** | pending | `daemon` + `hookclient` lifecycle tests |
+| **R4** | **done** | `cmd/` coverage — table-driven session + config CLI |
+| **R5** | **next** | `daemon` + `hookclient` lifecycle tests |
 | **R6** | pending | `dispatch` decode/targets — provider mapping consolidation |
 | **R7** | pending | Test hygiene — table-driven migration where structure matches |
 | **R8** | pending | Tier-1 package comments audit + docs sync |
@@ -173,20 +173,21 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 **Invariants:** validation stays in subcommand file; tests use `package cmd_test` + `RootCommand()`; no business logic added to `cmd/`.
 
 **Corner cases (test names):**
-- `TestSessionProviderCLI` — extend rows: show/export/search/replay/fork happy + error
-- `TestSessionReplayPolicy` — `--policy` requires config; missing `--session`
-- `TestSessionSubscribeFilter` — provider/session/source filter flag combos
-- `TestConfigValidate` / `TestDispatchRoutes` — table-driven stdout snapshots
+- `TestSessionProviderCLI` — list/import validation + `list json importer_status`
+- `TestSessionShowCLI` / `TestSessionExportCLI` / `TestSessionSearchCLI` / `TestSessionForkCLI` / `TestSessionImportCLI` — one table per subcommand family
+- `TestSessionReplayPolicy` — `--policy` required; missing `--session`; no raw; happy hits
+- `TestSessionSubscribeFilter` — provider validation + dial failure rows only
+- `TestConfigValidate` / `TestConfigShow` / `TestDispatchRoutes` — table-driven stdout/JSON
 
-**Out of scope:** E2E replacement; testing `main()`; hook integration (hookedge owns wire).
+**Out of scope:** E2E replacement; testing `main()`; hook integration (hookedge owns wire); `session subscribe` streaming happy path (R5).
 
 ### R4 checklist
 
-- [ ] r4-intent
-- [ ] r4-helper — shared `resetCommandFlags` + temp state dir helper in `cmd/*_test.go`
-- [ ] r4-session-table — one table per subcommand family (errors + one happy path)
-- [ ] r4-config-dispatch — table tests for validate/show/routes
-- [ ] r4-verify — `go test ./cmd/... -race` + cmd ≥ 55%
+- [x] r4-intent
+- [x] r4-helper — shared harness in `cmd/root_test.go` (`resetCommandFlags`, `executeRoot`, ledger fixtures)
+- [x] r4-session-table — one table per subcommand family (errors + one happy path)
+- [x] r4-config-dispatch — table tests for validate/show/routes
+- [x] r4-verify — `go test ./cmd/... -race` + cmd **60.7%** (≥ 55%)
 
 ---
 
@@ -492,7 +493,8 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 - Trajectory package refactor (pre-M12): AppendEvents sync write (no Persister leak); CanonicalProvider lowercase; importer `Import` facade + file split; thin `cmd/session_import`; DESIGN §14.8 `importer/`
 - **R2 done:** sentinels in `errors.go`; `ResolveSessionKeyID`; grpc/replay_config table tests; cmd error mapping
 - **R3 done:** importer registry + status colocated; `ImportSession` facade for CLI + watcher; `session list --json` enriches status in `cmd/`
-- Next agent session: open **R4** — `cmd/` table-driven CLI coverage
+- **R4 done:** shared `cmd/root_test.go` harness; table-driven session/config/dispatch CLI tests; cmd **60.7%**
+- Next agent session: open **R5** — daemon + hookclient lifecycle tests
 
 ### Refactor intent note (pre-R-series, archived)
 
@@ -511,11 +513,12 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 ```bash
 make lint
 make intent-check
-go test ./internal/trajectory/importer/... -race -count=1
-go test ./internal/trajectory/... ./internal/daemon/... ./cmd/... -race -count=1
-go test ./internal/trajectory/importer/... -coverprofile=/tmp/r3.cover -count=1
-go tool cover -func=/tmp/r3.cover | tail -1   # importer 71.8%
+go test ./cmd/... -race -count=1
+go test ./cmd/... -coverprofile=/tmp/cmd_r4.cover -count=1
+go tool cover -func=/tmp/cmd_r4.cover | tail -1   # cmd 60.7%
 ```
+
+**R4 files touched:** `cmd/root_test.go`, `cmd/session_{provider,show,export,search,fork,import,replay,subscribe}_test.go`, `cmd/config_{validate,show}_test.go`, `cmd/dispatch_routes_test.go`, `PROGRESS.md`
 
 **R3 files touched:** `internal/trajectory/importer/{registry,status,import,import_session,importer}.go`, `*_test.go` (status, import_session, import), deleted `internal/trajectory/importer_status.go`, `internal/trajectory/{list,trajectory}.go`, `internal/daemon/import_watch.go`, `cmd/session_{import,list}.go`, `PROGRESS.md`
 
