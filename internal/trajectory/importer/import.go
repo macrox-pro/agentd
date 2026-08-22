@@ -1,7 +1,6 @@
 package importer
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -23,35 +22,6 @@ type ImportResult struct {
 	TranscriptPath string
 	Events         []trajectory.Event
 	LastLineIndex  int
-}
-
-// Import dispatches to the provider importer and sets ProjectsRoot from cfg when empty.
-func Import(provider string, opts ImportOptions) (ImportResult, error) {
-	prov := trajectory.CanonicalProvider(provider)
-	status := trajectory.ProviderImporterStatus(prov)
-	if status == trajectory.ImporterNone {
-		return ImportResult{}, fmt.Errorf("%w: %q", ErrImportNotSupported, prov)
-	}
-	if opts.ProjectsRoot == "" {
-		switch prov {
-		case "claude-code":
-			opts.ProjectsRoot = opts.Cfg.ClaudeImport().Path
-		case "cursor":
-			opts.ProjectsRoot = opts.Cfg.CursorImport().Path
-		case "codex":
-			opts.ProjectsRoot = opts.Cfg.CodexImport().Path
-		}
-	}
-	switch prov {
-	case "claude-code":
-		return ImportClaude(opts)
-	case "cursor":
-		return ImportCursor(opts)
-	case "codex":
-		return ImportCodex(opts)
-	default:
-		return ImportResult{}, fmt.Errorf("%w: %q (status %s)", ErrImportNotSupported, prov, status)
-	}
 }
 
 // SessionIDFromTranscriptPath derives a session id from a transcript file path basename.

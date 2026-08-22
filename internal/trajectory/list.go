@@ -54,10 +54,9 @@ func ListSessions(root, providerFilter string) ([]SessionSummary, error) {
 		}
 		sid := strings.TrimSuffix(parts[1], ".jsonl")
 		out = append(out, SessionSummary{
-			Provider:       prov,
-			SessionID:      sid,
-			Path:           path,
-			ImporterStatus: string(ProviderImporterStatus(prov)),
+			Provider:  prov,
+			SessionID: sid,
+			Path:      path,
 		})
 		return nil
 	})

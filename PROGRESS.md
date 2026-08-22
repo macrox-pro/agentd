@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase: **R2 done** | Last: r2-trajectory-domain | Next: **R3 importer registry**
+Phase: **R3 done** | Last: r3-importer-registry | Next: **R4 cmd coverage**
 
 > Milestones M0–M12: **done**. Post-release work is the **R-series** refactor below — one phase = one PR or agent session, one package or one hot path ([AGENTS.md](./AGENTS.md) intent rules).
 
@@ -31,7 +31,7 @@ true
 | `internal/daemon` | 47.1% | **P1** — start/stop/reload lifecycle |
 | `internal/hookclient` | 52.4% | **P1** — gRPC client helpers |
 | `internal/dispatch/targets` | 60.1% | P2 |
-| `internal/trajectory/importer` | 63.8% | P2 — registry phase |
+| `internal/trajectory/importer` | 71.8% | maintain — registry done |
 | `internal/trajectory` | 68.3% | P2 — was 66.1% |
 | `internal/dispatch` | 69.5% | P2 |
 | `internal/hookedge` | 70.4% | maintain |
@@ -61,8 +61,8 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 |-------|--------|-----------|
 | **R1** | **done** | `internal/provider` — single source for ids, proto/agenthooks mapping |
 | **R2** | **done** | Trajectory domain — typed ids at boundaries, errors, grpc event mapping |
-| **R3** | **next** | Importer registry — kill `import.go` provider switch + string literals |
-| **R4** | pending | `cmd/` coverage — table-driven session + config CLI |
+| **R3** | **done** | Importer registry — `registry.go` + `ImportSession` facade |
+| **R4** | **next** | `cmd/` coverage — table-driven session + config CLI |
 | **R5** | pending | `daemon` + `hookclient` lifecycle tests |
 | **R6** | pending | `dispatch` decode/targets — provider mapping consolidation |
 | **R7** | pending | Test hygiene — table-driven migration where structure matches |
@@ -89,7 +89,7 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 - `TestCompileTrajectoryImportProviderAlias` — config YAML alias → canonical import key (`trajectory_test.go`)
 - `TestConformanceFixtures` — all six providers via `provider.Parse`→`Agenthooks()` (`conformance_test.go`)
 
-**Out of scope:** Changing proto enum values; Kimi alias policy beyond existing `kimicode`; importer registry (R3 — `importer/import.go` switches remain until then).
+**Out of scope:** Changing proto enum values; Kimi alias policy beyond existing `kimicode`.
 
 ### R1 checklist
 
@@ -105,7 +105,7 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 - [x] r1-conformance — hookedge conformance table all six providers; `Parse`→`Agenthooks()` in loop
 - [x] r1-verify — `make lint` + `make intent-check` + race tests on provider/cmd/hookedge/config
 
-**R1 acceptance:** zero `switch` on raw provider strings outside `internal/provider`, `trajectory/importer_status.go`, and `trajectory/importer/` (R3 registry).
+**R1 acceptance:** zero `switch` on raw provider strings outside `internal/provider` and the importer registry table in `internal/trajectory/importer/registry.go`.
 
 ---
 
@@ -121,7 +121,7 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 - `TestEventSessionEventRoundTrip` — nil, empty, zero TS, large Raw (`session_event_grpc_test.go`)
 - `TestReplayPolicyFromConfig` — bad config path, missing session, seq bounds
 - `TestResolveSessionKeyUsesCanonicalProvider` — alias + weak id stability
-- `TestProviderImporterStatusTable` — all six providers × status enum
+- `TestProviderImporterStatusTable` — all six providers × status enum (moved to `importer/status_test.go` in R3)
 
 **Out of scope:** Importer file layout; Persister.Close; changing on-disk JSONL layout.
 
@@ -155,12 +155,12 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 
 ### R3 checklist
 
-- [ ] r3-intent
-- [ ] r3-registry — `var importers = map[provider.ID]importerFunc{…}` or small registry type in `importer/`
-- [ ] r3-import-facade — `ImportSession(provider.ID, ImportOptions)`; CLI calls facade
-- [ ] r3-status-colocate — move `ProviderImporterStatus` next to registry (single table)
-- [ ] r3-delete-switch — `import.go` dispatches via registry only
-- [ ] r3-verify — `go test ./internal/trajectory/importer/... -race` + importer ≥ 70%
+- [x] r3-intent
+- [x] r3-registry — `map[provider.ID]importerEntry` in `importer/registry.go`
+- [x] r3-import-facade — `ImportSession(provider.ID, …)`; CLI + daemon watcher call facade
+- [x] r3-status-colocate — `importer/status.go` reads registry; deleted `trajectory/importer_status.go`
+- [x] r3-delete-switch — dispatch + projectsRoot via registry only
+- [x] r3-verify — `go test ./internal/trajectory/importer/... -race` + importer **71.8%** (≥ 70%)
 
 ---
 
@@ -490,8 +490,9 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 - M11 shipped: Cursor/Codex partial import, `session replay --policy`, `session fork`, `scripts/e2e-m11.sh`
 - M12 shipped: Subscribe RPC/CLI, hub fan-out, schema_version contract, `scripts/e2e-m12.sh`
 - Trajectory package refactor (pre-M12): AppendEvents sync write (no Persister leak); CanonicalProvider lowercase; importer `Import` facade + file split; thin `cmd/session_import`; DESIGN §14.8 `importer/`
-- **R2 done:** sentinels in `errors.go`; `ResolveSessionKeyID`; importer status `provider.ID` switch; grpc/replay_config table tests; cmd error mapping
-- Next agent session: open **R3** — importer registry (`import.go` dispatch switch)
+- **R2 done:** sentinels in `errors.go`; `ResolveSessionKeyID`; grpc/replay_config table tests; cmd error mapping
+- **R3 done:** importer registry + status colocated; `ImportSession` facade for CLI + watcher; `session list --json` enriches status in `cmd/`
+- Next agent session: open **R4** — `cmd/` table-driven CLI coverage
 
 ### Refactor intent note (pre-R-series, archived)
 
@@ -510,10 +511,13 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 ```bash
 make lint
 make intent-check
-go test ./internal/trajectory/... -race -count=1
-go test ./internal/trajectory/... -coverprofile=/tmp/r2.cover
-go tool cover -func=/tmp/r2.cover | tail -1   # trajectory 68.3%, importer 63.8%, module 66.7%
+go test ./internal/trajectory/importer/... -race -count=1
+go test ./internal/trajectory/... ./internal/daemon/... ./cmd/... -race -count=1
+go test ./internal/trajectory/importer/... -coverprofile=/tmp/r3.cover -count=1
+go tool cover -func=/tmp/r3.cover | tail -1   # importer 71.8%
 ```
+
+**R3 files touched:** `internal/trajectory/importer/{registry,status,import,import_session,importer}.go`, `*_test.go` (status, import_session, import), deleted `internal/trajectory/importer_status.go`, `internal/trajectory/{list,trajectory}.go`, `internal/daemon/import_watch.go`, `cmd/session_{import,list}.go`, `PROGRESS.md`
 
 **R2 files touched:** `internal/trajectory/{errors,replay,fork,list,search,session_key,importer_status,trajectory}.go`, `*_test.go` (session_key, import_checkpoint, fork, session_event_grpc, replay_config), `cmd/session_{replay,show,fork}.go`, `PROGRESS.md`
 

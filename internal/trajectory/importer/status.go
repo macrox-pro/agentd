@@ -1,4 +1,4 @@
-package trajectory
+package importer
 
 import "github.com/macrox-pro/agentd/internal/provider"
 
@@ -17,12 +17,9 @@ func ProviderImporterStatus(name string) ImporterStatus {
 	if !ok {
 		return ImporterNone
 	}
-	switch id {
-	case provider.ClaudeCode, provider.Codex:
-		return ImporterSupported
-	case provider.Cursor:
-		return ImporterPartial
-	default:
+	entry, ok := registry[id]
+	if !ok {
 		return ImporterNone
 	}
+	return entry.status
 }

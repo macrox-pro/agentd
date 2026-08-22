@@ -12,6 +12,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 
 	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 	"github.com/macrox-pro/agentd/internal/trajectory/importer"
 )
@@ -123,7 +124,7 @@ func (w *ImportWatcher) runWatch(ctx context.Context, cfg config.TrajectoryConfi
 				t.Stop()
 			}
 			debounce[path] = time.AfterFunc(importWatchDebounce, func() {
-				w.importFile(cfg, path)
+				w.importFile(ctx, cfg, path)
 			})
 			debounceMu.Unlock()
 		case err, ok := <-fw.Errors:
@@ -135,53 +136,17 @@ func (w *ImportWatcher) runWatch(ctx context.Context, cfg config.TrajectoryConfi
 	}
 }
 
-func (w *ImportWatcher) importFile(cfg config.TrajectoryConfig, transcriptPath string) {
+func (w *ImportWatcher) importFile(ctx context.Context, cfg config.TrajectoryConfig, transcriptPath string) {
 	sid := strings.TrimSuffix(filepath.Base(transcriptPath), ".jsonl")
-	sessionsRoot := trajectory.DefaultSessionsDir()
-	if sessionsRoot == "" {
-		return
-	}
-	cp, err := trajectory.LoadImportCheckpoint(trajectory.ImportSidecarPath(sessionsRoot, "claude-code", sid))
-	if err != nil {
-		w.log.Warn("import watcher: checkpoint", "error", err, "session", sid)
-		return
-	}
-	startIndex := 0
-	if cp.SourcePath != "" {
-		startIndex = cp.LastLineIndex + 1
-	}
-	result, err := importer.ImportClaude(importer.ImportOptions{
+	_, err := importer.ImportSession(ctx, importer.ImportSessionOptions{
+		Provider:       provider.ClaudeCode,
 		SessionID:      sid,
 		TranscriptPath: transcriptPath,
-		ProjectsRoot:   cfg.ClaudeImport().Path,
-		StartIndex:     startIndex,
-		Cfg:            cfg,
+		SnapshotCfg:    &cfg,
+		Hub:            w.hub,
 	})
 	if err != nil {
 		w.log.Warn("import watcher: import", "error", err, "session", sid)
-		return
-	}
-	if len(result.Events) == 0 {
-		return
-	}
-	key := trajectory.ResolveSessionKey("claude-code", sid, "", "")
-	if err := trajectory.AppendImported(sessionsRoot, key, result.Events); err != nil {
-		w.log.Warn("import watcher: append", "error", err, "session", sid)
-		return
-	}
-	if w.hub != nil && len(result.Events) > 0 {
-		w.hub.Publish(result.Events)
-	}
-	st, err := os.Stat(transcriptPath)
-	if err != nil {
-		w.log.Warn("import watcher: stat", "error", err)
-		return
-	}
-	cp.LastLineIndex = result.LastLineIndex
-	cp.SourcePath = transcriptPath
-	cp.SourceModTime = st.ModTime().UTC()
-	if err := trajectory.SaveImportCheckpoint(trajectory.ImportSidecarPath(sessionsRoot, "claude-code", sid), cp); err != nil {
-		w.log.Warn("import watcher: save checkpoint", "error", err)
 	}
 }
 

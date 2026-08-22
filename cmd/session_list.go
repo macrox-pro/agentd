@@ -8,6 +8,7 @@ import (
 
 	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
+	"github.com/macrox-pro/agentd/internal/trajectory/importer"
 )
 
 var (
@@ -37,6 +38,9 @@ var sessionListCmd = &cobra.Command{
 			return err
 		}
 		if sessionListJSON {
+			for i := range summaries {
+				summaries[i].ImporterStatus = string(importer.ProviderImporterStatus(summaries[i].Provider))
+			}
 			enc := json.NewEncoder(cmd.OutOrStdout())
 			enc.SetIndent("", "  ")
 			return enc.Encode(summaries)

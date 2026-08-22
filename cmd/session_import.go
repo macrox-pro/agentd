@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/macrox-pro/agentd/internal/provider"
-	"github.com/macrox-pro/agentd/internal/trajectory"
 	"github.com/macrox-pro/agentd/internal/trajectory/importer"
 )
 
@@ -47,12 +46,11 @@ func runSessionImport(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	prov := string(provID)
-	status := trajectory.ProviderImporterStatus(prov)
+	status := importer.ProviderImporterStatus(string(provID))
 	switch status {
-	case trajectory.ImporterNone:
-		return fmt.Errorf("transcript import for provider %q is not supported", prov)
-	case trajectory.ImporterPartial:
+	case importer.ImporterNone:
+		return fmt.Errorf("transcript import for provider %q is not supported", provID)
+	case importer.ImporterPartial:
 		if sessionImportPath == "" {
 			return fmt.Errorf("cursor import requires --path")
 		}
@@ -63,7 +61,7 @@ func runSessionImport(cmd *cobra.Command, _ []string) error {
 	}
 
 	result, err := importer.ImportSession(cmd.Context(), importer.ImportSessionOptions{
-		Provider:       prov,
+		Provider:       provID,
 		SessionID:      sessionImportSession,
 		TranscriptPath: sessionImportPath,
 		DryRun:         sessionImportDryRun,

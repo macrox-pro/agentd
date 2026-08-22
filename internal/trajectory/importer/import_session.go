@@ -6,17 +6,20 @@ import (
 	"os"
 
 	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
 // ImportSessionOptions configures an offline transcript import into the session ledger.
 type ImportSessionOptions struct {
-	Provider       string
+	Provider       provider.ID
 	SessionID      string
 	TranscriptPath string
 	DryRun         bool
 	ConfigPath     string
 	SessionsRoot   string
+	SnapshotCfg    *config.TrajectoryConfig
+	Hub            *trajectory.Hub
 }
 
 // ImportSessionResult summarizes one import run.
@@ -33,6 +36,7 @@ type ImportSessionResult struct {
 // ImportSession imports provider transcript JSONL into the local session ledger.
 func ImportSession(ctx context.Context, opts ImportSessionOptions) (ImportSessionResult, error) {
 	prov := opts.Provider
+	provStr := string(prov)
 
 	sessionsRoot := opts.SessionsRoot
 	if sessionsRoot == "" {
@@ -42,7 +46,7 @@ func ImportSession(ctx context.Context, opts ImportSessionOptions) (ImportSessio
 		return ImportSessionResult{}, trajectory.ErrSessionsDirUnavailable
 	}
 
-	cfg := importTrajectoryConfig(ctx, opts.ConfigPath)
+	cfg := trajectoryConfigForImport(ctx, opts)
 	sid := opts.SessionID
 	if sid == "" && opts.TranscriptPath != "" {
 		sid = SessionIDFromTranscriptPath(opts.TranscriptPath)
@@ -50,7 +54,7 @@ func ImportSession(ctx context.Context, opts ImportSessionOptions) (ImportSessio
 
 	startIndex := 0
 	if sid != "" {
-		cp, err := trajectory.LoadImportCheckpoint(trajectory.ImportSidecarPath(sessionsRoot, prov, sid))
+		cp, err := trajectory.LoadImportCheckpoint(trajectory.ImportSidecarPath(sessionsRoot, provStr, sid))
 		if err != nil {
 			return ImportSessionResult{}, fmt.Errorf("load import checkpoint: %w", err)
 		}
@@ -72,9 +76,9 @@ func ImportSession(ctx context.Context, opts ImportSessionOptions) (ImportSessio
 		sid = SessionIDFromTranscriptPath(result.TranscriptPath)
 	}
 
-	status := trajectory.ProviderImporterStatus(prov)
+	status := ProviderImporterStatus(provStr)
 	out := ImportSessionResult{
-		Provider:       prov,
+		Provider:       provStr,
 		SessionID:      sid,
 		ImporterStatus: string(status),
 		Imported:       len(result.Events),
@@ -83,13 +87,16 @@ func ImportSession(ctx context.Context, opts ImportSessionOptions) (ImportSessio
 		DryRun:         opts.DryRun,
 	}
 
-	if opts.DryRun {
+	if opts.DryRun || len(result.Events) == 0 {
 		return out, nil
 	}
 
-	key := trajectory.ResolveSessionKey(prov, sid, "", "")
+	key := trajectory.ResolveSessionKeyID(prov, sid, "", "")
 	if err := trajectory.AppendImported(sessionsRoot, key, result.Events); err != nil {
 		return ImportSessionResult{}, fmt.Errorf("append imported events: %w", err)
+	}
+	if opts.Hub != nil {
+		opts.Hub.Publish(result.Events)
 	}
 
 	st, err := os.Stat(result.TranscriptPath)
@@ -101,11 +108,18 @@ func ImportSession(ctx context.Context, opts ImportSessionOptions) (ImportSessio
 		SourcePath:    result.TranscriptPath,
 		SourceModTime: st.ModTime().UTC(),
 	}
-	if err := trajectory.SaveImportCheckpoint(trajectory.ImportSidecarPath(sessionsRoot, prov, sid), cp); err != nil {
+	if err := trajectory.SaveImportCheckpoint(trajectory.ImportSidecarPath(sessionsRoot, provStr, sid), cp); err != nil {
 		return ImportSessionResult{}, fmt.Errorf("save import checkpoint: %w", err)
 	}
 
 	return out, nil
+}
+
+func trajectoryConfigForImport(ctx context.Context, opts ImportSessionOptions) config.TrajectoryConfig {
+	if opts.SnapshotCfg != nil {
+		return *opts.SnapshotCfg
+	}
+	return importTrajectoryConfig(ctx, opts.ConfigPath)
 }
 
 func importTrajectoryConfig(ctx context.Context, path string) config.TrajectoryConfig {
