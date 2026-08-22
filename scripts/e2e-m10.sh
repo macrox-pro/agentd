@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# M10 acceptance: Claude import + search; L0 unchanged; importer status
+# M10 acceptance: Claude import + search; L0 unchanged; importer status; daemon log file
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,6 +10,7 @@ e2e_setup e2e-m10
 
 export XDG_STATE_HOME="$WORKDIR/state"
 mkdir -p "$XDG_STATE_HOME"
+LOG_FILE="$XDG_STATE_HOME/agentd/agentd.log"
 PROJ="$WORKDIR/repo"
 mkdir -p "$PROJ"
 SESSIONS="$XDG_STATE_HOME/agentd/sessions"
@@ -36,6 +37,9 @@ EOF
 
 e2e_build
 e2e_daemon_start --config "$CFG"
+
+[[ -f "$LOG_FILE" ]] || e2e_fail "missing log file ${LOG_FILE}"
+e2e_assert_file_contains "$LOG_FILE" "daemon ready" log-ready
 
 CLAUDE='{"session_id":"m10-claude","cwd":"'"$PROJ"'","hook_event_name":"PreToolUse","tool_name":"Bash","tool_use_id":"toolu_01","tool_input":{"command":"echo ok"}}'
 printf '%s' "$CLAUDE" | e2e_run_hook "$BIN" hook run --socket "$SOCK" --provider=claude-code
@@ -78,4 +82,5 @@ e2e_assert_contains "$LIST_CURSOR" 'importer_status' list-importer-cursor
 e2e_assert_contains "$LIST_CURSOR" 'none' list-importer-cursor-val
 
 e2e_daemon_stop
+e2e_assert_file_contains "$LOG_FILE" "daemon shutdown" log-shutdown
 e2e_pass
