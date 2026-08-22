@@ -1,6 +1,16 @@
-# agentd
+<div align="center">
+<img width="1280" height="640" alt="agentd-about" src="https://github.com/user-attachments/assets/399f29b3-958b-43ce-8166-a548bc7dde19" />
+</div>
 
-**A local daemon that proxies, guards, and observes coding-agent hooks — once, for every agent.**
+<hr />
+
+<p align="center">
+  <h1 align="center"><b>agentd</b></h1>
+  <p align="center">A local daemon that proxies, guards, and observes coding-agent hooks — once, for every agent.</p>
+  <p align="center"></p>  
+</p>
+
+<hr />
 
 agentd sits between your AI coding agents (Claude Code, Cursor, Codex, Gemini CLI, OpenCode, Kimi Code) and your hook logic. Agents invoke a thin CLI entrypoint; a user-level daemon applies policies, dispatches sync and async pipelines, and returns provider-correct responses. Built on [agenthooks](https://github.com/speakeasy-api/agenthooks) for wire compatibility.
 
