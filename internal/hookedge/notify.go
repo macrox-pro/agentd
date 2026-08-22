@@ -10,6 +10,7 @@ import (
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/hookclient"
+	"github.com/macrox-pro/agentd/internal/provider"
 )
 
 // Notify handles Codex notify-style hooks (argv JSON). Always async semantics on the daemon.
@@ -20,7 +21,16 @@ func Notify(ctx context.Context, opts Options) int {
 		stderr = io.Discard
 	}
 
-	provider, err := parseProvider(opts.Provider)
+	id, err := provider.Parse(opts.Provider)
+	if err != nil {
+		fmt.Fprintln(stderr, err.Error())
+		return 1
+	}
+	if id != provider.Codex {
+		fmt.Fprintf(stderr, "hook notify supports codex only, got %q\n", id)
+		return 1
+	}
+	protoProv, err := id.Proto()
 	if err != nil {
 		fmt.Fprintln(stderr, err.Error())
 		return 1
@@ -46,7 +56,7 @@ func Notify(ctx context.Context, opts Options) int {
 	defer cli.Close()
 
 	req := &agentdv1.InvokeRequest{
-		Provider:       provider,
+		Provider:       protoProv,
 		RawPayload:     payload,
 		InvocationMode: agentdv1.InvocationMode_INVOCATION_MODE_NOTIFY,
 	}

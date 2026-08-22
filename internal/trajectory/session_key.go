@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/macrox-pro/agentd/internal/provider"
 )
 
 // SessionKey identifies one ledger stream.
@@ -21,22 +23,10 @@ func (k SessionKey) String() string {
 
 // CanonicalProvider normalizes CLI/provider ids for ledger keys.
 func CanonicalProvider(name string) string {
-	switch strings.ToLower(strings.TrimSpace(name)) {
-	case "kimicode", "kimi-code":
-		return "kimi-code"
-	case "claude-code":
-		return "claude-code"
-	case "cursor":
-		return "cursor"
-	case "codex":
-		return "codex"
-	case "gemini":
-		return "gemini"
-	case "opencode":
-		return "opencode"
-	default:
-		return strings.TrimSpace(name)
+	if id, ok := provider.Lookup(name); ok {
+		return string(id)
 	}
+	return strings.TrimSpace(name)
 }
 
 // ResolveSessionKey builds a stable ledger key; empty session_id gets a weak synthetic id.

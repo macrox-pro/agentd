@@ -36,6 +36,11 @@ func Execute() {
 	}
 }
 
+// RootCommand returns the root cobra command (for external tests).
+func RootCommand() *cobra.Command {
+	return rootCmd
+}
+
 func init() {
 	cobra.OnInitialize(initConfig)
 

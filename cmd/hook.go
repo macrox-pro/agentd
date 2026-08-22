@@ -36,9 +36,6 @@ type hookCLIOpts struct {
 }
 
 func runHookRun(cmd *cobra.Command, o hookCLIOpts) error {
-	if o.provider == "" {
-		return fmt.Errorf("provider is required")
-	}
 	code := hookedge.Run(cmd.Context(), hookedge.Options{
 		Socket:      resolveSocket(),
 		Provider:    o.provider,
@@ -56,9 +53,6 @@ func runHookRun(cmd *cobra.Command, o hookCLIOpts) error {
 }
 
 func runHookNotify(cmd *cobra.Command, o hookCLIOpts) error {
-	if o.provider == "" {
-		return fmt.Errorf("provider is required")
-	}
 	if o.payloadArg == "" {
 		return fmt.Errorf("notify payload required")
 	}
@@ -80,9 +74,6 @@ func runHookServe(cmd *cobra.Command, o hookCLIOpts) error {
 	provider := o.provider
 	if provider == "" {
 		provider = o.defaultProvider
-	}
-	if provider == "" {
-		return fmt.Errorf("provider is required")
 	}
 	code := hookedge.Serve(cmd.Context(), hookedge.Options{
 		Socket:   resolveSocket(),

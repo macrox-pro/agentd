@@ -44,7 +44,7 @@ func TestImportCursorRequiresPath(t *testing.T) {
 	t.Parallel()
 	_, err := importer.ImportCursor(importer.ImportOptions{SessionID: "s1"})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "--path")
+	assert.ErrorIs(t, err, importer.ErrTranscriptRootRequired)
 }
 
 func TestImportCursorEmptyFile(t *testing.T) {

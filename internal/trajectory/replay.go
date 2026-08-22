@@ -3,6 +3,7 @@ package trajectory
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -10,12 +11,13 @@ import (
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/dispatch"
+	"github.com/macrox-pro/agentd/internal/provider"
 )
 
 const replayInvokeTimeout = 30 * time.Second
 
 // ErrReplayNoRaw is returned when no hook/invoked events have stored Raw.
-var ErrReplayNoRaw = fmt.Errorf("policy replay requires trajectory.include_raw=true at record time")
+var ErrReplayNoRaw = errors.New("policy replay requires stored raw payloads at record time")
 
 // ReplayOptions configures an offline policy dry-run against stored Raw payloads.
 type ReplayOptions struct {
@@ -100,7 +102,7 @@ func ReplayPolicy(ctx context.Context, opts ReplayOptions) (ReplayResult, error)
 		_ = json.Unmarshal(e.Data, &inv)
 		hit.Kind = inv.Kind
 
-		protoProv, err := providerFromName(e.Provider)
+		protoProv, err := eventProviderProto(e.Provider)
 		if err != nil {
 			hit.Error = err.Error()
 			out.Hits = append(out.Hits, hit)
@@ -142,23 +144,12 @@ func ReplayPolicy(ctx context.Context, opts ReplayOptions) (ReplayResult, error)
 	return out, nil
 }
 
-func providerFromName(name string) (agentdv1.Provider, error) {
-	switch CanonicalProvider(name) {
-	case "claude-code":
-		return agentdv1.Provider_PROVIDER_CLAUDE_CODE, nil
-	case "cursor":
-		return agentdv1.Provider_PROVIDER_CURSOR, nil
-	case "codex":
-		return agentdv1.Provider_PROVIDER_CODEX, nil
-	case "gemini":
-		return agentdv1.Provider_PROVIDER_GEMINI, nil
-	case "opencode":
-		return agentdv1.Provider_PROVIDER_OPENCODE, nil
-	case "kimi-code":
-		return agentdv1.Provider_PROVIDER_KIMI_CODE, nil
-	default:
+func eventProviderProto(name string) (agentdv1.Provider, error) {
+	id, ok := provider.Lookup(name)
+	if !ok {
 		return 0, fmt.Errorf("unknown provider %q", name)
 	}
+	return id.Proto()
 }
 
 func invocationModeFromString(mode, provider string) agentdv1.InvocationMode {

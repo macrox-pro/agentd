@@ -3,11 +3,10 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 	"github.com/macrox-pro/agentd/internal/trajectory/importer"
 )
@@ -43,107 +42,42 @@ Supported: claude-code, codex (~/.codex/sessions rollouts). Partial (path-first)
 	RunE: runSessionImport,
 }
 
-type importOutput struct {
-	Provider       string `json:"provider"`
-	SessionID      string `json:"session_id"`
-	ImporterStatus string `json:"importer_status"`
-	Imported       int    `json:"imported"`
-	TranscriptPath string `json:"transcript_path,omitempty"`
-	LastLineIndex  int    `json:"last_line_index,omitempty"`
-	DryRun         bool   `json:"dry_run,omitempty"`
-}
-
 func runSessionImport(cmd *cobra.Command, _ []string) error {
-	prov := trajectory.CanonicalProvider(sessionImportProvider)
-	cfg := loadTrajectoryConfigForImport(cmd)
-	sessionsRoot := trajectory.DefaultSessionsDir()
-	if sessionsRoot == "" {
-		return fmt.Errorf("sessions dir unavailable")
+	provID, err := provider.Parse(sessionImportProvider)
+	if err != nil {
+		return err
 	}
-
-	sid := sessionImportSession
-	if sid == "" && sessionImportPath != "" {
-		sid = importer.SessionIDFromTranscriptPath(sessionImportPath)
-	}
-
-	startIndex := 0
-	if sid != "" {
-		cp, err := trajectory.LoadImportCheckpoint(trajectory.ImportSidecarPath(sessionsRoot, prov, sid))
-		if err != nil {
-			return fmt.Errorf("load import checkpoint: %w", err)
+	prov := string(provID)
+	status := trajectory.ProviderImporterStatus(prov)
+	switch status {
+	case trajectory.ImporterNone:
+		return fmt.Errorf("transcript import for provider %q is not supported", prov)
+	case trajectory.ImporterPartial:
+		if sessionImportPath == "" {
+			return fmt.Errorf("cursor import requires --path")
 		}
-		if cp.SourcePath != "" {
-			startIndex = cp.LastLineIndex + 1
+	default:
+		if sessionImportPath == "" && sessionImportSession == "" {
+			return fmt.Errorf("import requires --session or --path")
 		}
 	}
 
-	result, err := importer.Import(prov, importer.ImportOptions{
-		SessionID:      sid,
+	result, err := importer.ImportSession(cmd.Context(), importer.ImportSessionOptions{
+		Provider:       prov,
+		SessionID:      sessionImportSession,
 		TranscriptPath: sessionImportPath,
-		StartIndex:     startIndex,
-		Cfg:            cfg,
+		DryRun:         sessionImportDryRun,
+		ConfigPath:     resolveConfigPath(),
 	})
 	if err != nil {
 		return err
 	}
-	if sid == "" {
-		sid = importer.SessionIDFromTranscriptPath(result.TranscriptPath)
-	}
-
-	status := trajectory.ProviderImporterStatus(prov)
-	out := importOutput{
-		Provider:       prov,
-		SessionID:      sid,
-		ImporterStatus: string(status),
-		Imported:       len(result.Events),
-		TranscriptPath: result.TranscriptPath,
-		LastLineIndex:  result.LastLineIndex,
-		DryRun:         sessionImportDryRun,
-	}
-
-	if sessionImportDryRun {
-		return emitImportOutput(cmd, out)
-	}
-
-	key := trajectory.ResolveSessionKey(prov, sid, "", "")
-	if err := trajectory.AppendImported(sessionsRoot, key, result.Events); err != nil {
-		return fmt.Errorf("append imported events: %w", err)
-	}
-
-	st, err := os.Stat(result.TranscriptPath)
-	if err != nil {
-		return fmt.Errorf("stat transcript: %w", err)
-	}
-	cp := trajectory.ImportCheckpoint{
-		LastLineIndex: result.LastLineIndex,
-		SourcePath:    result.TranscriptPath,
-		SourceModTime: st.ModTime().UTC(),
-	}
-	if err := trajectory.SaveImportCheckpoint(trajectory.ImportSidecarPath(sessionsRoot, prov, sid), cp); err != nil {
-		return fmt.Errorf("save import checkpoint: %w", err)
-	}
-
-	return emitImportOutput(cmd, out)
-}
-
-func loadTrajectoryConfigForImport(cmd *cobra.Command) config.TrajectoryConfig {
-	path := resolveConfigPath()
-	if path != "" {
-		store, err := config.Load(cmd.Context(), path)
-		if err == nil {
-			return store.Current().Trajectory
-		}
-	}
-	return trajectory.DefaultImportConfig()
-}
-
-func emitImportOutput(cmd *cobra.Command, out importOutput) error {
 	if sessionImportJSON {
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")
-		return enc.Encode(out)
+		return enc.Encode(result)
 	}
 	fmt.Fprintf(cmd.OutOrStdout(), "provider=%s session=%s status=%s imported=%d path=%s\n",
-		out.Provider, out.SessionID, out.ImporterStatus, out.Imported, out.TranscriptPath)
+		result.Provider, result.SessionID, result.ImporterStatus, result.Imported, result.TranscriptPath)
 	return nil
 }

@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/spf13/cobra"
 
-	"github.com/macrox-pro/agentd/internal/config"
-	"github.com/macrox-pro/agentd/internal/dispatch"
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
@@ -47,27 +45,21 @@ func runSessionReplay(cmd *cobra.Command, _ []string) error {
 	if !sessionReplayPolicy {
 		return fmt.Errorf("--policy is required (agent-loop resume is out of scope)")
 	}
-	store, err := config.Load(cmd.Context(), resolveConfigPath())
+	prov, err := provider.Parse(sessionReplayProvider)
 	if err != nil {
-		return fmt.Errorf("load config: %w", err)
-	}
-	snap := store.Current()
-	q := dispatch.NewQueue(snap.Async, nil)
-	defer q.Close(2 * time.Second)
-	eng := dispatch.NewEngine(q, nil)
-
-	result, err := trajectory.ReplayPolicy(cmd.Context(), trajectory.ReplayOptions{
-		SessionsRoot: trajectory.DefaultSessionsDir(),
-		Provider:     sessionReplayProvider,
-		SessionID:    sessionReplaySession,
-		Seq:          sessionReplaySeq,
-		Snap:         snap,
-		Engine:       eng,
-	})
-	if err != nil && !errors.Is(err, trajectory.ErrReplayNoRaw) {
 		return err
 	}
-	if errors.Is(err, trajectory.ErrReplayNoRaw) {
+	result, err := trajectory.ReplayPolicyFromConfig(cmd.Context(), trajectory.ReplayPolicyConfigOptions{
+		ConfigPath:   resolveConfigPath(),
+		SessionsRoot: trajectory.DefaultSessionsDir(),
+		Provider:     string(prov),
+		SessionID:    sessionReplaySession,
+		Seq:          sessionReplaySeq,
+	})
+	if err != nil {
+		if errors.Is(err, trajectory.ErrReplayNoRaw) {
+			return fmt.Errorf("policy replay requires trajectory.include_raw=true at record time")
+		}
 		return err
 	}
 

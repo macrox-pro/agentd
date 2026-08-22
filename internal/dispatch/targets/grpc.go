@@ -14,6 +14,7 @@ import (
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/transport"
 )
 
@@ -44,11 +45,15 @@ func (t *GRPC) InvokeSync(ctx context.Context, req SyncRequest) (agenthooks.Deci
 
 // InvokeAsync forwards Invoke and discards the decision.
 func (t *GRPC) InvokeAsync(ctx context.Context, req AsyncRequest) error {
-	provider, err := providerFromName(req.Provider)
+	id, err := provider.Parse(req.Provider)
 	if err != nil {
 		return err
 	}
-	_, err = t.invoke(ctx, req.Target, provider, req.Raw)
+	protoProv, err := id.Proto()
+	if err != nil {
+		return err
+	}
+	_, err = t.invoke(ctx, req.Target, protoProv, req.Raw)
 	return err
 }
 
@@ -137,24 +142,5 @@ func decisionFromProto(d *agentdv1.Decision) agenthooks.Decision {
 		return agenthooks.BlockPrompt(d.GetReason())
 	default:
 		return agenthooks.NoDecision()
-	}
-}
-
-func providerFromName(name string) (agentdv1.Provider, error) {
-	switch name {
-	case "claude-code":
-		return agentdv1.Provider_PROVIDER_CLAUDE_CODE, nil
-	case "cursor":
-		return agentdv1.Provider_PROVIDER_CURSOR, nil
-	case "codex":
-		return agentdv1.Provider_PROVIDER_CODEX, nil
-	case "gemini":
-		return agentdv1.Provider_PROVIDER_GEMINI, nil
-	case "opencode":
-		return agentdv1.Provider_PROVIDER_OPENCODE, nil
-	case "kimicode", "kimi-code":
-		return agentdv1.Provider_PROVIDER_KIMI_CODE, nil
-	default:
-		return 0, fmt.Errorf("unknown provider %q", name)
 	}
 }

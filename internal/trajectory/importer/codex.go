@@ -18,7 +18,7 @@ const (
 )
 
 // ResolveCodexTranscriptPath finds a Codex rollout JSONL.
-// Prefer explicit --path; else scan under configuredRoot or default
+// Prefer explicit path; else scan under configuredRoot or default
 // $CODEX_HOME/sessions (or ~/.codex/sessions) for files ending in -{sessionID}.jsonl
 // (real layout: sessions/YYYY/MM/DD/rollout-<ts>-{sessionID}.jsonl). Newest ModTime wins.
 func ResolveCodexTranscriptPath(sessionID, explicitPath, configuredRoot string) (string, error) {
@@ -27,9 +27,6 @@ func ResolveCodexTranscriptPath(sessionID, explicitPath, configuredRoot string) 
 			return "", fmt.Errorf("transcript path: %w", err)
 		}
 		return explicitPath, nil
-	}
-	if sessionID == "" {
-		return "", fmt.Errorf("codex import requires --path (or --session with sessions root)")
 	}
 	root := configuredRoot
 	if root == "" {

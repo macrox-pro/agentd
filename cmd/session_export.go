@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
@@ -28,10 +29,15 @@ Without --session, exports all sessions for --provider (or all providers).`,
   agentd session export --provider=cursor --session=s1`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_ = args
+		prov, err := provider.ParseFilter(sessionExportProvider, cmd.Flags().Changed("provider"))
+		if err != nil {
+			return err
+		}
+		filter := string(prov)
 		root := trajectory.DefaultSessionsDir()
 		if sessionExportOut != "" {
-			return trajectory.ExportToFile(sessionExportOut, root, sessionExportProvider, sessionExportSession)
+			return trajectory.ExportToFile(sessionExportOut, root, filter, sessionExportSession)
 		}
-		return trajectory.Export(cmd.OutOrStdout(), root, sessionExportProvider, sessionExportSession)
+		return trajectory.Export(cmd.OutOrStdout(), root, filter, sessionExportSession)
 	},
 }

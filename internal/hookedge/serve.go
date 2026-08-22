@@ -13,9 +13,8 @@ import (
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/hookclient"
+	"github.com/macrox-pro/agentd/internal/provider"
 )
-
-const providerOpenCode = "opencode"
 
 // Serve runs the long-lived OpenCode NDJSON bridge: each frame → daemon Invoke → wire reply.
 // Never writes debug logs to stdout.
@@ -33,13 +32,13 @@ func Serve(ctx context.Context, opts Options) int {
 		stdin = strings.NewReader("")
 	}
 
-	provider := strings.ToLower(strings.TrimSpace(opts.Provider))
-	if provider == "" {
-		fmt.Fprintln(stderr, "provider is required")
+	id, err := provider.Parse(opts.Provider)
+	if err != nil {
+		fmt.Fprintln(stderr, err.Error())
 		return 1
 	}
-	if provider != providerOpenCode {
-		fmt.Fprintf(stderr, "hook serve supports --provider=opencode, got %q\n", provider)
+	if id != provider.OpenCode {
+		fmt.Fprintf(stderr, "hook serve supports opencode only, got %q\n", id)
 		return 1
 	}
 

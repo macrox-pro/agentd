@@ -12,6 +12,7 @@ import (
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/hookclient"
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
@@ -47,6 +48,11 @@ func runSessionSubscribe(cmd *cobra.Command, _ []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
+	prov, err := provider.ParseFilter(sessionSubscribeProvider, cmd.Flags().Changed("provider"))
+	if err != nil {
+		return err
+	}
+
 	cli, err := hookclient.Dial(ctx, resolveSocket())
 	if err != nil {
 		return err
@@ -54,7 +60,7 @@ func runSessionSubscribe(cmd *cobra.Command, _ []string) error {
 	defer cli.Close()
 
 	stream, err := cli.Subscribe(ctx, &agentdv1.SubscribeRequest{
-		Provider:  sessionSubscribeProvider,
+		Provider:  string(prov),
 		SessionId: sessionSubscribeSession,
 		Source:    sessionSubscribeSource,
 	})
@@ -79,7 +85,7 @@ func runSessionSubscribe(cmd *cobra.Command, _ []string) error {
 			}
 			return err
 		}
-		ev := subscribeEventToLedger(msg.GetEvent())
+		ev := trajectory.EventFromSessionEvent(msg.GetEvent())
 		if sessionSubscribeJSON {
 			if err := enc.Encode(ev); err != nil {
 				return err
@@ -94,32 +100,4 @@ func runSessionSubscribe(cmd *cobra.Command, _ []string) error {
 		fmt.Fprintf(out, "%d\t%s\t%s\t%s\n",
 			ev.Seq, ev.Type, ev.Source, ev.Provider)
 	}
-}
-
-func subscribeEventToLedger(ev *agentdv1.SessionEvent) trajectory.Event {
-	if ev == nil {
-		return trajectory.Event{}
-	}
-	out := trajectory.Event{
-		SchemaVersion:  ev.GetSchemaVersion(),
-		Seq:            ev.GetSeq(),
-		Type:           ev.GetType(),
-		Source:         ev.GetSource(),
-		Provider:       ev.GetProvider(),
-		InvocationMode: ev.GetInvocationMode(),
-		SessionID:      ev.GetSessionId(),
-		ProjectRoot:    ev.GetProjectRoot(),
-		CWD:            ev.GetCwd(),
-		Ignorable:      ev.GetIgnorable(),
-	}
-	if ts := ev.GetTs(); ts != nil {
-		out.TS = ts.AsTime().UTC()
-	}
-	if len(ev.GetData()) > 0 {
-		out.Data = append(json.RawMessage(nil), ev.GetData()...)
-	}
-	if len(ev.GetRaw()) > 0 {
-		out.Raw = append(json.RawMessage(nil), ev.GetRaw()...)
-	}
-	return out
 }

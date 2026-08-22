@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
@@ -40,9 +41,13 @@ Scans every matching file line-by-line (O(total bytes); no search index).`,
   agentd session search --kind transcript/thinking --limit 20`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_ = args
+		prov, err := provider.ParseFilter(sessionSearchProvider, cmd.Flags().Changed("provider"))
+		if err != nil {
+			return err
+		}
 		hits, err := trajectory.Search(trajectory.SearchOptions{
 			Root:      trajectory.DefaultSessionsDir(),
-			Provider:  sessionSearchProvider,
+			Provider:  string(prov),
 			SessionID: sessionSearchSession,
 			Types:     sessionSearchKinds,
 			Source:    sessionSearchSource,

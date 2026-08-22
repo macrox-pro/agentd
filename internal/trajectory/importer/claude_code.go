@@ -29,9 +29,6 @@ func ResolveClaudeTranscriptPath(sessionID, explicitPath, projectsRoot string) (
 		}
 		return explicitPath, nil
 	}
-	if sessionID == "" {
-		return "", fmt.Errorf("session id or --path required")
-	}
 	root := projectsRoot
 	if root == "" {
 		home, err := os.UserHomeDir()

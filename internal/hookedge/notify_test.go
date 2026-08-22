@@ -15,6 +15,18 @@ import (
 	"github.com/macrox-pro/agentd/internal/transport"
 )
 
+func TestNotifyRejectsNonCodex(t *testing.T) {
+	t.Parallel()
+	var stderr bytes.Buffer
+	code := hookedge.Notify(context.Background(), hookedge.Options{
+		Provider:   "claude-code",
+		PayloadArg: `{"type":"agent-turn-complete"}`,
+		Stderr:     &stderr,
+	})
+	assert.Equal(t, 1, code, "Notify(non-codex): %s", stderr.String())
+	assert.Contains(t, stderr.String(), "codex")
+}
+
 func TestNotify(t *testing.T) {
 	dir := t.TempDir()
 	socket := filepath.Join(dir, "agentd.sock")

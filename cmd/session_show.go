@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
@@ -15,8 +16,9 @@ var (
 )
 
 func init() {
-	sessionShowCmd.Flags().StringVar(&sessionShowProvider, "provider", "", "provider id (required when session id is ambiguous)")
+	sessionShowCmd.Flags().StringVar(&sessionShowProvider, "provider", "", "provider id (required)")
 	sessionShowCmd.Flags().BoolVar(&sessionShowJSON, "json", false, "print JSON array of events")
+	_ = sessionShowCmd.MarkFlagRequired("provider")
 }
 
 var sessionShowCmd = &cobra.Command{
@@ -27,10 +29,11 @@ var sessionShowCmd = &cobra.Command{
   agentd session show s1 --provider=claude-code --json`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if sessionShowProvider == "" {
-			return fmt.Errorf("--provider is required")
+		prov, err := provider.Parse(sessionShowProvider)
+		if err != nil {
+			return err
 		}
-		path, err := trajectory.FindSessionPath(trajectory.DefaultSessionsDir(), sessionShowProvider, args[0])
+		path, err := trajectory.FindSessionPath(trajectory.DefaultSessionsDir(), string(prov), args[0])
 		if err != nil {
 			return err
 		}

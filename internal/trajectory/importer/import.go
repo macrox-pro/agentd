@@ -30,7 +30,7 @@ func Import(provider string, opts ImportOptions) (ImportResult, error) {
 	prov := trajectory.CanonicalProvider(provider)
 	status := trajectory.ProviderImporterStatus(prov)
 	if status == trajectory.ImporterNone {
-		return ImportResult{}, fmt.Errorf("transcript import for provider %q is not supported (importer status: none)", prov)
+		return ImportResult{}, fmt.Errorf("%w: %q", ErrImportNotSupported, prov)
 	}
 	if opts.ProjectsRoot == "" {
 		switch prov {
@@ -50,7 +50,7 @@ func Import(provider string, opts ImportOptions) (ImportResult, error) {
 	case "codex":
 		return ImportCodex(opts)
 	default:
-		return ImportResult{}, fmt.Errorf("transcript import for provider %q is not supported (importer status: %s)", prov, status)
+		return ImportResult{}, fmt.Errorf("%w: %q (status %s)", ErrImportNotSupported, prov, status)
 	}
 }
 

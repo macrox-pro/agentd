@@ -11,12 +11,13 @@ import (
 	"github.com/speakeasy-api/agenthooks"
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
+	"github.com/macrox-pro/agentd/internal/provider"
 )
 
 // DecodeTyped decodes a provider raw payload into a typed agenthooks event
 // using only the public Runner API (interceptor short-circuit).
 func DecodeTyped(ctx context.Context, provider agentdv1.Provider, mode agentdv1.InvocationMode, raw []byte) (any, error) {
-	name, err := providerName(provider)
+	name, err := providerFromProto(provider)
 	if err != nil {
 		return nil, err
 	}
@@ -67,21 +68,10 @@ func decodeWireArgs(provider string, mode agentdv1.InvocationMode, raw []byte) (
 	}
 }
 
-func providerName(p agentdv1.Provider) (string, error) {
-	switch p {
-	case agentdv1.Provider_PROVIDER_CLAUDE_CODE:
-		return "claude-code", nil
-	case agentdv1.Provider_PROVIDER_CURSOR:
-		return "cursor", nil
-	case agentdv1.Provider_PROVIDER_CODEX:
-		return "codex", nil
-	case agentdv1.Provider_PROVIDER_GEMINI:
-		return "gemini", nil
-	case agentdv1.Provider_PROVIDER_OPENCODE:
-		return "opencode", nil
-	case agentdv1.Provider_PROVIDER_KIMI_CODE:
-		return "kimi-code", nil
-	default:
-		return "", fmt.Errorf("unknown provider %v", p)
+func providerFromProto(p agentdv1.Provider) (string, error) {
+	id, err := provider.FromProto(p)
+	if err != nil {
+		return "", err
 	}
+	return string(id), nil
 }

@@ -13,6 +13,7 @@
 //   - schema_version frozen at SchemaVersion for v1.1 contract.
 //
 // Entry: Recorder.Record, Hub.Publish, ListSessions, Export, ExportToFile, Search,
-// AppendImported, ReplayPolicy, ForkSession.
+// AppendImported, ReplayPolicy, ReplayPolicyFromConfig, ForkSession,
+// EventFromSessionEvent, EventToSessionEvent. Import orchestration: importer.ImportSession.
 // See DESIGN.md §1.5 (async_side), §14.
 package trajectory

@@ -25,6 +25,10 @@ When a milestone ships `scripts/e2e-mN.sh`, name it `e2e-mN.sh` under `scripts/`
 
 No unused symbols. No “for later” APIs. No drive-by refactors. Comments only for non-obvious **why**.
 
+- **Call directly** — use the owning `internal/` API from the call site. No passthrough helpers or duplicate `switch`/parse tables for the same concern.
+- **One source of truth** — extend the package that owns the behavior; do not copy or re-export it elsewhere to “keep layers clean”.
+- **Real abstractions welcome** — adapters, factories, and interfaces at package boundaries are fine when they encode a design decision (see [CONVENTIONS.md](./CONVENTIONS.md#do-not-duplicate-or-wrap)).
+
 ```go
 // CORRECT — lowercase error; wrap with %w; sentinel for callers
 return fmt.Errorf("acquire lock: %w", ErrAlreadyRunning)
@@ -66,37 +70,10 @@ Platform: `{concern}.go` + `_unix.go` / `_windows.go` / `_other.go`. `_unix.go` 
 
 ### Tests
 
-`package xxx_test` only. testify `assert` / `require` / `mock` — no suite, no ginkgo. Table when ≥2 similar cases:
-
-```go
-func TestParsePolicy(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name    string
-		in      string
-		wantErr bool
-	}{
-		{name: "empty", in: ""},
-		{name: "invalid", in: "nope", wantErr: true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			_, err := ParsePolicy(tt.in)
-			if tt.wantErr {
-				require.Error(t, err, "ParsePolicy(%q)", tt.in)
-				return
-			}
-			require.NoError(t, err, "ParsePolicy(%q)", tt.in)
-		})
-	}
-}
-```
-
-- Subtest = `tt.name`; fail msgs include input; no `tt := tt` (Go 1.22+).
-- `require` for preconditions; `assert` for independent checks; `t.Helper()` + `t.Cleanup` in helpers.
-- Unit tests: bufconn / httptest / fakes — no real ports unless testing the network path.
-- Integration: `//go:build integration`.
+- `package xxx_test` only — never `package foo` in `*_test.go`.
+- testify `assert` / `require`; table when ≥2 similar cases; subtest = `tt.name`.
+- Unit tests: fakes / bufconn / httptest — no real ports unless testing the network path.
+- Details: [CONVENTIONS.md § Tests](./CONVENTIONS.md#tests).
 
 ## Intent before code
 
@@ -118,8 +95,8 @@ Rules:
 
 | Path | Owns | Must not |
 |------|------|----------|
-| `cmd/` | Cobra only — Short/Long/Example on every command | business logic |
-| `internal/` | All business logic | — |
+| `cmd/` | Cobra — flags, Short/Long/Example, **CLI input validation** in the subcommand file, `RunE` delegates to `internal/` | business logic, domain helpers, extra validation-only files |
+| `internal/` | Domain logic, sentinel errors (`var Err…`) | import `cmd/`, Cobra/flag names in errors, CLI argument rules |
 | `api/agentd/v1/` | Proto contracts | hand-written Go |
 | `gen/` | Generated — never edit | manual edits |
 | `internal/hookedge` | Provider codecs + wire I/O ([§1.5 invoke_sync](./DESIGN.md#15-hot-paths)) | policy, `Runner.Decide` |
@@ -132,7 +109,9 @@ Rules:
 | `internal/transport` | Unix socket / named pipe I/O | business logic |
 | `internal/hookclient` | gRPC client to daemon | hook wire |
 | `internal/install` | Provider hook install via agenthooks | daemon logic |
+| `internal/provider` | Canonical coding-agent provider ids and enum mapping | wire I/O, ledger, importer logic |
 
+- `cmd/`: flags + Cobra + **CLI input validation in the same file as the subcommand** (`session_import.go`, not a separate `session_import_validate.go`); domain logic in `internal/` ([CONVENTIONS.md § CLI](./CONVENTIONS.md#cli-cmd)).
 - Hook CLI: decode/encode only. `Runner.Decide` runs in the daemon.
 - Never log to stdout on the hook path. Preserve `Event.Raw` verbatim.
 - Hook entrypoint: public `agentd hook run|notify|serve`; `agenthooks/install` writes `agentd agenthooks …` (hidden alias, same `cmd/hook.go` path). Document `hook`, not `agenthooks`.
@@ -152,6 +131,10 @@ Rules:
 
 - Never edit `gen/` or hand-write `*.pb.go`.
 - Never reimplement provider codecs outside `hookedge` + agenthooks.
+- Never add a layer whose only job is forwarding to an existing function — call it directly (adapters/factories at real boundaries are fine; see [CONVENTIONS.md](./CONVENTIONS.md#do-not-duplicate-or-wrap)).
+- **`internal/` must not import `cmd/`** or mention Cobra flags (`--provider`, `--path`, …) in errors or comments.
+- **CLI argument validation** (required flags, flag combinations) lives in `cmd/` in the **same file** as the subcommand — not in `internal/`.
+- **Sentinel errors** in `internal/`: `var ErrFoo = errors.New("…")` when the message is static; wrap with `fmt.Errorf("…: %w", err)` only when adding context. CLI maps sentinels to user-facing flag text in `RunE`.
 - Never commit secrets / `.env`.
 - Change only files required by the current todo.
 

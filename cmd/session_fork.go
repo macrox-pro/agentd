@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
@@ -40,7 +41,11 @@ Does not spawn or resume a live agent. The source session JSONL is left immutabl
 }
 
 func runSessionFork(cmd *cobra.Command, _ []string) error {
-	key := trajectory.ResolveSessionKey(sessionForkProvider, sessionForkSession, "", "")
+	prov, err := provider.Parse(sessionForkProvider)
+	if err != nil {
+		return err
+	}
+	key := trajectory.ResolveSessionKey(string(prov), sessionForkSession, "", "")
 	result, err := trajectory.ForkSession(trajectory.DefaultSessionsDir(), key, sessionForkNewSession, sessionForkAtSeq)
 	if err != nil {
 		return err

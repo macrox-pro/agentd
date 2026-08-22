@@ -15,7 +15,7 @@ import (
 )
 
 // ResolveCursorTranscriptPath finds a Cursor transcript JSONL.
-// Prefer explicit --path; session+root scan only when configured path is set.
+// Prefer explicit path; session+root scan only when configured path is set.
 func ResolveCursorTranscriptPath(sessionID, explicitPath, configuredRoot string) (string, error) {
 	return resolveExplicitOrSessionPath(sessionID, explicitPath, configuredRoot, "cursor")
 }
@@ -27,11 +27,8 @@ func resolveExplicitOrSessionPath(sessionID, explicitPath, configuredRoot, label
 		}
 		return explicitPath, nil
 	}
-	if sessionID == "" {
-		return "", fmt.Errorf("%s import requires --path (or --session with configured import path)", label)
-	}
 	if configuredRoot == "" {
-		return "", fmt.Errorf("%s import requires --path (no stable default transcript root)", label)
+		return "", ErrTranscriptRootRequired
 	}
 	want := sessionID + ".jsonl"
 	candidate := filepath.Join(configuredRoot, want)

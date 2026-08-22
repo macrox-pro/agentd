@@ -10,6 +10,7 @@ import (
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/hookclient"
+	"github.com/macrox-pro/agentd/internal/provider"
 )
 
 // Run dials the daemon, invokes HookService, then encodes the decision wire response.
@@ -24,7 +25,12 @@ func Run(ctx context.Context, opts Options) int {
 		stdout = io.Discard
 	}
 
-	provider, err := parseProvider(opts.Provider)
+	id, err := provider.Parse(opts.Provider)
+	if err != nil {
+		fmt.Fprintln(stderr, err.Error())
+		return 1
+	}
+	protoProv, err := id.Proto()
 	if err != nil {
 		fmt.Fprintln(stderr, err.Error())
 		return 1
@@ -51,7 +57,7 @@ func Run(ctx context.Context, opts Options) int {
 	defer cli.Close()
 
 	req := &agentdv1.InvokeRequest{
-		Provider:       provider,
+		Provider:       protoProv,
 		RawPayload:     payload,
 		InvocationMode: mode,
 		Cwd:            ResolveCWD(payload),

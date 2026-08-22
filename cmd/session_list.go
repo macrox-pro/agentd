@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
@@ -27,7 +28,11 @@ var sessionListCmd = &cobra.Command{
   agentd session list --provider=cursor --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_ = args
-		summaries, err := trajectory.ListSessions(trajectory.DefaultSessionsDir(), sessionListProvider)
+		prov, err := provider.ParseFilter(sessionListProvider, cmd.Flags().Changed("provider"))
+		if err != nil {
+			return err
+		}
+		summaries, err := trajectory.ListSessions(trajectory.DefaultSessionsDir(), string(prov))
 		if err != nil {
 			return err
 		}

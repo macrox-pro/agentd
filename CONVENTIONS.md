@@ -35,12 +35,39 @@ package dispatch
 
 **Tests:** no scenario docs in `_test.go`. Spec = `TestXxx` and table `tt.name` only. No `// setup`, `// assert`, or `// Scenarios:` blocks.
 
-### Do not duplicate logic
+### Do not duplicate or wrap
+
+One implementation per concern. If something already exists in `internal/`, **import and call it** — do not copy, re-export, or hide it behind a one-line helper in another package.
+
+This rule targets **indirection without purpose**, not design patterns. Adapters, factories, factory methods, and small interfaces at real boundaries **are encouraged** when they isolate a concern, hide a third-party API, or make testing/extension clearer.
+
+**Wrong** (passthrough / duplication)
+
+- Same `switch` / parse table in `hookedge`, `install`, `dispatch`, and `cmd/`.
+- `cmd/foo.go` that only wraps `internal/bar.Parse` with no Cobra or I/O reason.
+- `func requireX(s string) { return bar.Parse(s) }` in `cmd/` when `RunE` can call `bar.Parse` directly.
+- Helper file whose sole purpose is renaming or forwarding to avoid an import path.
+- “Factory” or “adapter” that only renames a single call with no boundary to protect.
+
+**Right** (direct call or purposeful abstraction)
+
+- Owning package exposes the API; callers import that package, or depend on a **narrow interface** it implements.
+- `cmd/` binds flags and calls `internal/*` in `RunE` — no intermediate `cmd/` helper package.
+- **Adapter** — translate between worlds (e.g. `hookedge` ↔ agenthooks wire, `dispatch/targets` ↔ HTTP/gRPC/exec). Owns encode/decode or protocol mapping, not a one-line alias.
+- **Factory / constructor** — `NewEngine`, `NewStore`, `agenthooks.New` with options: centralize assembly of a cohesive object graph.
+- **Factory method** — package-level `Parse` / `Load` / `Compile` that returns a configured type when setup is non-trivial or must stay consistent.
+- Extract a shared helper when it removes **real** duplication (≥2 call sites, non-trivial logic), not to add indirection.
+
+**Litmus test:** if removing the type/function leaves call sites unchanged except for importing the underlying package directly, it was probably unnecessary wrapping. If it removes coupling, clarifies a boundary, or enables substitution in tests — keep it.
+
+Package-specific ownership (do not reimplement elsewhere):
 
 - Hook wire I/O: `internal/hookedge` + agenthooks — do not reimplement provider codecs.
 - Config merge/compile: `internal/config` only.
 - Dispatch routing: `internal/dispatch` only.
-- Extract shared test helpers once; use `t.Helper()`. Before adding a helper, search `internal/`.
+- Provider ids / enum mapping: `internal/provider` only.
+
+Before adding a helper, search `internal/` for an existing entry point. Extract shared test helpers once; use `t.Helper()`.
 
 ### Minimal scope
 
@@ -261,6 +288,11 @@ for name, tt := range tests {
 | Wrong | Right |
 |-------|-------|
 | `package config` in `*_test.go` | `package config_test` |
+| `package cmd` in `*_test.go` | `package cmd_test` |
+| Wrapper `cmd/foo.go` that only calls `internal` | Call `internal` from subcommand `RunE` |
+| `cmd/session_import_validate.go` (validation split from subcommand) | Validate in `session_import.go` `RunE` |
+| CLI flag names in `internal/` errors (`requires --path`) | Sentinel in `internal/`; flag text in `cmd/` `RunE` |
+| `fmt.Errorf("static message")` for stable domain errors | `var ErrFoo = errors.New("static message")` |
 | One `TestFoo` with `if a { ... }; if b { ... }` blocks | Table + `t.Run(tt.name, ...)` |
 | `for i, tt := range tests { ... }` without `t.Run` | Subtest per row |
 | `require.NoError(t, err)` with no context | `require.NoError(t, err, "Op(%q)", tt.in)` |
@@ -352,6 +384,46 @@ Platform I/O: `{concern}_unix.go` / `{concern}_windows.go` / `{concern}_other.go
 - Hook CLI: decode/encode only
 - Async never blocks sync response
 - New targets: `internal/dispatch/targets/` + table-driven tests in `targets_test`
+
+### CLI (`cmd/`)
+
+`cmd/` is the Cobra surface: flag binding, `Short`/`Long`/`Example`, **CLI input validation**, and `RunE` that delegates to `internal/*`. It is not a place for domain logic.
+
+**Do**
+
+- One file per subcommand; stem = command name (`session_list.go` → `agentd session list`).
+- **Validate CLI inputs in the same file** as the subcommand (`runSessionImport` in `session_import.go`) — do not add sibling `*_validate.go` files.
+- Call `internal/*` for domain identity and work (`provider.Parse`, `importer.ImportSession`, …) after CLI checks pass.
+- Put shared identity tables in one `internal/` package; other packages import it.
+- Optional filter flags (e.g. `--provider` on list/search): pass whether the flag was set on this invocation (`Flag.Changed`) into `internal/` so an omitted flag does not reuse a value from a prior `Execute()` on the same command tree.
+- Map `internal/` sentinel errors to CLI-friendly text in `RunE` when the user needs flag names or config keys (e.g. `errors.Is(err, trajectory.ErrReplayNoRaw)` → message mentioning `trajectory.include_raw`).
+- Test CLI wiring in `package cmd_test` — import `cmd`, exercise `RootCommand()`; test domain rules in `internal/*_test`.
+
+**Don't**
+
+- Add `cmd/` files or functions whose only job is wrapping `internal/` (see [Do not duplicate or wrap](#do-not-duplicate-or-wrap)).
+- Put CLI argument rules in `internal/` (required `--path`, `--session` or `--path`, flag combinations).
+- Duplicate domain rules already owned by `internal/`.
+- Use `package cmd` in `*_test.go` — black-box tests only (`package cmd_test`).
+
+### `internal/` vs `cmd/`
+
+- `internal/` never imports `cmd/`.
+- `internal/` errors and sentinels describe **domain** state only — no Cobra flag names, no “pass `--foo`”.
+- Static domain failures: `var ErrFoo = errors.New("…")` in `errors.go` (or next to the owning concern); compose with `%w` when callers need context.
+- `provider.Parse` validates canonical provider **ids** (domain); whether a flag is required or which flags combine is **`cmd/` only**.
+
+**Testing `cmd/`**
+
+- Domain tables and edge cases → `internal/<pkg>_test.go` (table-driven, `t.Parallel()` where safe).
+- End-to-end CLI errors (unknown flag value, missing `--path`) → `cmd_test` with `RootCommand().SetArgs(...)`.
+- Reusing one root command across cases: reset flag defaults/`Changed` between runs, or isolate env (e.g. create sessions dir under `t.TempDir()` before `session list`).
+
+### Provider identity (`internal/provider`)
+
+- Owns canonical provider id strings, aliases, and mapping to proto / agenthooks enums.
+- `Parse` — strict provider id (empty/unknown → `ErrProviderRequired` / `ErrUnknownProvider`); `ParseFilter` — optional filters with an explicit “flag was set” bit; `Lookup` — lenient normalization for ledger/event data (unknown ids may pass through elsewhere — see trajectory).
+- Importer support level (`ImporterNone` / `Partial` / `Supported`) is read in `cmd/` for CLI validation; domain import work stays in `internal/trajectory/importer`.
 
 ### CLI documentation
 

@@ -10,6 +10,8 @@ import (
 
 	"github.com/speakeasy-api/agenthooks"
 	ahinstall "github.com/speakeasy-api/agenthooks/install"
+
+	"github.com/macrox-pro/agentd/internal/provider"
 )
 
 const (
@@ -34,7 +36,11 @@ func Run(ctx context.Context, opts Options) error {
 	if len(opts.Command) == 0 {
 		return fmt.Errorf("command is required")
 	}
-	provider, err := parseProvider(opts.Provider)
+	id, err := provider.Parse(opts.Provider)
+	if err != nil {
+		return err
+	}
+	ahProv, err := id.Agenthooks()
 	if err != nil {
 		return err
 	}
@@ -66,31 +72,10 @@ func Run(ctx context.Context, opts Options) error {
 		Fail: agenthooks.FailClosed,
 	}
 	return ahinstall.Install(ctx, m, ahinstall.Target{
-		Provider: provider,
+		Provider: ahProv,
 		Scope:    scope,
 		Dir:      absDir,
 	})
-}
-
-func parseProvider(s string) (agenthooks.Provider, error) {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "claude-code":
-		return agenthooks.ProviderClaudeCode, nil
-	case "cursor":
-		return agenthooks.ProviderCursor, nil
-	case "codex":
-		return agenthooks.ProviderCodex, nil
-	case "gemini":
-		return agenthooks.ProviderGemini, nil
-	case "opencode":
-		return agenthooks.ProviderOpenCode, nil
-	case "kimicode", "kimi-code":
-		return agenthooks.ProviderKimi, nil
-	case "":
-		return "", fmt.Errorf("provider is required")
-	default:
-		return "", fmt.Errorf("unknown provider %q", s)
-	}
 }
 
 func parseScope(s string) (ahinstall.Scope, error) {

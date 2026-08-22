@@ -68,7 +68,7 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 	if err != nil {
 		return InvokeResult{}, err
 	}
-	providerName, _ := providerName(in.Provider)
+	providerName, _ := providerFromProto(in.Provider)
 	route := MatchRoute(in.Snap.Routes, typed)
 	if route == nil {
 		meta := MetaFromTyped(providerName, typed, false)
