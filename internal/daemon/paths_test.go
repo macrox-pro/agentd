@@ -1,6 +1,7 @@
 package daemon_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -53,6 +54,54 @@ func TestDaemonPaths(t *testing.T) {
 				paths.RemoveStale()
 				_, err = paths.ReadPID()
 				require.ErrorIs(t, err, daemon.ErrNotRunning, "ReadPID() after RemoveStale")
+			},
+		},
+		{
+			name: "read pid not running",
+			run: func(t *testing.T, paths daemon.Paths) {
+				t.Helper()
+				_, err := paths.ReadPID()
+				require.ErrorIs(t, err, daemon.ErrNotRunning, "ReadPID(missing)")
+			},
+		},
+		{
+			name: "invalid pid parse",
+			run: func(t *testing.T, paths daemon.Paths) {
+				t.Helper()
+				require.NoError(t, os.MkdirAll(paths.Dir, 0o700), "MkdirAll(%q)", paths.Dir)
+				require.NoError(t, os.WriteFile(paths.PID, []byte("not-a-pid\n"), 0o600), "WriteFile(%q)", paths.PID)
+
+				_, err := paths.ReadPID()
+				require.Error(t, err, "ReadPID(invalid)")
+				assert.Contains(t, err.Error(), "parse pid", "ReadPID(invalid)")
+			},
+		},
+		{
+			name: "write pid dir error",
+			run: func(t *testing.T, _ daemon.Paths) {
+				t.Helper()
+				dir := t.TempDir()
+				block := filepath.Join(dir, "block")
+				require.NoError(t, os.WriteFile(block, []byte("x"), 0o600), "WriteFile(%q)", block)
+				paths := daemon.NewPaths(filepath.Join(block, "s.sock"))
+				err := paths.WritePID(1)
+				require.Error(t, err, "WritePID(blocked dir)")
+			},
+		},
+		{
+			name: "release nil lock",
+			run: func(_ *testing.T, _ daemon.Paths) {
+				daemon.ReleaseLock(nil)
+			},
+		},
+		{
+			name: "lock open error",
+			run: func(t *testing.T, paths daemon.Paths) {
+				t.Helper()
+				require.NoError(t, os.MkdirAll(paths.Dir, 0o700), "MkdirAll(%q)", paths.Dir)
+				require.NoError(t, os.Mkdir(paths.Lock, 0o700), "Mkdir(%q)", paths.Lock)
+				_, err := paths.AcquireLock()
+				require.Error(t, err, "AcquireLock(dir)")
 			},
 		},
 	}

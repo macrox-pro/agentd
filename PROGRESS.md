@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase: **R4 done** | Last: r4-cmd-coverage | Next: **R5 daemon + hookclient**
+Phase: **R5 done** | Last: r5-daemon-hookclient | Next: **R6 dispatch boundaries**
 
 > Milestones M0–M12: **done**. Post-release work is the **R-series** refactor below — one phase = one PR or agent session, one package or one hot path ([AGENTS.md](./AGENTS.md) intent rules).
 
@@ -28,8 +28,8 @@ true
 | Package | Statements | Priority |
 |---------|------------|----------|
 | `cmd` | 60.7% | maintain — R4 table tests done |
-| `internal/daemon` | 47.1% | **P1** — start/stop/reload lifecycle |
-| `internal/hookclient` | 52.4% | **P1** — gRPC client helpers |
+| `internal/daemon` | 65.0% | maintain — R5 lifecycle tests done |
+| `internal/hookclient` | 81.0% | maintain — R5 client tests done |
 | `internal/dispatch/targets` | 60.1% | P2 |
 | `internal/trajectory/importer` | 71.8% | maintain — registry done |
 | `internal/trajectory` | 68.3% | P2 — was 66.1% |
@@ -49,6 +49,8 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 - **`SessionKey.Provider` is still `string`** — migrate call sites to `provider.ID` gradually; do not change `weakSessionID` hash inputs without a migration test.
 - **Table-driven hub/subscribe tests** — shared `Hub` + channel state: parallelize subtests only when each row uses disjoint hubs ([CONVENTIONS § Parallelism](./CONVENTIONS.md#parallelism)).
 - **`cmd` table tests** — reset Cobra flags between rows (`resetCommandFlags`); stale `Changed` bits cause flaky cross-row pollution. For `stringSlice`/`stringArray`, reset with `Set("")` not `Set(DefValue)` — nil defaults use DefValue `"[]"`, which parses as one element `"[]"`.
+- **`daemon` lifecycle tests** — short unix socket paths (`os.MkdirTemp("", "agentd-daemon-")` + `s.sock`); never `net.Listen` before `Start` on the same path — `transport.Listen` removes the file and the daemon may start instead of failing. Prefer gRPC stubs for Status/Reload rows; reserve full `Start` for lock/PID/SIGHUP paths.
+- **`hookclient` tests** — one prod file → one `client_test.go`; real unix socket for dial (not bufconn) when exercising `transport.Dial`.
 - **`internal/` errors** — no `--provider` / flag names in sentinels; map in `cmd/RunE` only.
 - **Importer registry** — must not pull `dispatch.InvokeInput` (PolicyInvoker still out of scope); registry returns `(ImportResult, error)` only.
 - **No drive-by refactors** — one R-phase touches one boundary; unrelated cleanups → separate PR.
@@ -63,8 +65,8 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 | **R2** | **done** | Trajectory domain — typed ids at boundaries, errors, grpc event mapping |
 | **R3** | **done** | Importer registry — `registry.go` + `ImportSession` facade |
 | **R4** | **done** | `cmd/` coverage — table-driven session + config CLI |
-| **R5** | **next** | `daemon` + `hookclient` lifecycle tests |
-| **R6** | pending | `dispatch` decode/targets — provider mapping consolidation |
+| **R5** | **done** | `daemon` + `hookclient` lifecycle tests |
+| **R6** | **next** | `dispatch` decode/targets — provider mapping consolidation |
 | **R7** | pending | Test hygiene — table-driven migration where structure matches |
 | **R8** | pending | Tier-1 package comments audit + docs sync |
 
@@ -197,22 +199,25 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 
 **Hot path:** `config_reload` (SIGHUP debounce); mgmt CLI → gRPC.
 
-**Invariants:** one daemon per user; lock released on stop; client respects `AGENTD_SOCKET` / default path.
+**Invariants:** one daemon per user; lock released on stop; client uses `--socket` / default path from `transport.DefaultSocketPath()`.
 
 **Corner cases (test names):**
-- `TestStartStopTable` — already running, stale PID, lock held
-- `TestReloadDebounced` — rapid SIGHUP coalesced
-- `TestHookclientDial` — missing socket, canceled ctx, bufconn success
-- `TestSubscribeClient` — cancel propagation (extend `hookclient` tests)
+- `TestStartStopTable` — foreground start/stop, already running (stub health), stale PID, lock held, listen error
+- `TestStopTable` — not running, clean shutdown, stale dead PID, own-PID timeout, shutdown RPC
+- `TestStatusTable` / `TestReloadRPC` — stub server rows + default socket
+- `TestReloadSIGHUP` — generation bump after SIGHUP (unix)
+- `TestHookclientDial` / `TestHookclientDaemonRPC` / `TestSubscribeClient` — dial, mgmt RPC, subscribe cancel
+- `TestDaemonStatusCLI` / `TestDaemonStopCLI` / `TestDaemonReloadCLI` — cmd daemon subcommands
 
-**Out of scope:** Real system systemd; Windows service integration beyond existing `_windows.go` splits.
+**Out of scope:** Real system systemd; Windows service integration beyond existing `_windows.go` splits; detached `Start` (`Foreground: false`).
 
 ### R5 checklist
 
-- [ ] r5-intent
-- [ ] r5-daemon-table — start/stop/status error rows
-- [ ] r5-hookclient — Invoke + Subscribe helpers via bufconn
-- [ ] r5-verify — daemon ≥ 65%, hookclient ≥ 70%
+- [x] r5-intent
+- [x] r5-daemon-table — start/stop/status/reload error rows + SIGHUP
+- [x] r5-hookclient — dial, Status/Reload/Shutdown, Subscribe cancel (`client_test.go` only)
+- [x] r5-cmd-daemon — `cmd/daemon_{status,stop,reload}_test.go` + subscribe streaming happy row
+- [x] r5-verify — daemon **65.0%**, hookclient **81.0%**; `-race -timeout=20s` green
 
 ---
 
@@ -494,7 +499,8 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 - **R2 done:** sentinels in `errors.go`; `ResolveSessionKeyID`; grpc/replay_config table tests; cmd error mapping
 - **R3 done:** importer registry + status colocated; `ImportSession` facade for CLI + watcher; `session list --json` enriches status in `cmd/`
 - **R4 done:** shared `cmd/root_test.go` harness; table-driven session/config/dispatch CLI tests; cmd **60.7%**
-- Next agent session: open **R5** — daemon + hookclient lifecycle tests
+- **R5 done:** daemon lifecycle tables + hookclient client tests + cmd daemon CLI; daemon **65.0%**, hookclient **81.0%**
+- Next agent session: open **R6** — dispatch decode/targets provider mapping
 
 ### Refactor intent note (pre-R-series, archived)
 
@@ -513,10 +519,14 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 ```bash
 make lint
 make intent-check
-go test ./cmd/... -race -count=1
-go test ./cmd/... -coverprofile=/tmp/cmd_r4.cover -count=1
-go tool cover -func=/tmp/cmd_r4.cover | tail -1   # cmd 60.7%
+go test ./internal/daemon/... ./internal/hookclient/... ./cmd/... -race -count=1 -timeout=20s
+go test ./internal/daemon/... -coverprofile=/tmp/daemon_r5.out -count=1
+go tool cover -func=/tmp/daemon_r5.out | tail -1   # daemon 65.0%
+go test ./internal/hookclient/... -coverprofile=/tmp/hookclient_r5.out -count=1
+go tool cover -func=/tmp/hookclient_r5.out | tail -1   # hookclient 81.0%
 ```
+
+**R5 files touched:** `internal/daemon/{start,stop,status,reload,reload_unix,paths}_test.go`, `internal/hookclient/client_test.go`, `cmd/{root,daemon_status,daemon_stop,daemon_reload,session_subscribe}_test.go`, `PROGRESS.md`
 
 **R4 files touched:** `cmd/root_test.go`, `cmd/session_{provider,show,export,search,fork,import,replay,subscribe}_test.go`, `cmd/config_{validate,show}_test.go`, `cmd/dispatch_routes_test.go`, `PROGRESS.md`
 
