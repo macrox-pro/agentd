@@ -135,7 +135,7 @@ Rules:
 
 - Hook CLI: decode/encode only. `Runner.Decide` runs in the daemon.
 - Never log to stdout on the hook path. Preserve `Event.Raw` verbatim.
-- Install hooks with `agentd hook run --provider=...`.
+- Hook entrypoint: public `agentd hook run|notify|serve`; `agenthooks/install` writes `agentd agenthooks …` (hidden alias, same `cmd/hook.go` path). Document `hook`, not `agenthooks`.
 - ConfigStore hot path: `store.Current()` only — no disk I/O. Runtime overlay + one debounced reload goroutine.
 - Async dispatch must not block the sync hook response.
 - New CLI command → update [DESIGN.md §6](./DESIGN.md#6-cli-reference) **and** [docs/en/cli.md](./docs/en/cli.md) + [docs/ru/cli.md](./docs/ru/cli.md).

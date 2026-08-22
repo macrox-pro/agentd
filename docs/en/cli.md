@@ -35,6 +35,8 @@ If dial/Invoke fails: stderr `daemon not running`, exit **1**. Do not write debu
 
 ### agenthooks (hidden)
 
+**Why:** `agentd install` uses [agenthooks/install](https://github.com/speakeasy-api/agenthooks), which writes provider hook configs with `agentd agenthooks …`, not `hook`. agentd registers matching hidden subcommands so those configs work unchanged. Prefer `hook run` / `hook serve` / `hook notify` in docs and manual hook settings — same flags, same wire path (`cmd/hook.go`).
+
 Install writes `agentd agenthooks run|notify|serve --provider=…`. Same behavior as `hook …`. `agenthooks serve` defaults `--provider` to `opencode`.
 
 ## config

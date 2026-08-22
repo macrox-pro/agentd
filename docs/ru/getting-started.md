@@ -49,7 +49,7 @@ guards:
 agentd install --provider=claude-code --scope=project
 ```
 
-В сгенерированных настройках агента вызывается `agentd agenthooks …` (скрытый алиас тех же `agentd hook …`). В документации удобнее ссылаться на `hook run` / `hook serve` / `hook notify`.
+В сгенерированных настройках агента вызывается `agentd agenthooks …` (скрытый алиас тех же `agentd hook …` — [зачем](./cli.md#agenthooks-скрытая-команда)). В документации удобнее ссылаться на `hook run` / `hook serve` / `hook notify`.
 
 Список провайдеров, областей установки и особенностей: [Провайдеры](./providers.md).
 

@@ -77,7 +77,7 @@ flowchart TB
   AsyncPipe -.->|"fire-and-forget"| AsyncQueue
 ```
 
-Agents always invoke `agentd hook run|notify|serve`. Hook CLI decode/encodes wire (agenthooks). **Dispatch Engine** routes sync (agent waits), async (telemetry), or hybrid.
+Agents invoke the hook CLI (`agentd hook run|notify|serve` in docs; install-generated configs use hidden `agentd agenthooks …` — same wire path). Hook CLI decode/encodes wire (agenthooks). **Dispatch Engine** routes sync (agent waits), async (telemetry), or hybrid.
 
 ### Process roles
 
@@ -89,25 +89,27 @@ Agents always invoke `agentd hook run|notify|serve`. Hook CLI decode/encodes wir
 
 ### agenthooks integration
 
-1. **Hook CLI** mirrors `install.Manifest` argv:
+**Why `hook` and `agenthooks`?** `agentd install` delegates to `github.com/speakeasy-api/agenthooks/install`. That library renders provider hook settings with argv `agentd agenthooks run|notify|serve --provider=…` (its install sentinel). Docs and manual setup use the public `agentd hook …` commands instead. Both names are thin Cobra wrappers over the same `hookedge` path (`cmd/hook.go`); `agenthooks` is `Hidden` so generated configs keep working without cluttering `--help`.
+
+1. **Hook CLI** (public):
    ```
    agentd hook run --provider=claude-code
    agentd hook run --provider=cursor --argv-payload
    agentd hook notify --provider=codex
    ```
-   Install via `github.com/speakeasy-api/agenthooks/install` with `Command: []string{"agentd", "hook", "run", ...}`.
+   Wire decode/encode only; policy lives in the daemon.
 
-2. **Daemon** owns `*agenthooks.Runner` for `builtin` target:
+2. **Install argv** — `install.Run` sets `Manifest.Command` to the absolute path of the `agentd` binary only; agenthooks/install appends `agenthooks run|serve|notify --provider=…` per hook kind. Generated files (e.g. `.claude/settings.json`, `.opencode/plugin/agenthooks.ts`) therefore call `agenthooks`, not `hook`. OpenCode shims spawn `agentd agenthooks serve --provider=opencode`; the hidden `serve` subcommand defaults `--provider` to `opencode` when omitted.
+
+3. **Daemon** owns `*agenthooks.Runner` for `builtin` target:
    - Guards → sync `builtin`
    - Observers → async `builtin` with `observe: true`
    - `Runner.Decide(ctx, typed)` on sync path
    - Forward targets in `internal/dispatch/targets/`
 
-3. **OpenCode** — `agentd hook serve` holds stdio; each NDJSON frame → gRPC `Invoke`; session mutex in daemon.
-   Install-generated shims use the agenthooks argv sentinel: `agentd agenthooks serve --provider=opencode`
-   (same behavior as `hook serve`).
+4. **OpenCode serve** — `agentd hook serve` (or install’s `agenthooks serve`) holds stdio; each NDJSON frame → gRPC `Invoke`; session mutex in daemon.
 
-4. **Providers:** `claude-code`, `cursor`, `codex`, `gemini`, `opencode`, `kimicode` (+ variants).
+5. **Providers:** `claude-code`, `cursor`, `codex`, `gemini`, `opencode`, `kimicode` (+ variants).
 
 ---
 

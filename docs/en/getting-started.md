@@ -49,7 +49,7 @@ From a project directory (example: Claude Code, project scope):
 agentd install --provider=claude-code --scope=project
 ```
 
-Generated configs call `agentd agenthooks …` (hidden alias of `agentd hook …`). Prefer documenting `hook run` / `hook serve` / `hook notify`.
+Generated configs call `agentd agenthooks …` (hidden alias of `agentd hook …` — [why](./cli.md#agenthooks-hidden)). Prefer documenting `hook run` / `hook serve` / `hook notify`.
 
 Providers, scopes, and quirks: [Providers](./providers.md).
 

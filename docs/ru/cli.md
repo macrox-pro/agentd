@@ -35,6 +35,8 @@
 
 ### agenthooks (скрытая команда)
 
+**Зачем:** `agentd install` вызывает [agenthooks/install](https://github.com/speakeasy-api/agenthooks), который прописывает в настройках агента `agentd agenthooks …`, а не `hook`. agentd регистрирует скрытые подкоманды с тем же поведением, чтобы сгенерированные конфиги работали без правок. В документации и при ручной настройке удобнее `hook run` / `hook serve` / `hook notify` — те же флаги и тот же путь через `hookedge` (`cmd/hook.go`).
+
 `install` прописывает в конфиг агента `agentd agenthooks run|notify|serve --provider=…`. Поведение совпадает с `hook …`. У `agenthooks serve` значение `--provider` по умолчанию — `opencode`.
 
 ## config (конфиг)
