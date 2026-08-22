@@ -115,3 +115,20 @@ trajectory:
 	assert.True(t, store.Current().Trajectory.CodexImport().Enabled)
 	assert.Equal(t, "/tmp/codex", store.Current().Trajectory.CodexImport().Path)
 }
+
+func TestCompileTrajectoryImportProviderAlias(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "agentd.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`version: 1
+trajectory:
+  import:
+    Claude-Code:
+      enabled: true
+      path: /tmp/claude-alias
+`), 0o600))
+	store, err := config.Load(context.Background(), path)
+	require.NoError(t, err)
+	assert.True(t, store.Current().Trajectory.ClaudeImport().Enabled)
+	assert.Equal(t, "/tmp/claude-alias", store.Current().Trajectory.ClaudeImport().Path)
+}

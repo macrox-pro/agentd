@@ -1,6 +1,10 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/macrox-pro/agentd/internal/provider"
+)
 
 const (
 	defaultMaxEventBytes      = 262144
@@ -36,9 +40,9 @@ func defaultTrajectory() TrajectoryConfig {
 
 func defaultImportProviders() map[string]ImportProviderConfig {
 	return map[string]ImportProviderConfig{
-		"claude-code": {Enabled: false, Path: ""},
-		"cursor":      {Enabled: false, Path: ""},
-		"codex":       {Enabled: false, Path: ""},
+		string(provider.ClaudeCode): {Enabled: false, Path: ""},
+		string(provider.Cursor):      {Enabled: false, Path: ""},
+		string(provider.Codex):       {Enabled: false, Path: ""},
 	}
 }
 
@@ -104,16 +108,10 @@ func parseTrajectory(in *fileTrajectory, base TrajectoryConfig) (TrajectoryConfi
 }
 
 func canonicalImportProvider(name string) string {
-	switch name {
-	case "claude-code":
-		return "claude-code"
-	case "cursor":
-		return "cursor"
-	case "codex":
-		return "codex"
-	default:
-		return name
+	if id, ok := provider.Lookup(name); ok {
+		return string(id)
 	}
+	return name
 }
 
 func mergeTrajectoryPtr(base, user *fileTrajectory) *fileTrajectory {
@@ -168,17 +166,17 @@ func mergeTrajectoryPtr(base, user *fileTrajectory) *fileTrajectory {
 
 // ClaudeImport returns compiled claude-code import settings.
 func (c TrajectoryConfig) ClaudeImport() ImportProviderConfig {
-	return c.importProvider("claude-code")
+	return c.importProvider(string(provider.ClaudeCode))
 }
 
 // CursorImport returns compiled cursor import settings.
 func (c TrajectoryConfig) CursorImport() ImportProviderConfig {
-	return c.importProvider("cursor")
+	return c.importProvider(string(provider.Cursor))
 }
 
 // CodexImport returns compiled codex import settings.
 func (c TrajectoryConfig) CodexImport() ImportProviderConfig {
-	return c.importProvider("codex")
+	return c.importProvider(string(provider.Codex))
 }
 
 func (c TrajectoryConfig) importProvider(name string) ImportProviderConfig {

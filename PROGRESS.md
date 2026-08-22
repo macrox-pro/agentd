@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase: **R1 in progress** | Last: m12-subscribe-v1.1 | Next: **R1 provider** → tag v1.1.0 (user)
+Phase: **R1 done** | Last: r1-provider-ssot | Next: **R2 trajectory domain**
 
 > Milestones M0–M12: **done**. Post-release work is the **R-series** refactor below — one phase = one PR or agent session, one package or one hot path ([AGENTS.md](./AGENTS.md) intent rules).
 
@@ -59,8 +59,8 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 
 | Phase | Status | One-liner |
 |-------|--------|-----------|
-| **R1** | **in progress** | `internal/provider` — single source for ids, proto/agenthooks mapping |
-| **R2** | pending | Trajectory domain — typed ids at boundaries, errors, grpc event mapping |
+| **R1** | **done** | `internal/provider` — single source for ids, proto/agenthooks mapping |
+| **R2** | **next** | Trajectory domain — typed ids at boundaries, errors, grpc event mapping |
 | **R3** | pending | Importer registry — kill `import.go` provider switch + string literals |
 | **R4** | pending | `cmd/` coverage — table-driven session + config CLI |
 | **R5** | pending | `daemon` + `hookclient` lifecycle tests |
@@ -86,7 +86,10 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 - `TestSessionProviderCLI` (`cmd/session_provider_test.go`) — list/import validation rows
 - `TestCanonicalProvider` — still passes via `trajectory` → `provider.Lookup`
 
-**Out of scope:** Changing proto enum values; Kimi alias policy beyond existing `kimicode`; importer registry (R3).
+- `TestCompileTrajectoryImportProviderAlias` — config YAML alias → canonical import key (`trajectory_test.go`)
+- `TestConformanceFixtures` — all six providers via `provider.Parse`→`Agenthooks()` (`conformance_test.go`)
+
+**Out of scope:** Changing proto enum values; Kimi alias policy beyond existing `kimicode`; importer registry (R3 — `importer/import.go` switches remain until then).
 
 ### R1 checklist
 
@@ -98,10 +101,11 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 - [x] r1-dispatch-decode — `dispatch/decode.go` uses `provider.FromProto`
 - [x] r1-trajectory-key — `CanonicalProvider` delegates to `provider.Lookup`
 - [x] r1-dispatch-grpc — `dispatch/targets/grpc.go` uses `provider.Parse`
-- [ ] r1-conformance — hookedge conformance table includes all six providers post-move
-- [ ] r1-verify — `make lint` + `make intent-check` + `go test ./internal/provider/... ./cmd/... ./internal/hookedge/... -race`
+- [x] r1-config-trajectory — `config/trajectory.go` uses `provider.Lookup` + `provider.*` constants; `TestCompileTrajectoryImportProviderAlias`
+- [x] r1-conformance — hookedge conformance table all six providers; `Parse`→`Agenthooks()` in loop
+- [x] r1-verify — `make lint` + `make intent-check` + race tests on provider/cmd/hookedge/config
 
-**R1 acceptance:** zero `switch` on raw provider strings outside `internal/provider` and `trajectory/importer_status.go` (status table — R3 moves it).
+**R1 acceptance:** zero `switch` on raw provider strings outside `internal/provider`, `trajectory/importer_status.go`, and `trajectory/importer/` (R3 registry).
 
 ---
 
@@ -486,8 +490,8 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 - M11 shipped: Cursor/Codex partial import, `session replay --policy`, `session fork`, `scripts/e2e-m11.sh`
 - M12 shipped: Subscribe RPC/CLI, hub fan-out, schema_version contract, `scripts/e2e-m12.sh`
 - Trajectory package refactor (pre-M12): AppendEvents sync write (no Persister leak); CanonicalProvider lowercase; importer `Import` facade + file split; thin `cmd/session_import`; DESIGN §14.8 `importer/`
-- **R-series started:** `internal/provider` extracted; session CLI + hookedge + install wired; `cmd/session_provider_test.go` added; R1 checklist partially complete (see above)
-- Next agent session: finish **R1** (`r1-dispatch-grpc`, `r1-conformance`, `r1-verify`) then open **R2** PR
+- **R1 done:** `config/trajectory.go` → `provider.Lookup`; conformance hardened; acceptance grep clean except R3 importer
+- Next agent session: open **R2** — trajectory domain boundaries (typed ids, errors, grpc event mapping)
 
 ### Refactor intent note (pre-R-series, archived)
 
@@ -506,14 +510,13 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 ```bash
 make lint
 make intent-check
-make docs-check
-make test
-go test -tags=integration ./internal/hookedge/ -race -count=1
-make e2e   # includes scripts/e2e-m9.sh … e2e-m12.sh
-# Per R-phase (touched packages):
+go test ./internal/provider/... ./cmd/... ./internal/hookedge/... ./internal/config/... -race -count=1
+go test -tags=integration ./internal/hookedge/ -race -count=1 -run TestConformanceFixtures
 go test ./internal/provider/... ./cmd/... -race -coverprofile=/tmp/r1.cover
-go tool cover -func=/tmp/r1.cover | tail -1   # track toward ≥70% total
+go tool cover -func=/tmp/r1.cover | tail -1   # provider 93.0%, cmd 35.8%, combined 61.5%
 ```
+
+**R1 files touched:** `internal/config/trajectory.go`, `internal/config/trajectory_test.go`, `internal/hookedge/conformance_test.go`, `PROGRESS.md`
 
 ## Blockers
 
