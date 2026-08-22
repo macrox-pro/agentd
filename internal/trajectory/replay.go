@@ -3,7 +3,6 @@ package trajectory
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -15,9 +14,6 @@ import (
 )
 
 const replayInvokeTimeout = 30 * time.Second
-
-// ErrReplayNoRaw is returned when no hook/invoked events have stored Raw.
-var ErrReplayNoRaw = errors.New("policy replay requires stored raw payloads at record time")
 
 // ReplayOptions configures an offline policy dry-run against stored Raw payloads.
 type ReplayOptions struct {
@@ -31,12 +27,12 @@ type ReplayOptions struct {
 
 // ReplayHit is one replayed hook/invoked event.
 type ReplayHit struct {
-	Seq             uint64 `json:"seq"`
-	Kind            string `json:"kind,omitempty"`
-	StoredDecision  string `json:"stored_decision,omitempty"`
-	ReplayDecision  string `json:"replay_decision,omitempty"`
-	Match           bool   `json:"match"`
-	Error           string `json:"error,omitempty"`
+	Seq            uint64 `json:"seq"`
+	Kind           string `json:"kind,omitempty"`
+	StoredDecision string `json:"stored_decision,omitempty"`
+	ReplayDecision string `json:"replay_decision,omitempty"`
+	Match          bool   `json:"match"`
+	Error          string `json:"error,omitempty"`
 }
 
 // ReplayResult is the full policy replay output.
@@ -49,10 +45,10 @@ type ReplayResult struct {
 // ReplayPolicy re-Invokes stored Raw through Engine (offline; no live agent).
 func ReplayPolicy(ctx context.Context, opts ReplayOptions) (ReplayResult, error) {
 	if opts.Snap == nil {
-		return ReplayResult{}, fmt.Errorf("nil config snapshot")
+		return ReplayResult{}, ErrNilConfigSnap
 	}
 	if opts.Engine == nil {
-		return ReplayResult{}, fmt.Errorf("nil dispatch engine")
+		return ReplayResult{}, ErrNilEngine
 	}
 	root := opts.SessionsRoot
 	if root == "" {
@@ -136,10 +132,10 @@ func ReplayPolicy(ctx context.Context, opts ReplayOptions) (ReplayResult, error)
 		return out, ErrReplayNoRaw
 	}
 	if opts.Seq != 0 && len(out.Hits) == 0 {
-		return out, fmt.Errorf("no hook/invoked event with seq=%d and raw payload", opts.Seq)
+		return out, fmt.Errorf("%w: %d", ErrReplaySeqNotFound, opts.Seq)
 	}
 	if candidates == 0 {
-		return out, fmt.Errorf("no hook/invoked events to replay")
+		return out, ErrReplayNoEvents
 	}
 	return out, nil
 }
@@ -147,7 +143,7 @@ func ReplayPolicy(ctx context.Context, opts ReplayOptions) (ReplayResult, error)
 func eventProviderProto(name string) (agentdv1.Provider, error) {
 	id, ok := provider.Lookup(name)
 	if !ok {
-		return 0, fmt.Errorf("unknown provider %q", name)
+		return 0, fmt.Errorf("%w %q", provider.ErrUnknownProvider, name)
 	}
 	return id.Proto()
 }

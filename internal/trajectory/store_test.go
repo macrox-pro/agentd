@@ -102,12 +102,3 @@ func TestQueueOverflowDrop(t *testing.T) {
 	require.True(t, dropped.Load(), "expected overflow drop")
 	assert.GreaterOrEqual(t, q.Dropped(), uint64(1))
 }
-
-func TestResolveSessionKeyWeakID(t *testing.T) {
-	t.Parallel()
-	k1 := trajectory.ResolveSessionKey("kimi-code", "", "/proj", "/cwd")
-	k2 := trajectory.ResolveSessionKey("kimi-code", "", "/proj", "/cwd")
-	assert.Equal(t, k1.SessionID, k2.SessionID)
-	assert.True(t, len(k1.SessionID) > 0)
-	assert.Equal(t, "kimi-code", k1.Provider)
-}

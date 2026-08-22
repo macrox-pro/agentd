@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -35,6 +36,9 @@ var sessionShowCmd = &cobra.Command{
 		}
 		path, err := trajectory.FindSessionPath(trajectory.DefaultSessionsDir(), string(prov), args[0])
 		if err != nil {
+			if errors.Is(err, trajectory.ErrSessionNotFound) {
+				return fmt.Errorf("session %q not found", args[0])
+			}
 			return err
 		}
 		events, err := trajectory.ReadEvents(path)

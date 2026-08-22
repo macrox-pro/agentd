@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -45,9 +46,15 @@ func runSessionFork(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	key := trajectory.ResolveSessionKey(string(prov), sessionForkSession, "", "")
+	key := trajectory.ResolveSessionKeyID(prov, sessionForkSession, "", "")
 	result, err := trajectory.ForkSession(trajectory.DefaultSessionsDir(), key, sessionForkNewSession, sessionForkAtSeq)
 	if err != nil {
+		if errors.Is(err, trajectory.ErrSessionNotFound) {
+			return fmt.Errorf("source session %q not found", sessionForkSession)
+		}
+		if errors.Is(err, trajectory.ErrSessionAlreadyExists) {
+			return fmt.Errorf("session %q already exists", sessionForkNewSession)
+		}
 		return err
 	}
 	if sessionForkJSON {

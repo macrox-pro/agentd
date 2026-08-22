@@ -91,6 +91,18 @@ Rules:
 - Behavior or boundary change → update Tier-1 package comment and/or DESIGN §1.5.
 - New corner case without a `TestXxx` / `tt.name` → do not merge.
 
+### Plans (before implementation)
+
+When preparing an implementation plan (Plan mode or session handoff), **segment TODOs** so nothing is missed:
+
+- Split work into ordered segments (e.g. rules/constraints → preflight audit → code changes → tests → verify → PROGRESS handoff).
+- **One actionable item per todo** — do not bundle unrelated steps (lint, code edit, docs update) into a single checkbox.
+- Map every intent-note **corner case**, checklist row, and verify command to at least one todo.
+- Call out **known exceptions** and **out-of-scope** items explicitly (separate todos or a dedicated segment) so they are not accidentally “fixed” mid-phase.
+- Preserve execution order in the plan body (segment tables or numbered lists) matching the todo list.
+
+A plan with fewer than ~5 coarse todos for a multi-file phase is usually under-segmented — expand until each step is independently checkable.
+
 ## Architecture
 
 | Path | Owns | Must not |

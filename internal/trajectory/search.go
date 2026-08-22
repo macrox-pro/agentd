@@ -42,7 +42,7 @@ func Search(opts SearchOptions) ([]SearchHit, error) {
 		root = DefaultSessionsDir()
 	}
 	if root == "" {
-		return nil, fmt.Errorf("sessions dir unavailable")
+		return nil, ErrSessionsDirUnavailable
 	}
 	limit := opts.Limit
 	if limit <= 0 {

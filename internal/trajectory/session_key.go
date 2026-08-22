@@ -43,6 +43,11 @@ func ResolveSessionKey(provider, sessionID, projectRoot, cwd string) SessionKey 
 	}
 }
 
+// ResolveSessionKeyID is ResolveSessionKey with a validated provider.ID.
+func ResolveSessionKeyID(id provider.ID, sessionID, projectRoot, cwd string) SessionKey {
+	return ResolveSessionKey(string(id), sessionID, projectRoot, cwd)
+}
+
 func weakSessionID(provider, projectRoot, cwd string) string {
 	sum := sha256.Sum256([]byte(provider + "\x00" + projectRoot + "\x00" + cwd))
 	return "weak-" + hex.EncodeToString(sum[:8])

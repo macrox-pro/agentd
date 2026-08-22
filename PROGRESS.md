@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase: **R1 done** | Last: r1-provider-ssot | Next: **R2 trajectory domain**
+Phase: **R2 done** | Last: r2-trajectory-domain | Next: **R3 importer registry**
 
 > Milestones M0–M12: **done**. Post-release work is the **R-series** refactor below — one phase = one PR or agent session, one package or one hot path ([AGENTS.md](./AGENTS.md) intent rules).
 
@@ -32,7 +32,7 @@ true
 | `internal/hookclient` | 52.4% | **P1** — gRPC client helpers |
 | `internal/dispatch/targets` | 60.1% | P2 |
 | `internal/trajectory/importer` | 63.8% | P2 — registry phase |
-| `internal/trajectory` | 66.1% | P2 |
+| `internal/trajectory` | 68.3% | P2 — was 66.1% |
 | `internal/dispatch` | 69.5% | P2 |
 | `internal/hookedge` | 70.4% | maintain |
 | `internal/config` | 74.8% | maintain |
@@ -60,8 +60,8 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 | Phase | Status | One-liner |
 |-------|--------|-----------|
 | **R1** | **done** | `internal/provider` — single source for ids, proto/agenthooks mapping |
-| **R2** | **next** | Trajectory domain — typed ids at boundaries, errors, grpc event mapping |
-| **R3** | pending | Importer registry — kill `import.go` provider switch + string literals |
+| **R2** | **done** | Trajectory domain — typed ids at boundaries, errors, grpc event mapping |
+| **R3** | **next** | Importer registry — kill `import.go` provider switch + string literals |
 | **R4** | pending | `cmd/` coverage — table-driven session + config CLI |
 | **R5** | pending | `daemon` + `hookclient` lifecycle tests |
 | **R6** | pending | `dispatch` decode/targets — provider mapping consolidation |
@@ -127,13 +127,13 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 
 ### R2 checklist
 
-- [ ] r2-intent — intent note finalized in PR
-- [ ] r2-errors — extend `trajectory/errors.go`; replace ad-hoc `fmt.Errorf` where message is static
-- [ ] r2-session-key — optional `SessionKey` helpers accepting `provider.ID` (keep string field for disk compat)
-- [ ] r2-importer-status — table-driven `ProviderImporterStatus` test; use `provider.ID` constants in switch
-- [ ] r2-replay-config — `replay_config.go` wired from `cmd/session_replay.go` only (no duplicate config load)
-- [ ] r2-grpc-map — `session_event_grpc.go` covered by roundtrip table
-- [ ] r2-verify — `go test ./internal/trajectory/... -race` + coverage ≥ 68% for package
+- [x] r2-intent — intent note finalized in PR
+- [x] r2-errors — extend `trajectory/errors.go`; replace ad-hoc `fmt.Errorf` where message is static
+- [x] r2-session-key — `ResolveSessionKeyID`; `TestResolveSessionKeyUsesCanonicalProvider` alias + weak-id rows
+- [x] r2-importer-status — `TestProviderImporterStatusTable`; `provider.ID` switch in `importer_status.go`
+- [x] r2-replay-config — `replay_config_test.go`; `cmd/session_replay.go` sole caller; sentinel mapping in cmd
+- [x] r2-grpc-map — `TestEventSessionEventRoundTrip` table in `session_event_grpc_test.go`
+- [x] r2-verify — `go test ./internal/trajectory/... -race` + root coverage **68.3%** (≥ 68%)
 
 ---
 
@@ -490,8 +490,8 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 - M11 shipped: Cursor/Codex partial import, `session replay --policy`, `session fork`, `scripts/e2e-m11.sh`
 - M12 shipped: Subscribe RPC/CLI, hub fan-out, schema_version contract, `scripts/e2e-m12.sh`
 - Trajectory package refactor (pre-M12): AppendEvents sync write (no Persister leak); CanonicalProvider lowercase; importer `Import` facade + file split; thin `cmd/session_import`; DESIGN §14.8 `importer/`
-- **R1 done:** `config/trajectory.go` → `provider.Lookup`; conformance hardened; acceptance grep clean except R3 importer
-- Next agent session: open **R2** — trajectory domain boundaries (typed ids, errors, grpc event mapping)
+- **R2 done:** sentinels in `errors.go`; `ResolveSessionKeyID`; importer status `provider.ID` switch; grpc/replay_config table tests; cmd error mapping
+- Next agent session: open **R3** — importer registry (`import.go` dispatch switch)
 
 ### Refactor intent note (pre-R-series, archived)
 
@@ -510,13 +510,12 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 ```bash
 make lint
 make intent-check
-go test ./internal/provider/... ./cmd/... ./internal/hookedge/... ./internal/config/... -race -count=1
-go test -tags=integration ./internal/hookedge/ -race -count=1 -run TestConformanceFixtures
-go test ./internal/provider/... ./cmd/... -race -coverprofile=/tmp/r1.cover
-go tool cover -func=/tmp/r1.cover | tail -1   # provider 93.0%, cmd 35.8%, combined 61.5%
+go test ./internal/trajectory/... -race -count=1
+go test ./internal/trajectory/... -coverprofile=/tmp/r2.cover
+go tool cover -func=/tmp/r2.cover | tail -1   # trajectory 68.3%, importer 63.8%, module 66.7%
 ```
 
-**R1 files touched:** `internal/config/trajectory.go`, `internal/config/trajectory_test.go`, `internal/hookedge/conformance_test.go`, `PROGRESS.md`
+**R2 files touched:** `internal/trajectory/{errors,replay,fork,list,search,session_key,importer_status,trajectory}.go`, `*_test.go` (session_key, import_checkpoint, fork, session_event_grpc, replay_config), `cmd/session_{replay,show,fork}.go`, `PROGRESS.md`
 
 ## Blockers
 

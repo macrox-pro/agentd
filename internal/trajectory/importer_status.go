@@ -1,5 +1,7 @@
 package trajectory
 
+import "github.com/macrox-pro/agentd/internal/provider"
+
 // ImporterStatus is L2 import support for a provider (DESIGN §14.6).
 type ImporterStatus string
 
@@ -10,11 +12,15 @@ const (
 )
 
 // ProviderImporterStatus returns the importer tier for a canonical provider id.
-func ProviderImporterStatus(provider string) ImporterStatus {
-	switch CanonicalProvider(provider) {
-	case "claude-code", "codex":
+func ProviderImporterStatus(name string) ImporterStatus {
+	id, ok := provider.Lookup(name)
+	if !ok {
+		return ImporterNone
+	}
+	switch id {
+	case provider.ClaudeCode, provider.Codex:
 		return ImporterSupported
-	case "cursor":
+	case provider.Cursor:
 		return ImporterPartial
 	default:
 		return ImporterNone

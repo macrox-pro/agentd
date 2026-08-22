@@ -21,7 +21,7 @@ type ForkResult struct {
 // The source JSONL is never modified.
 func ForkSession(root string, src SessionKey, newSessionID string, atSeq uint64) (ForkResult, error) {
 	if newSessionID == "" {
-		return ForkResult{}, fmt.Errorf("new session id required")
+		return ForkResult{}, ErrNewSessionIDRequired
 	}
 	if root == "" {
 		root = DefaultSessionsDir()
@@ -36,13 +36,13 @@ func ForkSession(root string, src SessionKey, newSessionID string, atSeq uint64)
 		return ForkResult{}, fmt.Errorf("read source session: %w", err)
 	}
 	if len(events) == 0 {
-		return ForkResult{}, fmt.Errorf("source session is empty")
+		return ForkResult{}, ErrSourceSessionEmpty
 	}
 
 	dst := ResolveSessionKey(src.Provider, newSessionID, src.ProjectRoot, "")
 	dstPath := SessionFilePath(root, dst)
 	if _, err := os.Stat(dstPath); err == nil {
-		return ForkResult{}, fmt.Errorf("session %q already exists for provider %q", newSessionID, dst.Provider)
+		return ForkResult{}, fmt.Errorf("%w: %q", ErrSessionAlreadyExists, newSessionID)
 	} else if !os.IsNotExist(err) {
 		return ForkResult{}, fmt.Errorf("stat destination: %w", err)
 	}

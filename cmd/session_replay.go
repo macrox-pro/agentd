@@ -60,6 +60,12 @@ func runSessionReplay(cmd *cobra.Command, _ []string) error {
 		if errors.Is(err, trajectory.ErrReplayNoRaw) {
 			return fmt.Errorf("policy replay requires trajectory.include_raw=true at record time")
 		}
+		if errors.Is(err, trajectory.ErrSessionNotFound) {
+			return fmt.Errorf("session %q not found", sessionReplaySession)
+		}
+		if errors.Is(err, trajectory.ErrReplaySeqNotFound) {
+			return fmt.Errorf("no hook/invoked event with raw payload at seq %d", sessionReplaySeq)
+		}
 		return err
 	}
 

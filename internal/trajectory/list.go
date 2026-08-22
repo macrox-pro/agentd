@@ -26,7 +26,7 @@ func ListSessions(root, providerFilter string) ([]SessionSummary, error) {
 		root = DefaultSessionsDir()
 	}
 	if root == "" {
-		return nil, fmt.Errorf("sessions dir unavailable")
+		return nil, ErrSessionsDirUnavailable
 	}
 	filter := CanonicalProvider(providerFilter)
 	var out []SessionSummary
@@ -97,7 +97,7 @@ func FindSessionPath(root, provider, sessionID string) (string, error) {
 	provDir := filepath.Join(root, CanonicalProvider(provider))
 	entries, err := os.ReadDir(provDir)
 	if err != nil {
-		return "", fmt.Errorf("session not found")
+		return "", ErrSessionNotFound
 	}
 	want := SessionFileName(sessionID)
 	for _, e := range entries {
@@ -105,7 +105,7 @@ func FindSessionPath(root, provider, sessionID string) (string, error) {
 			return filepath.Join(provDir, e.Name()), nil
 		}
 	}
-	return "", fmt.Errorf("session not found")
+	return "", ErrSessionNotFound
 }
 
 func decodeEvents(r io.Reader) ([]Event, error) {

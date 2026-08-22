@@ -54,8 +54,7 @@ func TestForkDuplicateRejected(t *testing.T) {
 	_, err := trajectory.ForkSession(root, key, "dup", 0)
 	require.NoError(t, err)
 	_, err = trajectory.ForkSession(root, key, "dup", 0)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "already exists")
+	require.ErrorIs(t, err, trajectory.ErrSessionAlreadyExists)
 }
 
 func writeForkSource(t *testing.T, root, provider, sessionID string, n int) {

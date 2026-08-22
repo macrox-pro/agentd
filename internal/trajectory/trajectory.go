@@ -14,6 +14,7 @@
 //
 // Entry: Recorder.Record, Hub.Publish, ListSessions, Export, ExportToFile, Search,
 // AppendImported, ReplayPolicy, ReplayPolicyFromConfig, ForkSession,
-// EventFromSessionEvent, EventToSessionEvent. Import orchestration: importer.ImportSession.
+// ResolveSessionKey, ResolveSessionKeyID, EventFromSessionEvent, EventToSessionEvent.
+// Import orchestration: importer.ImportSession.
 // See DESIGN.md §1.5 (async_side), §14.
 package trajectory

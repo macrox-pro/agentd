@@ -10,21 +10,23 @@ import (
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
-func TestProviderImporterStatus(t *testing.T) {
+func TestProviderImporterStatusTable(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
+		name     string
 		provider string
 		want     trajectory.ImporterStatus
 	}{
-		{provider: "claude-code", want: trajectory.ImporterSupported},
-		{provider: "cursor", want: trajectory.ImporterPartial},
-		{provider: "codex", want: trajectory.ImporterSupported},
-		{provider: "gemini", want: trajectory.ImporterNone},
-		{provider: "opencode", want: trajectory.ImporterNone},
-		{provider: "kimi-code", want: trajectory.ImporterNone},
+		{name: "claude-code", provider: "claude-code", want: trajectory.ImporterSupported},
+		{name: "cursor", provider: "cursor", want: trajectory.ImporterPartial},
+		{name: "codex", provider: "codex", want: trajectory.ImporterSupported},
+		{name: "gemini", provider: "gemini", want: trajectory.ImporterNone},
+		{name: "opencode", provider: "opencode", want: trajectory.ImporterNone},
+		{name: "kimi-code", provider: "kimi-code", want: trajectory.ImporterNone},
+		{name: "kimi alias", provider: "kimicode", want: trajectory.ImporterNone},
 	}
 	for _, tt := range tests {
-		t.Run(tt.provider, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tt.want, trajectory.ProviderImporterStatus(tt.provider))
 		})
