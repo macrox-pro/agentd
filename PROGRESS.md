@@ -97,7 +97,21 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 ## Session notes
 
 - M11 shipped: Cursor/Codex partial import, `session replay --policy`, `session fork`, `scripts/e2e-m11.sh`
+- Trajectory package refactor (pre-M12): AppendEvents sync write (no Persister leak); CanonicalProvider lowercase; importer `Import` facade + file split (`import.go`, `resolve.go`, `mapEntriesFrom` in `map.go`); thin `cmd/session_import`; DESIGN §14.8 `importer/`; skipped PolicyInvoker (would still import `dispatch.InvokeInput`)
+- Files touched: `internal/trajectory/*` (persist, session_key, trajectory, list, replay, import_append, queue, replay_test), `internal/trajectory/importer/*`, `cmd/session_import.go`, `DESIGN.md`
 - Next: M12 Subscribe + trajectory contract freeze + v1.1 release
+
+### Refactor intent note
+
+**Problem:** Post-M11 drift — offline AppendEvents leaked Persister goroutine; shared importer API in claude_code.go; provider switch in cmd/; stale Entry/DESIGN paths; CanonicalProvider casing.
+
+**Hot path:** `other` (offline CLI/import/fork/replay); live `async_side` unchanged.
+
+**Invariants:** append-only; fork immutable source; no invented L2/L3; no unused APIs; cmd Cobra-only; no kitchen-sink filenames.
+
+**Corner cases:** `TestAppendEventsNoLeakedGoroutine`, `TestCanonicalProvider`, `TestImportDispatchesByProvider`.
+
+**Out of scope:** M12 Subscribe; Persister.Close; RunOfflineImport; PolicyInvoker without net win; coverage marathon.
 
 ## Verify (last green)
 

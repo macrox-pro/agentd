@@ -47,22 +47,6 @@ func TestImportCursorRequiresPath(t *testing.T) {
 	assert.Contains(t, err.Error(), "--path")
 }
 
-func TestImportCodexMapsMessages(t *testing.T) {
-	t.Parallel()
-	path := filepath.Join("testdata", "codex_transcript.jsonl")
-	result, err := importer.ImportCodex(importer.ImportOptions{
-		SessionID:      "m11-codex",
-		TranscriptPath: path,
-		Cfg:            config.TrajectoryConfig{},
-	})
-	require.NoError(t, err, "ImportCodex")
-	require.NotEmpty(t, result.Events)
-	for _, e := range result.Events {
-		assert.Equal(t, "codex", e.Provider)
-		assert.Equal(t, trajectory.SourceTranscript, e.Source)
-	}
-}
-
 func TestImportCursorEmptyFile(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

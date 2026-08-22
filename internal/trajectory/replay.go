@@ -12,6 +12,8 @@ import (
 	"github.com/macrox-pro/agentd/internal/dispatch"
 )
 
+const replayInvokeTimeout = 30 * time.Second
+
 // ErrReplayNoRaw is returned when no hook/invoked events have stored Raw.
 var ErrReplayNoRaw = fmt.Errorf("policy replay requires trajectory.include_raw=true at record time")
 
@@ -112,7 +114,7 @@ func ReplayPolicy(ctx context.Context, opts ReplayOptions) (ReplayResult, error)
 			Snap:           opts.Snap,
 			CWD:            e.CWD,
 			ProjectRoot:    e.ProjectRoot,
-			Deadline:       time.Now().Add(30 * time.Second),
+			Deadline:       time.Now().Add(replayInvokeTimeout),
 		})
 		if err != nil {
 			hit.Error = err.Error()

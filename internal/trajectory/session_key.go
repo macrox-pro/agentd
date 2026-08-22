@@ -24,8 +24,16 @@ func CanonicalProvider(name string) string {
 	switch strings.ToLower(strings.TrimSpace(name)) {
 	case "kimicode", "kimi-code":
 		return "kimi-code"
-	case "claude-code", "cursor", "codex", "gemini", "opencode":
-		return name
+	case "claude-code":
+		return "claude-code"
+	case "cursor":
+		return "cursor"
+	case "codex":
+		return "codex"
+	case "gemini":
+		return "gemini"
+	case "opencode":
+		return "opencode"
 	default:
 		return strings.TrimSpace(name)
 	}

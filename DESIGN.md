@@ -1035,7 +1035,8 @@ User-facing quirk index remains [docs/en/providers.md](./docs/en/providers.md); 
 
 ```
 internal/trajectory/     # store, append, export, search
-internal/trajectory/import/  # provider importers (M10+); one file/package per provider
+internal/trajectory/importer/  # provider importers (M10+); one file per provider + shared map/resolve
+
 cmd/session_*.go         # list/show/export/search/import/fork/replay
 api/agentd/v1/session.proto  # M12 Subscribe (+ read RPCs as needed)
 ```

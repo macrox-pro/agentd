@@ -165,6 +165,23 @@ func mapCursorEntry(ent transcript.Entry, sessionID string, ts time.Time, cfg co
 	return []trajectory.Event{mapMessageEntry(base, ent, role, text, "", cfg)}
 }
 
+func mapEntriesFrom(startIndex int, entries []transcript.Entry, mapFn func(transcript.Entry) []trajectory.Event) ([]trajectory.Event, int) {
+	var events []trajectory.Event
+	lastIndex := max(startIndex-1, -1)
+	for _, ent := range entries {
+		// startIndex is exclusive lower bound (0 = fresh import; LastLineIndex+1 to resume).
+		if ent.Index < startIndex {
+			continue
+		}
+		events = append(events, mapFn(ent)...)
+		lastIndex = ent.Index
+	}
+	if lastIndex < startIndex-1 {
+		lastIndex = startIndex - 1
+	}
+	return events, lastIndex
+}
+
 func mustJSON(v any) json.RawMessage {
 	b, err := json.Marshal(v)
 	if err != nil {

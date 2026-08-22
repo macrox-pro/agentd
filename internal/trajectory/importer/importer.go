@@ -7,6 +7,6 @@
 //   - Never invent thinking or tool output absent from transcript files.
 //   - Imported events use source=transcript and append-only seq assignment (caller).
 //
-// Entry: ImportClaude, ImportCursor, ImportCodex.
+// Entry: Import, ImportClaude, ImportCursor, ImportCodex.
 // See DESIGN.md §14.3, §14.6.
 package importer

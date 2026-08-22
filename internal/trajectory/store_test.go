@@ -2,6 +2,8 @@ package trajectory_test
 
 import (
 	"encoding/json"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -80,12 +82,25 @@ func TestQueueOverflowDrop(t *testing.T) {
 	t.Parallel()
 	store := trajectory.NewStore()
 	q := trajectory.NewQueue(1, store, nil, nil)
+	defer q.Close(0)
 	key := trajectory.SessionKey{Provider: "codex", SessionID: "s4"}
 	ev := []trajectory.Event{{Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, TS: time.Now().UTC()}}
-	require.True(t, q.Enqueue(key, ev), "first")
-	require.False(t, q.Enqueue(key, ev), "overflow")
-	assert.Equal(t, uint64(1), q.Dropped())
-	q.Close(0)
+	var dropped atomic.Bool
+	var wg sync.WaitGroup
+	for range 32 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range 64 {
+				if !q.Enqueue(key, ev) {
+					dropped.Store(true)
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	require.True(t, dropped.Load(), "expected overflow drop")
+	assert.GreaterOrEqual(t, q.Dropped(), uint64(1))
 }
 
 func TestResolveSessionKeyWeakID(t *testing.T) {

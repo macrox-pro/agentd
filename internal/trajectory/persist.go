@@ -124,7 +124,12 @@ func (p *Persister) Flush(_ context.Context) error {
 }
 
 func (p *Persister) appendFile(key SessionKey, events []Event) error {
-	path := SessionFilePath(p.root, key)
+	return appendEventsToFile(p.root, key, events)
+}
+
+// appendEventsToFile writes events to the session JSONL file synchronously.
+func appendEventsToFile(root string, key SessionKey, events []Event) error {
+	path := SessionFilePath(root, key)
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return fmt.Errorf("mkdir sessions: %w", err)
 	}
@@ -142,11 +147,10 @@ func (p *Persister) appendFile(key SessionKey, events []Event) error {
 	return nil
 }
 
-// AppendEvents writes events to the session JSONL file immediately (offline import).
+// AppendEvents writes events to the session JSONL file immediately (offline import/fork).
 func AppendEvents(root string, key SessionKey, events []Event) error {
 	if len(events) == 0 {
 		return nil
 	}
-	p := NewPersister(root, nil)
-	return p.appendFile(key, events)
+	return appendEventsToFile(root, key, events)
 }

@@ -8,6 +8,8 @@ import (
 	"github.com/macrox-pro/agentd/internal/config"
 )
 
+const defaultImportMaxEventBytes = 262144
+
 // AppendImported assigns contiguous seq after existing ledger events and persists.
 func AppendImported(root string, key SessionKey, events []Event) error {
 	if len(events) == 0 {
@@ -47,7 +49,7 @@ func AppendImported(root string, key SessionKey, events []Event) error {
 func DefaultImportConfig() config.TrajectoryConfig {
 	cfg := config.TrajectoryConfig{
 		RedactSecretRules: true,
-		MaxEventBytes:     262144,
+		MaxEventBytes:     defaultImportMaxEventBytes,
 	}
 	return cfg
 }

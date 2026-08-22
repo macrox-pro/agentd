@@ -43,7 +43,7 @@ func ForkSession(root string, src SessionKey, newSessionID string, atSeq uint64)
 	dstPath := SessionFilePath(root, dst)
 	if _, err := os.Stat(dstPath); err == nil {
 		return ForkResult{}, fmt.Errorf("session %q already exists for provider %q", newSessionID, dst.Provider)
-	} else if err != nil && !os.IsNotExist(err) {
+	} else if !os.IsNotExist(err) {
 		return ForkResult{}, fmt.Errorf("stat destination: %w", err)
 	}
 

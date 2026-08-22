@@ -47,6 +47,28 @@ func TestPersisterConcurrentSchedule(t *testing.T) {
 	}
 }
 
+func TestAppendEventsNoLeakedGoroutine(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	key := trajectory.SessionKey{Provider: "cursor", SessionID: "append-sync"}
+	ev := []trajectory.Event{{
+		Type:      trajectory.TypeHookInvoked,
+		Source:    trajectory.SourceHook,
+		Provider:  key.Provider,
+		SessionID: key.SessionID,
+		TS:        time.Now().UTC(),
+		Seq:       1,
+	}}
+	for range 20 {
+		require.NoError(t, trajectory.AppendEvents(root, key, ev))
+	}
+	path := trajectory.SessionFilePath(root, key)
+	events, err := trajectory.ReadEvents(path)
+	require.NoError(t, err)
+	require.Len(t, events, 20)
+	assert.Equal(t, trajectory.TypeHookInvoked, events[0].Type)
+}
+
 func TestPersisterRequeuesFailedFlush(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

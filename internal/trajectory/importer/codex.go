@@ -2,8 +2,6 @@ package importer
 
 import (
 	"fmt"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/speakeasy-api/agenthooks"
@@ -32,7 +30,7 @@ func ImportCodex(opts ImportOptions) (ImportResult, error) {
 	now := time.Now().UTC()
 	sid := opts.SessionID
 	if sid == "" {
-		sid = strings.TrimSuffix(filepath.Base(path), ".jsonl")
+		sid = SessionIDFromTranscriptPath(path)
 	}
 	events, lastIndex := mapEntriesFrom(opts.StartIndex, entries, func(ent transcript.Entry) []trajectory.Event {
 		return mapClaudeStyleEntry(ent, "codex", sid, now, opts.Cfg)

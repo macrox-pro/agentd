@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-
 )
 
 // SessionSummary is one on-disk session ledger.

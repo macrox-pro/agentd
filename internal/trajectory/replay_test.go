@@ -108,8 +108,6 @@ func writeReplayLedger(t *testing.T, root, provider, sessionID, mode string, raw
 		Decision: agentdv1.DecisionKind_DECISION_KIND_NO_DECISION.String(),
 	})
 	require.NoError(t, err)
-	rawJSON, err := json.Marshal(json.RawMessage(raw))
-	require.NoError(t, err)
 	// Embed raw as JSON object/array from fixture bytes.
 	events := []map[string]any{
 		{
@@ -131,7 +129,6 @@ func writeReplayLedger(t *testing.T, root, provider, sessionID, mode string, raw
 			"data":       json.RawMessage(decData),
 		},
 	}
-	_ = rawJSON
 	f, err := os.Create(filepath.Join(dir, sessionID+".jsonl"))
 	require.NoError(t, err)
 	defer f.Close()

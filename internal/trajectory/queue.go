@@ -8,7 +8,10 @@ import (
 	"time"
 )
 
-const persistDebounce = 50 * time.Millisecond
+const (
+	persistDebounce     = 50 * time.Millisecond
+	defaultQueueWorkers = 2
+)
 
 // appendJob is one async store write unit.
 type appendJob struct {
@@ -40,7 +43,7 @@ func NewQueue(capacity int, store *Store, persist *Persister, log *slog.Logger) 
 		persist:  persist,
 		log:      log,
 	}
-	workers := 2
+	workers := defaultQueueWorkers
 	if workers > capacity {
 		workers = 1
 	}

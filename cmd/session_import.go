@@ -54,11 +54,6 @@ type importOutput struct {
 
 func runSessionImport(cmd *cobra.Command, _ []string) error {
 	prov := trajectory.CanonicalProvider(sessionImportProvider)
-	status := trajectory.ProviderImporterStatus(prov)
-	if status == trajectory.ImporterNone {
-		return fmt.Errorf("transcript import for provider %q is not supported (importer status: none)", prov)
-	}
-
 	cfg := loadTrajectoryConfigForImport(cmd)
 	sessionsRoot := trajectory.DefaultSessionsDir()
 	if sessionsRoot == "" {
@@ -67,7 +62,7 @@ func runSessionImport(cmd *cobra.Command, _ []string) error {
 
 	sid := sessionImportSession
 	if sid == "" && sessionImportPath != "" {
-		sid = sessionIDFromTranscriptPath(sessionImportPath)
+		sid = importer.SessionIDFromTranscriptPath(sessionImportPath)
 	}
 
 	startIndex := 0
@@ -81,34 +76,20 @@ func runSessionImport(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	opts := importer.ImportOptions{
+	result, err := importer.Import(prov, importer.ImportOptions{
 		SessionID:      sid,
 		TranscriptPath: sessionImportPath,
 		StartIndex:     startIndex,
 		Cfg:            cfg,
-	}
-	var result importer.ImportResult
-	var err error
-	switch prov {
-	case "claude-code":
-		opts.ProjectsRoot = cfg.ClaudeImport().Path
-		result, err = importer.ImportClaude(opts)
-	case "cursor":
-		opts.ProjectsRoot = cfg.CursorImport().Path
-		result, err = importer.ImportCursor(opts)
-	case "codex":
-		opts.ProjectsRoot = cfg.CodexImport().Path
-		result, err = importer.ImportCodex(opts)
-	default:
-		return fmt.Errorf("transcript import for provider %q is not supported (importer status: %s)", prov, status)
-	}
+	})
 	if err != nil {
 		return err
 	}
 	if sid == "" {
-		sid = sessionIDFromTranscriptPath(result.TranscriptPath)
+		sid = importer.SessionIDFromTranscriptPath(result.TranscriptPath)
 	}
 
+	status := trajectory.ProviderImporterStatus(prov)
 	out := importOutput{
 		Provider:       prov,
 		SessionID:      sid,
@@ -142,20 +123,6 @@ func runSessionImport(cmd *cobra.Command, _ []string) error {
 	}
 
 	return emitImportOutput(cmd, out)
-}
-
-func sessionIDFromTranscriptPath(transcriptPath string) string {
-	base := transcriptPath
-	for i := len(base) - 1; i >= 0; i-- {
-		if base[i] == '/' || base[i] == '\\' {
-			base = base[i+1:]
-			break
-		}
-	}
-	if len(base) > 6 && base[len(base)-6:] == ".jsonl" {
-		return base[:len(base)-6]
-	}
-	return base
 }
 
 func loadTrajectoryConfigForImport(cmd *cobra.Command) config.TrajectoryConfig {
