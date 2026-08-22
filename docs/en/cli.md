@@ -66,7 +66,7 @@ Offline compile of defaults ⊕ user ⊕ optional project (no daemon required).
 
 ## session
 
-Trajectory ledger inspect/export ([Trajectory](./trajectory.md)). Offline — reads `$XDG_STATE_HOME/agentd/sessions/`.
+Trajectory ledger inspect/export ([Trajectory](./trajectory.md)). Offline — reads `$XDG_STATE_HOME/agentd/sessions/`. **Exception:** `session subscribe` requires a running daemon.
 
 | Command | Flags |
 |---------|-------|
@@ -77,7 +77,8 @@ Trajectory ledger inspect/export ([Trajectory](./trajectory.md)). Offline — re
 | `session import` | `--provider` (required), `--session`, `--path`, `--dry-run`, `--json` |
 | `session replay` | `--policy` (required), `--provider`, `--session`, `--seq`, `--json` |
 | `session fork` | `--provider`, `--session`, `--new-session`, `--at-seq`, `--json` |
+| `session subscribe` | `--provider`, `--session`, `--source`, `--json` (live firehose; daemon required) |
 
-`session search` scans JSONL line-by-line (O(total bytes); no index). `session import`: Claude Code and Codex `supported`; Cursor `partial` (prefer `--path`); others explicit `none`. `session replay --policy` needs `include_raw` at record time. `session fork` is audit lineage only (source immutable).
+`session search` scans JSONL line-by-line (O(total bytes); no index). `session import`: Claude Code and Codex `supported`; Cursor `partial` (prefer `--path`); others explicit `none`. `session replay --policy` needs `include_raw` at record time. `session fork` is audit lineage only (source immutable). `session subscribe` is live-only from dial time — use show/export for history.
 
 See also: [Getting started](./getting-started.md), [Providers](./providers.md).

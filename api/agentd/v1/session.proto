@@ -1,0 +1,40 @@
+// Session ledger read/stream RPCs (not on the hook hot path).
+syntax = "proto3";
+
+package agentd.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/macrox-pro/agentd/gen/agentd/v1;agentdv1";
+
+// SessionService exposes live trajectory ledger streaming for external viewers.
+service SessionService {
+  // Subscribe streams ledger events after in-memory append (live firehose from dial time).
+  rpc Subscribe(SubscribeRequest) returns (stream SubscribeResponse);
+}
+
+message SubscribeRequest {
+  string provider = 1;   // optional filter (canonical provider id)
+  string session_id = 2; // optional filter
+  string source = 3;     // optional: hook|decision|transcript|system
+}
+
+message SessionEvent {
+  uint32 schema_version = 1; // frozen at 1 for v1.1
+  uint64 seq = 2;
+  string type = 3;
+  string source = 4;
+  google.protobuf.Timestamp ts = 5;
+  string provider = 6;
+  string invocation_mode = 7;
+  string session_id = 8;
+  string project_root = 9;
+  string cwd = 10;
+  bytes data = 11; // JSON object
+  bytes raw = 12;  // optional; may be empty/redacted
+  bool ignorable = 13;
+}
+
+message SubscribeResponse {
+  SessionEvent event = 1;
+}

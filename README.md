@@ -18,7 +18,7 @@ agentd sits between your AI coding agents (Claude Code, Cursor, Codex, Gemini CL
 ![Go Version](https://img.shields.io/badge/go-1.26+-00ADD8?logo=go)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-> **Status:** v1 (M0–M8). Roadmap history: [DESIGN.md §13](./DESIGN.md#13-milestones).
+> **Status:** v1.1 (M12 Subscribe). Roadmap history: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
 ## Documentation
 
@@ -171,6 +171,17 @@ Full schema, merge rules, and reload behavior: [DESIGN.md § Configuration schem
 | `agentd config patch` | Patch runtime overlay (persisted) |
 | `agentd config record-decision` | Record approval after Ask |
 | `agentd dispatch routes` | Show compiled dispatch routes |
+| `agentd session subscribe` | Live trajectory stream (daemon required) |
+
+**Trajectory (opt-in):** every supported agent’s hooks are traceable on one stream; transcript/thinking depth varies by provider — not “everything the model sees everywhere.”
+
+| Provider | L2 import |
+|----------|-----------|
+| claude-code, codex | **supported** |
+| cursor | **partial** (`--path`) |
+| gemini, opencode, kimi-code | none |
+
+Details: [docs/en/trajectory.md](./docs/en/trajectory.md) · [DESIGN §14.6](./DESIGN.md#146-provider-support-matrix-all-supported-agents)
 
 Rationale for each command: [DESIGN.md § CLI Reference](./DESIGN.md#6-cli-reference) · [docs/en/cli.md](./docs/en/cli.md)
 

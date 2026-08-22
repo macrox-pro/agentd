@@ -1,10 +1,10 @@
-// Package server implements thin gRPC mapping for DaemonService, HookService, and ConfigService.
+// Package server implements thin gRPC mapping for DaemonService, HookService, ConfigService, and SessionService.
 //
 // Owns: proto ↔ internal type mapping; delegates Invoke to dispatch.Engine.
 // Must not: policy logic, route match, guard checks, config compile.
 //
-// Entry: HookService.Invoke, ConfigService handlers.
-// See DESIGN.md §1.5 (invoke_sync, config_reload).
+// Entry: HookService.Invoke, ConfigService handlers, SessionService.Subscribe.
+// See DESIGN.md §1.5 (invoke_sync, config_reload, async_side).
 package server
 
 import (
@@ -62,5 +62,10 @@ func New(opts Options) *grpc.Server {
 		log:      opts.Logger,
 	})
 	agentdv1.RegisterConfigServiceServer(s, &configService{store: opts.Store})
+	if opts.Recorder != nil {
+		agentdv1.RegisterSessionServiceServer(s, &sessionService{hub: opts.Recorder.Hub()})
+	} else {
+		agentdv1.RegisterSessionServiceServer(s, &sessionService{})
+	}
 	return s
 }

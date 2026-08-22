@@ -12,15 +12,25 @@ import (
 // Recorder enqueues trajectory events from HookService.Invoke (async side).
 type Recorder struct {
 	queue *Queue
+	hub   *Hub
 	log   *slog.Logger
 }
 
-// NewRecorder wires store + persist into a bounded queue.
+// NewRecorder wires store + persist + hub into a bounded queue.
 func NewRecorder(sessionsDir string, capacity int, log *slog.Logger) *Recorder {
 	store := NewStore()
 	persist := NewPersister(sessionsDir, log)
-	q := NewQueue(capacity, store, persist, log)
-	return &Recorder{queue: q, log: log}
+	hub := NewHub(log)
+	q := NewQueue(capacity, store, persist, hub, log)
+	return &Recorder{queue: q, hub: hub, log: log}
+}
+
+// Hub returns the live event fan-out registry.
+func (r *Recorder) Hub() *Hub {
+	if r == nil {
+		return nil
+	}
+	return r.hub
 }
 
 // Queue returns the underlying queue (Status drop counter).
@@ -31,9 +41,15 @@ func (r *Recorder) Queue() *Queue {
 	return r.queue
 }
 
-// Close drains workers and flushes pending JSONL.
+// Close drains workers, closes hub subscriptions, and flushes pending JSONL.
 func (r *Recorder) Close(timeout time.Duration) {
-	if r == nil || r.queue == nil {
+	if r == nil {
+		return
+	}
+	if r.hub != nil {
+		r.hub.Close()
+	}
+	if r.queue == nil {
 		return
 	}
 	r.queue.Close(timeout)

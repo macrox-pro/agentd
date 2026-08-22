@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase: **m11 done** (+ Codex rollout L2 fix) | Last: codex-rollout-importer | Next: m12 Subscribe / v1.1
+Phase: **m12 done** | Last: m12-subscribe-v1.1 | Next: user tag v1.1.0
 
 ## agents_md_ready
 
@@ -68,7 +68,7 @@ true
 | **M9** | **done** | Trajectory P0 — L0 live ledger for all six providers + export |
 | **M10** | **done** | Trajectory P1 — search + Claude import; others stay L0 |
 | **M11** | **done** | Trajectory P2 — importers if format exists; policy replay all dialects |
-| **M12 / v1.1** | planned | Trajectory P3 — Subscribe; contract + §14.6; **v1.1 release** |
+| **M12 / v1.1** | **done** | Trajectory P3 — Subscribe; contract freeze; depth = §14.6 matrix |
 
 Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
@@ -118,11 +118,87 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
 **M11 acceptance:** see [DESIGN.md §13 M11](./DESIGN.md#m11--trajectory-p2-multi-import--policy-replay).
 
-## M12 / v1.1 (outline only)
+## M12 intent note
 
-| Milestone | Focus |
-|-----------|--------|
-| M12 / v1.1 | Subscribe; versioned contract; README §14.6; tag **v1.1.0** |
+**Problem:** External Trajectory UIs cannot live-tail the ledger; schema/docs not frozen for v1.1.
+
+**Hot path:** Fan-out after in-memory append → `async_side`; Subscribe RPC / CLI → `other`.
+
+**Invariants:**
+- Subscribe never blocks Invoke; append-only; `ignorable` = forward-compat hint (not Subscribe filter)
+- `schema_version: 1` on all appended/streamed events
+- Honest §14.6 claim; no agent-loop
+
+**Corner cases (test names):**
+- `TestHubDeliverAfterAppend`, `TestHubSlowConsumerDrop`, `TestHubUnregister`, `TestHubMultipleSubscribers`, `TestHubPublishNoSubscribers`, `TestHubCloseEndsSubscribers`
+- `TestSchemaVersionOnAppend`, `TestIgnorablePreserved`
+- `TestSubscribeFilterProvider`, `TestSubscribeFilterSession`, `TestSubscribeFilterSource`, `TestSubscribeNoFilter`, `TestSubscribeCancel`, `TestSubscribeIdleThenEvent`, `TestSubscribeNilHub`
+
+**Out of scope:** grpc-gateway; webhook; `after_seq` catch-up; Codex/Cursor fsnotify watchers; importer refactors; git tag (user).
+
+## M12 checklist — Trajectory P3 / v1.1
+
+### Phase 0 — Process
+
+- [x] m12-0-agents — AGENTS.md + CONVENTIONS
+- [x] m12-0-intent — intent note (this section)
+- [x] m12-0-checklist — segmented checklist
+
+### Phase A1 — Proto
+
+- [x] m12-a1-proto — `api/agentd/v1/session.proto`
+- [x] m12-a1-generate — `make generate` + build
+- [x] m12-a1-design4 — DESIGN §4 SessionService
+
+### Phase A2 — Hub + schema
+
+- [x] m12-a2-schema — SchemaVersion stamp in Store.Append + AppendEvents
+- [x] m12-a2-schema-test — TestSchemaVersionOnAppend, TestIgnorablePreserved
+- [x] m12-a2-hub — `internal/trajectory/hub.go`
+- [x] m12-a2-hub-tests — hub corner cases
+- [x] m12-a2-queue — Publish(appended) after Append
+- [x] m12-a2-recorder — Hub + Close closes Hub
+
+### Phase A3 — gRPC server
+
+- [x] m12-a3-server — `internal/server/session.go` + register
+- [x] m12-a3-server-opts — daemon wires Hub
+- [x] m12-a3-server-tests — bufconn Subscribe tests
+
+### Phase A4 — Client + CLI
+
+- [x] m12-a4-hookclient — Subscribe helper
+- [x] m12-a4-cli — `cmd/session_subscribe.go`
+- [x] m12-a4-cli-wire — session.go AddCommand
+- [x] m12-a4-design6 — DESIGN §6
+- [x] m12-a4-docs-cli — docs en/ru cli + trajectory
+
+### Phase A5 — Import live fan-out
+
+- [x] m12-a5-import-hub — Hub.Publish after AppendImported (Claude watcher)
+- [x] m12-a5-import-wire — ImportWatcher gets Hub
+
+### Phase B — Mirror docs
+
+- [x] m12-b-docs-mirror — store mirror documented; no webhook
+- [x] m12-b-progress — Phase B checkbox
+
+### Phase C — Contract freeze
+
+- [x] m12-c-contract-en — docs/en/trajectory.md
+- [x] m12-c-contract-ru — docs/ru/trajectory.md
+- [x] m12-c-readme — README v1.1 + matrix
+- [x] m12-c-design-accept — DESIGN §13/§14.3/§14.5/§14.8
+- [x] m12-c-docs-check — `make docs-check`
+
+### Phase D — e2e + CHANGELOG
+
+- [x] m12-d-e2e — `scripts/e2e-m12.sh`
+- [x] m12-d-changelog — CHANGELOG `[v1.1.0]`
+- [x] m12-d-progress-done — m12 done + verify block
+- [x] m12-d-verify — lint + intent-check + test + e2e
+
+**M12 acceptance:** see [DESIGN.md §13 M12](./DESIGN.md#m12--v11--trajectory-p3-stream-out).
 
 ## Session notes
 
@@ -151,7 +227,7 @@ make intent-check
 make docs-check
 make test
 go test -tags=integration ./internal/hookedge/ -race -count=1
-make e2e   # includes scripts/e2e-m9.sh … e2e-m11.sh
+make e2e   # includes scripts/e2e-m9.sh … e2e-m12.sh
 ```
 
 ## Blockers

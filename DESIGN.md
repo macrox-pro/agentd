@@ -384,6 +384,16 @@ Protobuf definitions: `api/agentd/v1/`. Buf rules: [AGENTS.md § Protobuf](./AGE
 | `PatchConfig` | Runtime overlay patch |
 | `RecordDecision` | Approval after Ask (e.g. secrets) |
 
+### SessionService
+
+| RPC | Purpose |
+|-----|---------|
+| `Subscribe` | Live trajectory firehose (post-commit; filters optional) |
+
+**SubscribeRequest:** `provider`, `session_id`, `source` (all optional filters)
+
+**SessionEvent:** `schema_version`, `seq`, `type`, `source`, `ts`, `provider`, `invocation_mode`, `session_id`, `project_root`, `cwd`, `data`, `raw`, `ignorable`
+
 ---
 
 ## 5. Transport
@@ -544,9 +554,9 @@ routes appear before default-kind fallbacks; target kinds are listed for sync/as
 
 **Hook failure modes:** daemon down → `policy.offline`; timeout → per `policy.fail`; never debug on stdout.
 
-### `agentd session list|show|export|search|import|replay|fork`
+### `agentd session list|show|export|search|import|replay|fork|subscribe`
 
-Inspect local trajectory session ledgers (JSONL under `$XDG_STATE_HOME/agentd/sessions/`). Offline — no daemon required.
+Inspect local trajectory session ledgers (JSONL under `$XDG_STATE_HOME/agentd/sessions/`). Offline — no daemon required except **subscribe**.
 
 | Command | Role |
 |---------|------|
@@ -557,6 +567,7 @@ Inspect local trajectory session ledgers (JSONL under `$XDG_STATE_HOME/agentd/se
 | `session import --provider ID [--session ID] [--path PATH] [--dry-run] [--json]` | Append provider transcript events (`claude-code`/`codex`: supported; `cursor`: partial via `--path`; others: explicit `none`) |
 | `session replay --policy --provider ID --session ID [--seq N] [--json]` | Dry-run stored `Raw` through Dispatch Engine (requires `include_raw` at record time; no live agent) |
 | `session fork --provider ID --session SRC --new-session DST [--at-seq N] [--json]` | Copy ledger prefix → new session id (audit lineage; source immutable) |
+| `session subscribe [--provider ID] [--session ID] [--source hook\|decision\|transcript\|system] [--json]` | **Live** stream from daemon (from dial time; history via show/export) |
 
 Requires `trajectory.enabled` in config for live hook recording; import/search/replay/fork read existing JSONL without a running daemon.
 
@@ -569,6 +580,8 @@ agentd session import --provider cursor --path /path/to/transcript.jsonl
 agentd session import --provider codex --session s1
 agentd session replay --policy --provider claude-code --session s1 --json
 agentd session fork --provider claude-code --session s1 --new-session s1-fork --at-seq 4
+agentd session subscribe --json
+agentd session subscribe --provider claude-code --json
 ```
 
 ---
@@ -746,7 +759,7 @@ agentd/
 | **M9** | done | Trajectory hub P0 — **L0 live ledger for all six providers** + export (§14 / §14.6) |
 | **M10** | done | Trajectory P1 — search + Claude import; others L0 + explicit importer status |
 | **M11** | **done** | Trajectory P2 — importers where possible; policy replay **all** wire dialects |
-| **M12 / v1.1** | planned | Trajectory P3 — Subscribe; contract freeze; depth = §14.6 matrix; **v1.1 release gate** |
+| **M12 / v1.1** | **done** | Trajectory P3 — Subscribe; contract freeze; depth = §14.6 matrix |
 
 Session checklists and verify commands: [PROGRESS.md](./PROGRESS.md).
 
@@ -862,10 +875,10 @@ M7 acceptance: Approve once → subsequent matching tool.pre allows within TTL; 
 
 **M12 / v1.1 acceptance:**
 
-- [ ] Subscriber receives events after append without blocking Invoke (any provider)
-- [ ] Schema versioned; unknown `ignorable` types skippable by readers
-- [ ] Product copy: “every **supported agent’s hooks** are traceable on one stream; transcript depth varies by provider” — not “everything the model sees everywhere”
-- [ ] M9–M11 acceptance met; `make lint` + `make test` + e2e-m9…m12 green; release artifact published
+- [x] Subscriber receives events after append without blocking Invoke (any provider)
+- [x] Schema versioned; unknown `ignorable` types skippable by readers
+- [x] Product copy: “every **supported agent’s hooks** are traceable on one stream; transcript depth varies by provider” — not “everything the model sees everywhere”
+- [x] M9–M11 acceptance met; `make lint` + `make test` + e2e-m9…m12 green
 
 ---
 
@@ -925,7 +938,7 @@ flowchart LR
 
 ### 14.3 Event model (draft catalog)
 
-Contiguous `seq` per session; JSON-serializable `data`; optional `ignorable` for forward-compatible readers.
+Contiguous `seq` per session; JSON-serializable `data`; `schema_version` frozen at **1** (v1.1); optional `ignorable` for forward-compatible readers (skip unknown **types**; not a Subscribe filter).
 
 | Type | Source | When | Notes |
 |------|--------|------|-------|
@@ -971,7 +984,7 @@ Persist: debounced / batched append; atomic rotate if needed. Distinct from `run
 | `agentd session import` | M10 | Pull provider transcript into stream |
 | `agentd session replay --policy` | M11 | Dry-run Engine on stored payload |
 | `agentd session fork` | M11 | New ledger from prefix |
-| gRPC Subscribe / http mirror | M12 | External Trajectory viewers |
+| `agentd session subscribe` / gRPC `SessionService.Subscribe` | M12 | Live firehose (daemon; dial time onward) |
 
 ### 14.6 Provider support matrix (all supported agents)
 
@@ -1036,7 +1049,7 @@ User-facing quirk index remains [docs/en/providers.md](./docs/en/providers.md); 
 
 ```
 internal/trajectory/     # store, append, export, search
-internal/trajectory/importer/  # provider importers (M10+); one file per provider + shared map/resolve
+internal/trajectory/importer/  # import.go facade, event.go mapping, per-provider + codex_map.go
 
 cmd/session_*.go         # list/show/export/search/import/fork/replay
 api/agentd/v1/session.proto  # M12 Subscribe (+ read RPCs as needed)

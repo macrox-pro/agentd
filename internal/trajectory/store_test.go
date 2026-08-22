@@ -81,7 +81,7 @@ func TestSessionOpenOnce(t *testing.T) {
 func TestQueueOverflowDrop(t *testing.T) {
 	t.Parallel()
 	store := trajectory.NewStore()
-	q := trajectory.NewQueue(1, store, nil, nil)
+	q := trajectory.NewQueue(1, store, nil, nil, nil)
 	defer q.Close(0)
 	key := trajectory.SessionKey{Provider: "codex", SessionID: "s4"}
 	ev := []trajectory.Event{{Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, TS: time.Now().UTC()}}

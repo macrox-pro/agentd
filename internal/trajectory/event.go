@@ -24,8 +24,12 @@ const (
 	SourceTranscript = "transcript"
 )
 
+// SchemaVersion is the frozen trajectory event contract version (v1.1).
+const SchemaVersion uint32 = 1
+
 // Event is one append-only ledger record (DESIGN §14.3).
 type Event struct {
+	SchemaVersion  uint32          `json:"schema_version,omitempty"`
 	Seq            uint64          `json:"seq"`
 	Type           string          `json:"type"`
 	Source         string          `json:"source"`
@@ -109,4 +113,10 @@ func mustJSON(v any) json.RawMessage {
 		return json.RawMessage(`{}`)
 	}
 	return b
+}
+
+func stampSchemaVersion(e *Event) {
+	if e != nil && e.SchemaVersion == 0 {
+		e.SchemaVersion = SchemaVersion
+	}
 }

@@ -40,6 +40,29 @@ Recording happens on the daemon async path — sync hook latency is unchanged.
 | `agentd session import --provider ID …` | Append transcript events (`source=transcript`) |
 | `agentd session replay --policy --provider ID --session ID` | Dry-run stored Raw through Dispatch Engine |
 | `agentd session fork --provider ID --session SRC --new-session DST` | Copy ledger prefix (audit lineage) |
+| `agentd session subscribe [--json]` | **Live** stream from daemon (requires running daemon + trajectory.enabled) |
+
+## Subscribe (live stream)
+
+`session subscribe` tails the daemon in-memory ledger from dial time (gRPC `SessionService.Subscribe`). Filters: `--provider`, `--session`, `--source`. History is **not** replayed — use `session show` or `session export`.
+
+- Requires a **running daemon** with `trajectory.enabled`.
+- Offline `session import` / `fork` do not publish to Subscribe (no Hub); Claude daemon import watcher does.
+- `schema_version: 1` on every event; `ignorable` marks forward-compat hints (readers may skip unknown **types**; Subscribe still delivers transcript events).
+- `raw` on the stream follows the same redaction rules as JSONL (`include_raw`, `redact_secret_rules`).
+- Global ledger mirror: `trajectory.enabled` records all Invokes — no separate webhook or `target: trajectory` in M12.
+
+## Trajectory contract (v1.1)
+
+| Field | Meaning |
+|-------|---------|
+| `schema_version` | Frozen at `1` for v1.1 |
+| `seq` | Contiguous per session |
+| `type` | Event catalog (`hook/invoked`, `transcript/message`, …) |
+| `source` | `hook`, `decision`, `transcript`, `system` |
+| `ignorable` | Forward-compat: old readers may skip unknown **types** |
+
+Event catalog matches [DESIGN §14.3](../../DESIGN.md#143-event-model-draft-catalog).
 
 ## Search
 

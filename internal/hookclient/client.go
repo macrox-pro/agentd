@@ -1,10 +1,10 @@
 // Package hookclient provides a gRPC client for the local agentd daemon.
 //
-// Owns: dial transport, HookService/ConfigService RPC wrappers.
+// Owns: dial transport, HookService/ConfigService/SessionService RPC wrappers.
 // Must not: hook wire decode/encode (hookedge).
 //
-// Entry: New, Client.Invoke.
-// See DESIGN.md §1.5 (invoke_sync).
+// Entry: New, Client.Invoke, Client.Subscribe.
+// See DESIGN.md §1.5 (invoke_sync, async_side).
 package hookclient
 
 import (
@@ -21,12 +21,13 @@ import (
 
 const grpcDialTarget = "passthrough:///agentd"
 
-// Client wraps daemon, hook, and config service clients.
+// Client wraps daemon, hook, config, and session service clients.
 type Client struct {
-	conn   *grpc.ClientConn
-	daemon agentdv1.DaemonServiceClient
-	hook   agentdv1.HookServiceClient
-	config agentdv1.ConfigServiceClient
+	conn    *grpc.ClientConn
+	daemon  agentdv1.DaemonServiceClient
+	hook    agentdv1.HookServiceClient
+	config  agentdv1.ConfigServiceClient
+	session agentdv1.SessionServiceClient
 }
 
 // Dial connects to the daemon socket.
@@ -45,10 +46,11 @@ func Dial(ctx context.Context, socket string) (*Client, error) {
 		return nil, fmt.Errorf("dial daemon: %w", err)
 	}
 	return &Client{
-		conn:   conn,
-		daemon: agentdv1.NewDaemonServiceClient(conn),
-		hook:   agentdv1.NewHookServiceClient(conn),
-		config: agentdv1.NewConfigServiceClient(conn),
+		conn:    conn,
+		daemon:  agentdv1.NewDaemonServiceClient(conn),
+		hook:    agentdv1.NewHookServiceClient(conn),
+		config:  agentdv1.NewConfigServiceClient(conn),
+		session: agentdv1.NewSessionServiceClient(conn),
 	}, nil
 }
 
@@ -99,4 +101,9 @@ func (c *Client) PatchConfig(ctx context.Context, req *agentdv1.PatchConfigReque
 // RecordDecision records an approval in the runtime overlay.
 func (c *Client) RecordDecision(ctx context.Context, req *agentdv1.RecordDecisionRequest) (*agentdv1.RecordDecisionResponse, error) {
 	return c.config.RecordDecision(ctx, req)
+}
+
+// Subscribe opens a live trajectory event stream from the daemon.
+func (c *Client) Subscribe(ctx context.Context, req *agentdv1.SubscribeRequest) (agentdv1.SessionService_SubscribeClient, error) {
+	return c.session.Subscribe(ctx, req)
 }

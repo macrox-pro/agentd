@@ -28,11 +28,12 @@ type Queue struct {
 	wg       sync.WaitGroup
 	store    *Store
 	persist  *Persister
+	hub      *Hub
 	log      *slog.Logger
 }
 
 // NewQueue starts workers for trajectory side effects.
-func NewQueue(capacity int, store *Store, persist *Persister, log *slog.Logger) *Queue {
+func NewQueue(capacity int, store *Store, persist *Persister, hub *Hub, log *slog.Logger) *Queue {
 	if capacity < 1 {
 		capacity = 1024
 	}
@@ -41,6 +42,7 @@ func NewQueue(capacity int, store *Store, persist *Persister, log *slog.Logger) 
 		ch:       make(chan appendJob, capacity),
 		store:    store,
 		persist:  persist,
+		hub:      hub,
 		log:      log,
 	}
 	workers := defaultQueueWorkers
@@ -128,6 +130,9 @@ func (q *Queue) run(job appendJob) {
 		return
 	}
 	appended := q.store.Append(job.key, job.events)
+	if q.hub != nil && len(appended) > 0 {
+		q.hub.Publish(appended)
+	}
 	if q.persist != nil && len(appended) > 0 {
 		q.persist.Schedule(job.key, appended)
 	}

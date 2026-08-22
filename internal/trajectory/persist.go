@@ -152,5 +152,8 @@ func AppendEvents(root string, key SessionKey, events []Event) error {
 	if len(events) == 0 {
 		return nil
 	}
+	for i := range events {
+		stampSchemaVersion(&events[i])
+	}
 	return appendEventsToFile(root, key, events)
 }

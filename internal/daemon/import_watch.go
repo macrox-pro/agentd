@@ -21,14 +21,15 @@ const importWatchDebounce = 500 * time.Millisecond
 // ImportWatcher debounces Claude transcript imports (async_side; never blocks Invoke).
 type ImportWatcher struct {
 	store  *config.Store
+	hub    *trajectory.Hub
 	log    *slog.Logger
 	mu     sync.Mutex
 	cancel context.CancelFunc
 }
 
 // NewImportWatcher returns a watcher tied to config reloads.
-func NewImportWatcher(store *config.Store, log *slog.Logger) *ImportWatcher {
-	return &ImportWatcher{store: store, log: log}
+func NewImportWatcher(store *config.Store, hub *trajectory.Hub, log *slog.Logger) *ImportWatcher {
+	return &ImportWatcher{store: store, hub: hub, log: log}
 }
 
 // Start begins watching when claude import is enabled in the current snapshot.
@@ -167,6 +168,9 @@ func (w *ImportWatcher) importFile(cfg config.TrajectoryConfig, transcriptPath s
 	if err := trajectory.AppendImported(sessionsRoot, key, result.Events); err != nil {
 		w.log.Warn("import watcher: append", "error", err, "session", sid)
 		return
+	}
+	if w.hub != nil && len(result.Events) > 0 {
+		w.hub.Publish(result.Events)
 	}
 	st, err := os.Stat(transcriptPath)
 	if err != nil {

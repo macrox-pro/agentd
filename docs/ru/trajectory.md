@@ -40,6 +40,29 @@ trajectory:
 | `agentd session import --provider ID …` | Импорт transcript (`source=transcript`) |
 | `agentd session replay --policy --provider ID --session ID` | Dry-run policy по сохранённому Raw |
 | `agentd session fork --provider ID --session SRC --new-session DST` | Копия префикса ledger (аудит) |
+| `agentd session subscribe [--json]` | **Live** поток от демона (нужен запущенный daemon + trajectory.enabled) |
+
+## Subscribe (live-поток)
+
+`session subscribe` читает in-memory ledger демона с момента подключения (gRPC `SessionService.Subscribe`). Фильтры: `--provider`, `--session`, `--source`. История **не** воспроизводится — используйте `session show` или `session export`.
+
+- Нужен **запущенный демон** с `trajectory.enabled`.
+- Offline `session import` / `fork` не публикуют в Subscribe; watcher импорта Claude — публикует.
+- `schema_version: 1` на каждом событии; `ignorable` — forward-compat (пропуск неизвестных **type**; transcript всё равно доставляется).
+- `raw` на потоке следует тем же правилам redaction, что и JSONL.
+- Зеркало ledger: `trajectory.enabled` — отдельный webhook / `target: trajectory` в M12 нет.
+
+## Контракт trajectory (v1.1)
+
+| Поле | Смысл |
+|------|-------|
+| `schema_version` | Зафиксировано `1` для v1.1 |
+| `seq` | Монотонный в рамках сессии |
+| `type` | Каталог событий |
+| `source` | `hook`, `decision`, `transcript`, `system` |
+| `ignorable` | Forward-compat для неизвестных **type** |
+
+Каталог событий: [DESIGN §14.3](../../DESIGN.md#143-event-model-draft-catalog).
 
 ## Поиск
 

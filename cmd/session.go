@@ -6,7 +6,7 @@ import (
 
 func init() {
 	rootCmd.AddCommand(sessionCmd)
-	sessionCmd.AddCommand(sessionListCmd, sessionShowCmd, sessionExportCmd, sessionSearchCmd, sessionImportCmd, sessionReplayCmd, sessionForkCmd)
+	sessionCmd.AddCommand(sessionListCmd, sessionShowCmd, sessionExportCmd, sessionSearchCmd, sessionImportCmd, sessionReplayCmd, sessionForkCmd, sessionSubscribeCmd)
 }
 
 var sessionCmd = &cobra.Command{

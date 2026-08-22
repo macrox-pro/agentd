@@ -1,5 +1,20 @@
 # Changelog
 
+## [v1.1.0] — unreleased
+
+Trajectory P3 (M12): live Subscribe + schema freeze.
+
+### Highlights
+
+- gRPC `SessionService.Subscribe` and `agentd session subscribe` — live trajectory firehose from daemon
+- `schema_version: 1` on all ledger events (JSONL + stream)
+- Trajectory contract docs; honest §14.6 coverage matrix in user guide
+- Codex L2 import **supported** (rollout JSONL under `~/.codex/sessions`) — shipped pre-M12
+
+### Explicitly not in v1.1
+
+Historical catch-up on Subscribe (`after_seq`), HTTP webhook mirror, agent-loop resume, git tag automation in-repo.
+
 ## [v1.0.0] — 2026-08-20
 
 First v1 release (M0–M8).

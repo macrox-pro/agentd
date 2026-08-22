@@ -66,7 +66,7 @@
 
 ## session (журнал trajectory)
 
-Просмотр и экспорт JSONL ([Trajectory](./trajectory.md)). Offline — читает `$XDG_STATE_HOME/agentd/sessions/`.
+Просмотр и экспорт JSONL ([Trajectory](./trajectory.md)). Offline — читает `$XDG_STATE_HOME/agentd/sessions/`. **Исключение:** `session subscribe` требует запущенный daemon.
 
 | Команда | Флаги |
 |---------|-------|
@@ -77,7 +77,8 @@
 | `session import` | `--provider` (обязателен), `--session`, `--path`, `--dry-run`, `--json` |
 | `session replay` | `--policy` (обязателен), `--provider`, `--session`, `--seq`, `--json` |
 | `session fork` | `--provider`, `--session`, `--new-session`, `--at-seq`, `--json` |
+| `session subscribe` | `--provider`, `--session`, `--source`, `--json` (live; нужен daemon) |
 
-`session search` сканирует JSONL построчно (O(объём); без индекса). `session import`: Claude Code и Codex — `supported`; Cursor — `partial` (лучше `--path`); остальные — явный `none`. `session replay --policy` требует `include_raw` при записи. `session fork` — только аудит (исходник неизменяем).
+`session search` сканирует JSONL построчно (O(объём); без индекса). `session import`: Claude Code и Codex — `supported`; Cursor — `partial` (лучше `--path`); остальные — явный `none`. `session replay --policy` требует `include_raw` при записи. `session fork` — только аудит (исходник неизменяем). `session subscribe` — live с момента подключения; история через show/export.
 
 См. также: [Быстрый старт](./getting-started.md), [Провайдеры](./providers.md).

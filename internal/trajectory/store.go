@@ -42,6 +42,7 @@ func (s *Store) Append(key SessionKey, events []Event) []Event {
 			}
 			log.opened = true
 		}
+		stampSchemaVersion(&e)
 		log.nextSeq++
 		e.Seq = log.nextSeq
 		log.events = append(log.events, e)

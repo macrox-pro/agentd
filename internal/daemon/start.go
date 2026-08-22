@@ -144,7 +144,7 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	}
 	defer func() { _ = watcher.Close() }()
 
-	importWatcher := NewImportWatcher(store, log)
+	importWatcher := NewImportWatcher(store, recorder.Hub(), log)
 	importWatcher.Start(runCtx)
 	defer importWatcher.Stop()
 
