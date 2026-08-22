@@ -46,5 +46,11 @@ func foregroundArgs(opts StartOptions) []string {
 	if opts.Socket != "" {
 		args = append(args, "--socket", opts.Socket)
 	}
+	if opts.LogLevel != "" {
+		args = append(args, "--log-level", opts.LogLevel)
+	}
+	if opts.LogFile != "" {
+		args = append(args, "--log-file", opts.LogFile)
+	}
 	return args
 }

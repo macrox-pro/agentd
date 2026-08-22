@@ -3,7 +3,6 @@ package daemon
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -30,6 +29,8 @@ type StartOptions struct {
 	ConfigPath string
 	Foreground bool
 	Version    string
+	LogLevel   string
+	LogFile    string
 }
 
 // Start runs the daemon. In foreground mode it blocks until shutdown.
@@ -113,12 +114,27 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	log := slog.Default()
-	queue := dispatch.NewQueue(store.Current().Async, log)
+	snap := store.Current()
+	log, logCleanup, err := SetupLog(SetupLogOptions{
+		Logging:    snap.Logging,
+		Foreground: opts.Foreground,
+		LogLevel:   opts.LogLevel,
+		LogFile:    opts.LogFile,
+	})
+	if err != nil {
+		return fmt.Errorf("setup log: %w", err)
+	}
+	defer func() {
+		log.Info("daemon shutdown complete")
+		logCleanup()
+	}()
+
+	store.SetLogger(log)
+	queue := dispatch.NewQueue(snap.Async, log)
 	engine := dispatch.NewEngine(queue, log)
 	defer queue.Close(5 * time.Second)
 
-	trajCfg := store.Current().Trajectory
+	trajCfg := snap.Trajectory
 	recorder := trajectory.NewRecorder(trajectory.DefaultSessionsDir(), trajCfg.QueueCapacity, log)
 	defer recorder.Close(5 * time.Second)
 
@@ -136,6 +152,7 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 		Store:      store,
 		Engine:     engine,
 		Recorder:   recorder,
+		Logger:     log,
 		StartedAt:  time.Now().UTC(),
 		Version:    opts.Version,
 		OnShutdown: cancel,
@@ -159,6 +176,14 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 		return fmt.Errorf("write pid: %w", err)
 	}
 
+	cur := store.Current()
+	log.Info("daemon ready",
+		"version", opts.Version,
+		"socket", opts.Socket,
+		"generation", cur.Generation,
+		"fingerprint", cur.Fingerprint,
+	)
+
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	defer signal.Stop(sigCh)
@@ -167,6 +192,7 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	defer signal.Stop(reloadCh)
 
 	shutdown := func() {
+		log.Info("daemon shutdown started")
 		// Drop PID before signal.Stop / queue drain so Stop does not fall through
 		// to SIGTERM against this process (foreground PID == os.Getpid()).
 		paths.ClearPID()
@@ -184,6 +210,11 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 				if err := store.Reload(runCtx); err != nil {
 					log.Warn("config reload failed", "error", err)
 				} else {
+					cur := store.Current()
+					log.Info("config reload succeeded",
+						"generation", cur.Generation,
+						"fingerprint", cur.Fingerprint,
+					)
 					importWatcher.Start(runCtx)
 				}
 				continue
@@ -194,6 +225,11 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 			if err := store.Reload(context.Background()); err != nil {
 				log.Warn("config reload failed", "error", err)
 			} else {
+				cur := store.Current()
+				log.Info("config reload succeeded",
+					"generation", cur.Generation,
+					"fingerprint", cur.Fingerprint,
+				)
 				importWatcher.Start(runCtx)
 			}
 		case err := <-errCh:

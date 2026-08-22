@@ -16,7 +16,7 @@ Commands and flags as implemented under `cmd/`. Narrative rationale: [DESIGN.md 
 
 | Command | Flags | Notes |
 |---------|-------|-------|
-| `daemon start` | `--foreground` | Detach by default; waits until Health succeeds |
+| `daemon start` | `--foreground`, `--log-level`, `--log-file` | Detach by default; waits until Health succeeds; logs to state-dir file |
 | `daemon stop` | `--timeout` (`10s`) | gRPC Shutdown, then SIGTERM fallback |
 | `daemon status` | `--json` | Runtime snapshot ([Operations](./operations.md)) |
 | `daemon reload` | — | Force config re-merge |

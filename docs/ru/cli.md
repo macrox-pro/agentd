@@ -16,7 +16,7 @@
 
 | Команда | Флаги | Заметки |
 |---------|-------|---------|
-| `daemon start` | `--foreground` | По умолчанию уходит в фон; ждёт успешного Health |
+| `daemon start` | `--foreground`, `--log-level`, `--log-file` | По умолчанию уходит в фон; ждёт Health; логи в файл state-dir |
 | `daemon stop` | `--timeout` (`10s`) | Корректное завершение по gRPC, иначе SIGTERM |
 | `daemon status` | `--json` | Снимок состояния ([Эксплуатация](./operations.md)) |
 | `daemon reload` | — | Принудительно пересобрать конфиг с диска |

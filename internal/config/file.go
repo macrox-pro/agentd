@@ -11,6 +11,7 @@ type fileConfig struct {
 	DispatchDefaults map[string]fileKindDefault `yaml:"dispatch_defaults"`
 	Dispatch         []fileRoute                `yaml:"dispatch"`
 	Trajectory       *fileTrajectory            `yaml:"trajectory"`
+	Logging          *fileLogging               `yaml:"logging"`
 }
 
 type fileApprovals struct {

@@ -36,6 +36,9 @@ func baseFileConfig() *fileConfig {
 			},
 		},
 		DispatchDefaults: dd,
+		Logging: &fileLogging{
+			Level: string(LogLevelInfo),
+		},
 	}
 }
 
@@ -47,6 +50,7 @@ type CompileResult struct {
 	Approvals       Approvals
 	TemporaryBlocks []TemporaryBlock
 	Trajectory      TrajectoryConfig
+	Logging         LoggingConfig
 	Routes          []CompiledRoute
 	Merged          *fileConfig
 }
@@ -101,6 +105,10 @@ func CompileMerged(user, project, runtime *fileConfig) (CompileResult, error) {
 	if err != nil {
 		return CompileResult{}, err
 	}
+	logging, err := parseLogging(merged.Logging, defaultLogging())
+	if err != nil {
+		return CompileResult{}, err
+	}
 	return CompileResult{
 		Policy:          pol,
 		Async:           async,
@@ -108,6 +116,7 @@ func CompileMerged(user, project, runtime *fileConfig) (CompileResult, error) {
 		Approvals:       approvals,
 		TemporaryBlocks: blocks,
 		Trajectory:      traj,
+		Logging:         logging,
 		Routes:          routes,
 		Merged:          merged,
 	}, nil

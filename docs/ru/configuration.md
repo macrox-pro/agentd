@@ -22,7 +22,7 @@
 
 ## Ключи верхнего уровня YAML
 
-Из схемы файла: `version`, `policy`, `async`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`, `trajectory`.
+Из схемы файла: `version`, `policy`, `async`, `logging`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`, `trajectory`.
 
 В проектном файле обычно `guards` / `dispatch`. Блоки `approvals` и `blocks` чаще попадают в runtime через CLI или gRPC.
 
@@ -47,6 +47,17 @@
 | `on_overflow` | `drop` (`drop` \| `log`) | При переполнении: отбросить; `log` ещё пишет предупреждение |
 
 При переполнении задача **всегда** отбрасывается, счётчик `async_dropped_count` в статусе растёт.
+
+### logging (операционные логи демона)
+
+Не путать с асинхронной целью dispatch `target: log`.
+
+| Ключ | По умолчанию |
+|------|--------------|
+| `level` | `info` (`debug` \| `info` \| `warn` \| `error`) |
+| `file` | `""` → `$XDG_STATE_HOME/agentd/agentd.log` (Windows: `%LOCALAPPDATA%\agentd\agentd.log`) |
+
+`agentd daemon start --foreground` дублирует логи в stderr и в файл. Флаги CLI `--log-level` и `--log-file` переопределяют YAML только для этого процесса.
 
 ### trajectory (журнал сессий)
 

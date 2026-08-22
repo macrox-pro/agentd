@@ -71,9 +71,11 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 	providerName, _ := providerName(in.Provider)
 	route := MatchRoute(in.Snap.Routes, typed)
 	if route == nil {
+		meta := MetaFromTyped(providerName, typed, false)
+		e.logInvokeDebug(providerName, meta.EventKind, "", NeutralDecision())
 		return InvokeResult{
 			Decision: NeutralDecision(),
-			Meta:     MetaFromTyped(providerName, typed, false),
+			Meta:     meta,
 		}, nil
 	}
 
@@ -103,7 +105,9 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 	switch mode {
 	case config.ModeAsyncOnly:
 		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
-		return InvokeResult{Decision: NeutralDecision(), AsyncDispatchedCount: n, Meta: meta}, nil
+		res := InvokeResult{Decision: NeutralDecision(), AsyncDispatchedCount: n, Meta: meta}
+		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
+		return res, nil
 
 	case config.ModeParallel:
 		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
@@ -111,7 +115,9 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		if err != nil {
 			return InvokeResult{}, err
 		}
-		return InvokeResult{Decision: DecisionToProto(d), AsyncDispatchedCount: n, Meta: meta}, nil
+		res := InvokeResult{Decision: DecisionToProto(d), AsyncDispatchedCount: n, Meta: meta}
+		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
+		return res, nil
 
 	case config.ModeAfterSync:
 		d, err := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
@@ -121,15 +127,35 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		proto := DecisionToProto(d)
 		outcome := &targets.SyncOutcome{Kind: proto.GetKind(), Reason: proto.GetReason()}
 		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, outcome)
-		return InvokeResult{Decision: proto, AsyncDispatchedCount: n, Meta: meta}, nil
+		res := InvokeResult{Decision: proto, AsyncDispatchedCount: n, Meta: meta}
+		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
+		return res, nil
 
 	default: // sync_only
 		d, err := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
 		if err != nil {
 			return InvokeResult{}, err
 		}
-		return InvokeResult{Decision: DecisionToProto(d), AsyncDispatchedCount: 0, Meta: meta}, nil
+		res := InvokeResult{Decision: DecisionToProto(d), AsyncDispatchedCount: 0, Meta: meta}
+		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
+		return res, nil
 	}
+}
+
+func (e *Engine) logInvokeDebug(provider, eventKind, routeName string, decision *agentdv1.Decision) {
+	if e == nil || e.log == nil {
+		return
+	}
+	kind := agentdv1.DecisionKind_DECISION_KIND_NO_DECISION
+	if decision != nil {
+		kind = decision.GetKind()
+	}
+	e.log.Debug("invoke",
+		"provider", provider,
+		"event_kind", eventKind,
+		"route", routeName,
+		"decision_kind", kind.String(),
+	)
 }
 
 func (e *Engine) runSync(ctx context.Context, b *targets.Builtin, syncTargets []config.CompiledTarget, typed any, provider agentdv1.Provider, raw []byte) (agenthooks.Decision, error) {

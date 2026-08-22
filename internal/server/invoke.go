@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"log/slog"
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/dispatch"
@@ -35,10 +34,12 @@ func (h *hookService) Invoke(ctx context.Context, req *agentdv1.InvokeRequest) (
 	result, err := h.engine.Invoke(ctx, in)
 	if err != nil {
 		// Match agenthooks wire: undecodable payloads become a neutral no-op.
-		slog.Default().Warn("invoke failed; skipping trajectory record",
-			"provider", req.GetProvider(),
-			"error", err,
-		)
+		if log := h.log; log != nil {
+			log.Warn("invoke failed; skipping trajectory record",
+				"provider", req.GetProvider(),
+				"error", err,
+			)
+		}
 		return resp, nil
 	}
 	resp.Decision = result.Decision

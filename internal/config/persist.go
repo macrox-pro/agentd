@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -29,7 +28,7 @@ func (s *Store) schedulePersistLocked() {
 
 func (s *Store) flushRuntimeAsync() {
 	if err := s.FlushRuntime(); err != nil {
-		slog.Default().Warn("runtime persist failed", "error", err)
+		s.logger().Warn("runtime persist failed", "error", err)
 	}
 }
 

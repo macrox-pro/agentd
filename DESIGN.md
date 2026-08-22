@@ -417,7 +417,7 @@ agentd
 
 **Persistent flags:** `--config`, `--socket`, `-v` (stderr only; never hook stdout).
 
-### `agentd daemon start [--foreground]`
+### `agentd daemon start [--foreground] [--log-level LEVEL] [--log-file PATH]`
 
 Start the user-level daemon (gRPC, ConfigStore, Dispatch, async queue).
 
@@ -425,6 +425,8 @@ Start the user-level daemon (gRPC, ConfigStore, Dispatch, async queue).
 - Detached start returns only after Health succeeds (or a readiness timeout / error)
 - Lock file prevents double start; stale socket/PID cleanup runs only under the lock
 - Does not handle hook events
+- Operational logs append to `$XDG_STATE_HOME/agentd/agentd.log` by default (see `logging` in §7); `--foreground` also mirrors to stderr
+- `--log-level` / `--log-file` override YAML for this process only (not persisted)
 
 **See also:** `daemon stop`, `daemon status`
 
@@ -433,6 +435,7 @@ Start the user-level daemon (gRPC, ConfigStore, Dispatch, async queue).
 ```bash
 agentd daemon start
 agentd daemon start --foreground
+agentd daemon start --log-level debug
 ```
 
 ### `agentd daemon stop [--timeout 10s]`
@@ -580,6 +583,10 @@ async:
   worker_limit: 8
   target_timeout: 30s
   on_overflow: drop          # drop | log
+
+logging:
+  level: info                # debug | info | warn | error
+  file: ""                   # empty = $XDG_STATE_HOME/agentd/agentd.log
 
 dispatch_defaults:
   tool.pre: { mode: parallel, blocking: true }

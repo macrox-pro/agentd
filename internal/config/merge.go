@@ -49,6 +49,9 @@ func mergeFile(base *fileConfig, user *fileConfig) *fileConfig {
 	if user.Trajectory != nil {
 		out.Trajectory = mergeTrajectoryPtr(out.Trajectory, user.Trajectory)
 	}
+	if user.Logging != nil {
+		out.Logging = mergeLoggingPtr(out.Logging, user.Logging)
+	}
 	return &out
 }
 

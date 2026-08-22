@@ -83,6 +83,7 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 ## Session notes
 
 - M10 shipped: `session search|import`, Claude transcript import, importer_status, `trajectory.import`, `scripts/e2e-m10.sh`
+- Daemon operational logging: `logging` config, `SetupLog`, default `$XDG_STATE_HOME/agentd/agentd.log`, `--log-level`/`--log-file`, `scripts/e2e-m10-logging.sh`
 - Next: M11 multi-import + policy replay
 
 ## Verify (last green)

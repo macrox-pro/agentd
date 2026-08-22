@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -24,6 +25,7 @@ type Snapshot struct {
 	Approvals       Approvals
 	TemporaryBlocks []TemporaryBlock
 	Trajectory      TrajectoryConfig
+	Logging         LoggingConfig
 	Routes          []CompiledRoute
 }
 
@@ -55,6 +57,7 @@ type Store struct {
 
 	watcher      *Watcher
 	persistTimer *time.Timer
+	log          *slog.Logger
 }
 
 type projectState struct {
@@ -92,6 +95,20 @@ func LoadWith(_ context.Context, opts LoadOptions) (*Store, error) {
 // Current returns the active base snapshot (defaults ⊕ user ⊕ runtime).
 func (s *Store) Current() *Snapshot {
 	return s.snap.Load()
+}
+
+// SetLogger configures operational logging for background persist failures.
+func (s *Store) SetLogger(log *slog.Logger) {
+	if s != nil {
+		s.log = log
+	}
+}
+
+func (s *Store) logger() *slog.Logger {
+	if s != nil && s.log != nil {
+		return s.log
+	}
+	return slog.Default()
 }
 
 // UserPath returns the configured user config path.
@@ -420,6 +437,7 @@ func snapshotFrom(res CompileResult, gen uint64, fp, userPath, runtimePath, proj
 		Approvals:       res.Approvals,
 		TemporaryBlocks: res.TemporaryBlocks,
 		Trajectory:      res.Trajectory,
+		Logging:         res.Logging,
 		Routes:          res.Routes,
 	}
 }

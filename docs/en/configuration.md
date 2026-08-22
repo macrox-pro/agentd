@@ -22,7 +22,7 @@ Runtime writes are debounced (**500ms**), mode `0600`, atomic rename. Hot path u
 
 ## Top-level YAML keys
 
-From the file schema: `version`, `policy`, `async`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`, `trajectory`.
+From the file schema: `version`, `policy`, `async`, `logging`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`, `trajectory`.
 
 Project files typically carry `guards` / `dispatch`. `approvals` and `blocks` usually land in runtime via CLI/gRPC.
 
@@ -47,6 +47,17 @@ Project files typically carry `guards` / `dispatch`. `approvals` and `blocks` us
 | `on_overflow` | `drop` (`drop` \| `log`) |
 
 Overflow always drops the job and increments `async_dropped_count` on Status; `log` also emits a warn log.
+
+### logging
+
+Daemon operational logging (not the async dispatch `target: log`).
+
+| Key | Default |
+|-----|---------|
+| `level` | `info` (`debug` \| `info` \| `warn` \| `error`) |
+| `file` | `""` → `$XDG_STATE_HOME/agentd/agentd.log` (Windows: `%LOCALAPPDATA%\agentd\agentd.log`) |
+
+`agentd daemon start --foreground` mirrors logs to stderr as well as the file. CLI `--log-level` and `--log-file` override YAML for that process only.
 
 ### trajectory
 

@@ -11,6 +11,7 @@ import (
 const (
 	userConfigFileName    = ".agentd.yaml"
 	runtimeConfigFileName = "runtime.yaml"
+	defaultLogFileName    = "agentd.log"
 	stateSubdir           = "agentd"
 )
 
@@ -22,4 +23,22 @@ func DefaultUserPath() string {
 		return ""
 	}
 	return filepath.Join(home, userConfigFileName)
+}
+
+// DefaultStateDir returns the agentd state directory (parent of runtime.yaml).
+func DefaultStateDir() string {
+	p := DefaultRuntimePath()
+	if p == "" {
+		return ""
+	}
+	return filepath.Dir(p)
+}
+
+// DefaultLogPath returns the default daemon operational log file path.
+func DefaultLogPath() string {
+	dir := DefaultStateDir()
+	if dir == "" {
+		return ""
+	}
+	return filepath.Join(dir, defaultLogFileName)
 }

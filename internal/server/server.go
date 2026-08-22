@@ -8,6 +8,7 @@
 package server
 
 import (
+	"log/slog"
 	"time"
 
 	"google.golang.org/grpc"
@@ -25,6 +26,7 @@ type Options struct {
 	Store      *config.Store
 	Engine     *dispatch.Engine
 	Recorder   *trajectory.Recorder
+	Logger     *slog.Logger
 	StartedAt  time.Time
 	Version    string
 	OnShutdown func()
@@ -40,6 +42,7 @@ type hookService struct {
 	store    *config.Store
 	engine   *dispatch.Engine
 	recorder *trajectory.Recorder
+	log      *slog.Logger
 }
 
 // New registers DaemonService, HookService, and ConfigService on a new gRPC server.
@@ -52,7 +55,12 @@ func New(opts Options) *grpc.Server {
 	}
 	s := grpc.NewServer()
 	agentdv1.RegisterDaemonServiceServer(s, &daemonService{opts: opts})
-	agentdv1.RegisterHookServiceServer(s, &hookService{store: opts.Store, engine: opts.Engine, recorder: opts.Recorder})
+	agentdv1.RegisterHookServiceServer(s, &hookService{
+		store:    opts.Store,
+		engine:   opts.Engine,
+		recorder: opts.Recorder,
+		log:      opts.Logger,
+	})
 	agentdv1.RegisterConfigServiceServer(s, &configService{store: opts.Store})
 	return s
 }
