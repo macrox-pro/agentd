@@ -15,6 +15,7 @@ make build                         # go build -o agentd .
 make start                         # build + agentd daemon start
 make stop                          # agentd daemon stop
 make generate                      # buf lint + buf generate
+make intent-check                  # package comments present (internal/)
 go test ./internal/daemon/... -race -count=1
 go fix ./path/to/changed/...
 ```
@@ -97,18 +98,39 @@ func TestParsePolicy(t *testing.T) {
 - Unit tests: bufconn / httptest / fakes — no real ports unless testing the network path.
 - Integration: `//go:build integration`.
 
+## Intent before code
+
+Before writing code, fill an **intent note** (PR body or session notes):
+
+- **Problem** — what and why
+- **Hot path** — `invoke_sync` | `config_reload` | `async_side` | `other` ([DESIGN §1.5](./DESIGN.md#15-hot-paths))
+- **Invariants** — what must stay true
+- **Corner cases** — scenarios to cover (test names, not prose in `_test.go`)
+- **Out of scope** — what this change explicitly skips
+
+Rules:
+
+- One PR or agent session → one package or one hot path.
+- Behavior or boundary change → update Tier-1 package comment and/or DESIGN §1.5.
+- New corner case without a `TestXxx` / `tt.name` → do not merge.
+
 ## Architecture
 
-| Path | Owns |
-|------|------|
-| `cmd/` | Cobra only — Short/Long/Example on every command |
-| `internal/` | All business logic |
-| `api/agentd/v1/` | Proto contracts |
-| `gen/` | Generated — never edit |
-| `internal/hookedge` | Provider codecs + wire I/O |
-| `internal/config` | Config merge/compile only |
-| `internal/dispatch` | Routing; new targets → `targets/` |
-| `internal/server` | Thin gRPC mapping |
+| Path | Owns | Must not |
+|------|------|----------|
+| `cmd/` | Cobra only — Short/Long/Example on every command | business logic |
+| `internal/` | All business logic | — |
+| `api/agentd/v1/` | Proto contracts | hand-written Go |
+| `gen/` | Generated — never edit | manual edits |
+| `internal/hookedge` | Provider codecs + wire I/O ([§1.5 invoke_sync](./DESIGN.md#15-hot-paths)) | policy, `Runner.Decide` |
+| `internal/config` | Config merge/compile ([§1.5 config_reload](./DESIGN.md#15-hot-paths)) | dispatch, wire decode |
+| `internal/dispatch` | Routing; new targets → `targets/` ([§1.5 invoke_sync, async_side](./DESIGN.md#15-hot-paths)) | wire decode, YAML compile |
+| `internal/guard` | secrets/shell/mcp/paths checks | routing, encode |
+| `internal/daemon` | start/stop, lock, status, reload signal | dispatch, config compile |
+| `internal/server` | Thin gRPC mapping | policy, dispatch logic |
+| `internal/transport` | Unix socket / named pipe I/O | business logic |
+| `internal/hookclient` | gRPC client to daemon | hook wire |
+| `internal/install` | Provider hook install via agenthooks | daemon logic |
 
 - Hook CLI: decode/encode only. `Runner.Decide` runs in the daemon.
 - Never log to stdout on the hook path. Preserve `Event.Raw` verbatim.
@@ -136,4 +158,4 @@ func TestParsePolicy(t *testing.T) {
 
 On stop / context limit: update [PROGRESS.md](./PROGRESS.md) (next todo + files touched).
 
-PR: `make lint` + `make test` on touched packages; `make e2e` when shipping a milestone e2e script (and wire it into Makefile `e2e`); `make generate` if `api/` changed; DESIGN.md CLI section **and** `docs/en`+`docs/ru` if commands or user-facing behavior changed (`make docs-check`).
+PR: intent note + comprehension checklist ([template](./.github/pull_request_template.md)); `make lint` + `make intent-check` + `make test` on touched packages; `make e2e` when shipping a milestone e2e script (and wire it into Makefile `e2e`); `make generate` if `api/` changed; DESIGN.md CLI section **and** `docs/en`+`docs/ru` if commands or user-facing behavior changed (`make docs-check`).

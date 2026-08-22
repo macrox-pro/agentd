@@ -1,4 +1,3 @@
-// Package install writes provider hook configs via agenthooks/install.
 package install
 
 import (

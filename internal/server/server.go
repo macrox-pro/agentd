@@ -1,4 +1,10 @@
 // Package server implements thin gRPC mapping for DaemonService, HookService, and ConfigService.
+//
+// Owns: proto ↔ internal type mapping; delegates Invoke to dispatch.Engine.
+// Must not: policy logic, route match, guard checks, config compile.
+//
+// Entry: HookService.Invoke, ConfigService handlers.
+// See DESIGN.md §1.5 (invoke_sync, config_reload).
 package server
 
 import (

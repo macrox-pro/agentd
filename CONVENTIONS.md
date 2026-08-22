@@ -17,6 +17,24 @@ Deep reference for contributors. Agents: prefer [AGENTS.md](./AGENTS.md); open t
 - Unexported symbols: no doc comment unless there is a quirk worth documenting.
 - Exported API: one-line godoc when behavior is not obvious from the signature.
 
+**Package comment** (in `{package}.go`, immediately before `package`): Tier-1 template — no code examples.
+
+```go
+// Package dispatch routes hook Invoke through sync and async pipelines.
+//
+// Owns: …
+// Must not: …
+//
+// Invariants:
+//   - …
+//
+// Entry: Engine.Invoke, …
+// See DESIGN.md §1.5 (invoke_sync), §2.
+package dispatch
+```
+
+**Tests:** no scenario docs in `_test.go`. Spec = `TestXxx` and table `tt.name` only. No `// setup`, `// assert`, or `// Scenarios:` blocks.
+
 ### Do not duplicate logic
 
 - Hook wire I/O: `internal/hookedge` + agenthooks — do not reimplement provider codecs.

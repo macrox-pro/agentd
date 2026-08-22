@@ -111,6 +111,53 @@ Agents always invoke `agentd hook run|notify|serve`. Hook CLI decode/encodes wir
 
 ---
 
+## 1.5 Hot paths
+
+Three traces for reading code and reviewing PRs. Entry points only — no implementation paste.
+
+### invoke_sync
+
+Blocking hook: agent waits for decision before continuing.
+
+```mermaid
+sequenceDiagram
+  participant Agent
+  participant HookCLI as hookedge
+  participant GRPC as server.Invoke
+  participant Engine as dispatch.Engine
+  participant Guard as targets.builtin
+  Agent->>HookCLI: wire stdin
+  HookCLI->>GRPC: Invoke raw
+  GRPC->>Engine: InvokeInput + Snapshot
+  Engine->>Guard: sync pipeline
+  Guard-->>Engine: Decision
+  Engine-->>GRPC: InvokeResult
+  GRPC-->>HookCLI: proto
+  HookCLI-->>Agent: encoded response
+```
+
+Flow: `hook run|serve` → hookedge decode → gRPC `HookService.Invoke` → `dispatch.Engine.Invoke` with `config.Snapshot` from `Store.Current()` → route match → sync targets (builtin guards via `Runner.Decide`) → decision proto → encode.
+
+Policy `fail_closed` denies on guard/dispatch errors. Sync budget from `dispatch.SyncBudget` (`timeout.go`) — must fit provider hook timeout.
+
+### config_reload
+
+Config changes without blocking Invoke.
+
+Flow: fsnotify on user/project/runtime YAML → debounced reload goroutine in `config.Store` → merge layers → `Compile` → atomic pointer swap. Hot path reads `Store.Current()` only — zero disk I/O per Invoke.
+
+Daemon `SIGHUP` or runtime overlay write triggers reload; daemon does not compile config itself.
+
+### async_side
+
+Telemetry and observers; never blocks wire response.
+
+Flow: `parallel` / `after_sync` / `async_only` modes → `Queue.Enqueue` (non-blocking; drops when full per `on_overflow`) → worker pool → async targets (log, file, http, exec, grpc). Overflow increments Status drop counter.
+
+Sync pipeline returns before async workers finish. Async failure does not change sync decision.
+
+---
+
 ## 2. Hook Dispatch Engine
 
 Central router with two axes:

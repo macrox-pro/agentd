@@ -1,4 +1,4 @@
-.PHONY: generate generate-grpc lint test test-short e2e docs-check build start stop
+.PHONY: generate generate-grpc lint test test-short e2e docs-check intent-check build start stop
 
 BIN ?= agentd
 
@@ -33,6 +33,9 @@ docs-check:
 	diff -u "$$tmp_en" "$$tmp_ru" \
 		|| { echo "docs-check: docs/en and docs/ru must have the same *.md basenames" >&2; exit 1; }; \
 	echo "docs-check: ok"
+
+intent-check:
+	@bash scripts/check-package-comments.sh
 
 start: build
 	@./$(BIN) daemon start

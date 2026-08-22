@@ -1,4 +1,10 @@
 // Package hookclient provides a gRPC client for the local agentd daemon.
+//
+// Owns: dial transport, HookService/ConfigService RPC wrappers.
+// Must not: hook wire decode/encode (hookedge).
+//
+// Entry: New, Client.Invoke.
+// See DESIGN.md §1.5 (invoke_sync).
 package hookclient
 
 import (

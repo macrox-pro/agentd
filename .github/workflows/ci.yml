@@ -24,6 +24,8 @@ jobs:
         run: make lint
       - name: Docs parity
         run: make docs-check
+      - name: Intent check
+        run: make intent-check
       - name: Test
         run: make test
       - name: Integration

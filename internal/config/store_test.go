@@ -14,7 +14,7 @@ import (
 	"github.com/macrox-pro/agentd/internal/config"
 )
 
-func TestLoad(t *testing.T) {
+func TestStoreLoad(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()

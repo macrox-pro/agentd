@@ -78,6 +78,7 @@ Do **not**: invent thinking/tool results; Claude-only L0; agent-loop resume (DES
 
 ## Session notes
 
+- Mental model: intent-first comprehension (Tier-1 package comments, DESIGN §1.5 hot paths, PR gate)
 - AGENTS.md / CONVENTIONS.md read: yes (2026-08-21)
 - Trajectory hub planned: universal **L0** for all supported agents; L2/L3 per-provider matrix in DESIGN §14.6
 - DESIGN: §11 transcripts → §14; §12 Q6–Q8; §13 M9–M12; §14 (+ full provider limits)
@@ -88,6 +89,7 @@ Do **not**: invent thinking/tool results; Claude-only L0; agent-loop resume (DES
 
 ```bash
 make lint
+make intent-check
 make docs-check
 make test
 go test -tags=integration ./internal/hookedge/ -race -count=1

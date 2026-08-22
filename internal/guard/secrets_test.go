@@ -14,7 +14,7 @@ import (
 
 const fakeAWSKey = "AKIAIOSFODNN7EXAMPLE"
 
-func TestScan(t *testing.T) {
+func TestSecretsScan(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

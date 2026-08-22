@@ -10,7 +10,7 @@ import (
 	"github.com/macrox-pro/agentd/internal/daemon"
 )
 
-func TestPaths(t *testing.T) {
+func TestDaemonPaths(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

@@ -1,4 +1,7 @@
 // Package version holds the build-time agentd version string.
+//
+// Owns: link-time Version var.
+// Must not: runtime feature logic.
 package version
 
 // Version is overridden at link time via:

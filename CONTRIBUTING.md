@@ -63,9 +63,10 @@ make e2e           # if you add/change scripts/e2e-m*.sh or milestone behavior
 
 ### Pull request tips
 
+- Non-trivial PRs: fill the [PR template](./.github/pull_request_template.md) intent note and comprehension checklist.
 - Title and body should explain the problem and approach, not only the diff.
 - Link related issues.
-- CI runs lint, docs parity, unit/race tests, integration tags, and e2e — keep the PR green.
+- CI runs lint, intent-check, docs parity, unit/race tests, integration tags, and e2e — keep the PR green.
 - Do not commit secrets, `.env`, or local binaries.
 
 ## Development pointers
