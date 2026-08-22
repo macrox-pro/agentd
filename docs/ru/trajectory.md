@@ -13,6 +13,10 @@ trajectory:
   redact_secret_rules: true
   max_event_bytes: 262144
   queue_capacity: 1024
+  import:
+    claude-code:
+      enabled: false
+      path: ""
 ```
 
 Хранение: `$XDG_STATE_HOME/agentd/sessions/<provider>/<session_id>.jsonl`.
@@ -23,17 +27,32 @@ trajectory:
 
 | Команда | Назначение |
 |---------|------------|
-| `agentd session list [--provider ID] [--json]` | Список сессий (offline) |
+| `agentd session list [--provider ID] [--json]` | Список сессий (`importer_status` в `--json`) |
 | `agentd session show ID --provider ID [--json]` | События одной сессии |
-| `agentd session export [--provider ID] [--session ID] [--out PATH]` | Экспорт JSONL |
+| `agentd session export …` | Экспорт JSONL |
+| `agentd session search …` | Поиск (O(n) скан JSONL) |
+| `agentd session import --provider claude-code …` | Импорт transcript (`source=transcript`) |
+
+## Поиск
+
+`session search` обходит JSONL построчно без индекса. Фильтры: `--provider`, `--session`, `--kind`, `--source`, `--query`, `--limit`.
+
+## Импорт (Claude Code)
+
+```bash
+agentd session import --provider claude-code --session SESSION_ID
+agentd session import --provider claude-code --path /path/to/session.jsonl
+```
+
+Transcript-события дописываются после hook-событий (монотонный `seq`). Повторный импорт пропускает строки из sidecar `<session_id>.import.json`. Корреляция по `session_id` и `tool_use_id`.
 
 ## Покрытие (L0 и выше)
 
-| Provider | Entrypoint | L0 live | L2 import | L3 thinking |
-|----------|------------|---------|-----------|-------------|
-| claude-code | `hook run` | обязательно | M10 | из session files, не из hooks |
-| cursor | `hook run --argv-payload` | обязательно | M11 partial | часто redacted |
-| codex | `run` + `hook notify` | обязательно | none | маловероятно в hooks |
+| Provider | Entrypoint | L0 live | L2 import status | L3 thinking |
+|----------|------------|---------|------------------|-------------|
+| claude-code | `hook run` | обязательно | **supported** | из session files |
+| cursor | `hook run --argv-payload` | обязательно | none (M11 partial) | часто redacted |
+| codex | `run` + `hook notify` | обязательно | none | маловероятно |
 | gemini | `hook run` | обязательно | none | unknown |
 | opencode | `hook serve` | обязательно | none | unknown |
 | kimi-code | `hook run` | обязательно | none | unknown |

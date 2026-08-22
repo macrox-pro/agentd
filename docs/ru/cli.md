@@ -70,8 +70,12 @@
 
 | Команда | Флаги |
 |---------|-------|
-| `session list` | `--provider`, `--json` |
+| `session list` | `--provider`, `--json` (в `--json` есть `importer_status`) |
 | `session show SESSION_ID` | `--provider` (обязателен), `--json` |
 | `session export` | `--provider`, `--session`, `--out` |
+| `session search` | `--provider`, `--session`, `--kind` (повтор), `--source`, `--query`, `--limit`, `--json` |
+| `session import` | `--provider` (обязателен), `--session`, `--path`, `--dry-run`, `--json` |
+
+`session search` сканирует JSONL построчно (O(объём); без индекса). `session import` offline; для Claude Code — `supported`, для остальных явный `none`.
 
 См. также: [Быстрый старт](./getting-started.md), [Провайдеры](./providers.md).

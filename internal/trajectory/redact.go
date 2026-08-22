@@ -39,6 +39,24 @@ func redactRaw(raw []byte) []byte {
 	return out
 }
 
+// PrepareTranscriptText applies redaction and max size to imported transcript text.
+func PrepareTranscriptText(text string, cfg config.TrajectoryConfig) string {
+	if text == "" {
+		return ""
+	}
+	out := []byte(text)
+	if cfg.RedactSecretRules {
+		b, _ := json.Marshal(text)
+		if len(guard.Scan(b, nil)) > 0 {
+			return "[REDACTED]"
+		}
+	}
+	if cfg.MaxEventBytes > 0 && len(out) > cfg.MaxEventBytes {
+		return string(out[:cfg.MaxEventBytes])
+	}
+	return text
+}
+
 func redactValue(v *any) {
 	switch t := (*v).(type) {
 	case map[string]any:

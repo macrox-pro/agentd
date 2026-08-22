@@ -89,9 +89,7 @@ func (q *Queue) Close(timeout time.Duration) {
 	}()
 	if timeout <= 0 {
 		<-done
-		if q.persist != nil {
-			q.persist.Flush(context.Background())
-		}
+		q.flushPersist()
 		return
 	}
 	timer := time.NewTimer(timeout)
@@ -103,8 +101,15 @@ func (q *Queue) Close(timeout time.Duration) {
 			q.log.Warn("trajectory queue drain timed out")
 		}
 	}
-	if q.persist != nil {
-		q.persist.Flush(context.Background())
+	q.flushPersist()
+}
+
+func (q *Queue) flushPersist() {
+	if q.persist == nil {
+		return
+	}
+	if err := q.persist.Flush(context.Background()); err != nil && q.log != nil {
+		q.log.Warn("trajectory persist flush failed", "error", err)
 	}
 }
 

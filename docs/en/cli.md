@@ -70,8 +70,12 @@ Trajectory ledger inspect/export ([Trajectory](./trajectory.md)). Offline — re
 
 | Command | Flags |
 |---------|-------|
-| `session list` | `--provider`, `--json` |
+| `session list` | `--provider`, `--json` (includes `importer_status`) |
 | `session show SESSION_ID` | `--provider` (required), `--json` |
 | `session export` | `--provider`, `--session`, `--out` |
+| `session search` | `--provider`, `--session`, `--kind` (repeatable), `--source`, `--query`, `--limit`, `--json` |
+| `session import` | `--provider` (required), `--session`, `--path`, `--dry-run`, `--json` |
+
+`session search` scans JSONL line-by-line (O(total bytes); no index). `session import` is offline; Claude Code is `supported`, other providers return explicit `none`.
 
 See also: [Getting started](./getting-started.md), [Providers](./providers.md).

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/speakeasy-api/agenthooks/agenthookstest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -86,6 +87,21 @@ func TestHookServiceInvoke(t *testing.T) {
 			},
 		},
 		{
+			name: "cursor argv decodes",
+			run: func(t *testing.T) {
+				t.Helper()
+				resp, err := hook.Invoke(ctx, &agentdv1.InvokeRequest{
+					Provider:       agentdv1.Provider_PROVIDER_CURSOR,
+					RawPayload:     agenthookstest.Fixture(t, "cursor/pre_tool_use.json"),
+					InvocationMode: agentdv1.InvocationMode_INVOCATION_MODE_ARGV,
+					Cwd:            "/work/repo",
+				})
+				require.NoError(t, err, "Invoke(cursor)")
+				assert.Equal(t, agentdv1.DecisionKind_DECISION_KIND_NO_DECISION, resp.GetDecision().GetKind(), "Invoke(cursor)")
+				assert.GreaterOrEqual(t, resp.GetAsyncDispatchedCount(), uint32(1), "cursor decoded and routed")
+			},
+		},
+		{
 			name: "invoke undecodable is neutral",
 			run: func(t *testing.T) {
 				t.Helper()
@@ -160,4 +176,58 @@ trajectory:
 	for i, e := range events {
 		assert.Equal(t, uint64(i+1), e.Seq)
 	}
+}
+
+func TestHookServiceInvokeCursorArgvTrajectory(t *testing.T) {
+	ctx := context.Background()
+	stateDir := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", stateDir)
+
+	path := filepath.Join(t.TempDir(), "agentd.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`version: 1
+trajectory:
+  enabled: true
+dispatch:
+  - name: observe-all
+    match:
+      kind: ["*"]
+      provider: ["*"]
+    mode: parallel
+    sync:
+      - target: builtin
+        guards: [secrets]
+    async:
+      - target: builtin
+        observe: true
+`), 0o600))
+	store, err := config.Load(ctx, path)
+	require.NoError(t, err)
+
+	q := dispatch.NewQueue(store.Current().Async, nil)
+	t.Cleanup(func() { q.Close(2 * time.Second) })
+	recorder := trajectory.NewRecorder(trajectory.DefaultSessionsDir(), store.Current().Trajectory.QueueCapacity, nil)
+	t.Cleanup(func() { recorder.Close(2 * time.Second) })
+
+	srv := server.New(server.Options{
+		Store:     store,
+		Engine:    dispatch.NewEngine(q, nil),
+		Recorder:  recorder,
+		StartedAt: time.Now().UTC(),
+		Version:   "test",
+	})
+	conn := dialBuf(t, srv)
+	hook := agentdv1.NewHookServiceClient(conn)
+
+	_, err = hook.Invoke(ctx, &agentdv1.InvokeRequest{
+		Provider:       agentdv1.Provider_PROVIDER_CURSOR,
+		RawPayload:     agenthookstest.Fixture(t, "cursor/pre_tool_use.json"),
+		InvocationMode: agentdv1.InvocationMode_INVOCATION_MODE_ARGV,
+		Cwd:            "/work/repo",
+	})
+	require.NoError(t, err)
+
+	time.Sleep(150 * time.Millisecond)
+	summaries, err := trajectory.ListSessions(trajectory.DefaultSessionsDir(), "cursor")
+	require.NoError(t, err)
+	require.NotEmpty(t, summaries, "cursor ledger")
 }

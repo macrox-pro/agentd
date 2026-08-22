@@ -59,6 +59,10 @@ Opt-in session ledger ([Trajectory](./trajectory.md)). Default **off**.
 | `redact_secret_rules` | `true` |
 | `max_event_bytes` | `262144` |
 | `queue_capacity` | `1024` |
+| `import.claude-code.enabled` | `false` |
+| `import.claude-code.path` | `""` (default `~/.claude/projects`) |
+
+When `import.claude-code.enabled` is true, the daemon watches the projects directory and appends new transcript lines asynchronously. CLI `session import` works offline without this flag.
 
 Overflow increments `trajectory_dropped_count` on Status.
 

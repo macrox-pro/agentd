@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase: **m10** | Last: m9-trajectory-p0 | Next: m10-a search + Claude import
+Phase: **m10 done** | Last: m10-trajectory-p1 | Next: m11-a importers + policy replay
 
 ## agents_md_ready
 
@@ -17,69 +17,73 @@ true
 | M0–M7 | **done** | Daemon through approvals / RecordDecision / runtime persist |
 | M8 / v1 | **done** | Overflow counters, conformance, docs freeze, release |
 | **M9** | **done** | Trajectory P0 — L0 live ledger for all six providers + export |
-| **M10** | planned | Trajectory P1 — search + Claude import; others stay L0 |
+| **M10** | **done** | Trajectory P1 — search + Claude import; others stay L0 |
 | **M11** | planned | Trajectory P2 — importers if format exists; policy replay all dialects |
 | **M12 / v1.1** | planned | Trajectory P3 — Subscribe; contract + §14.6; **v1.1 release** |
 
 Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
-## M9 checklist — Trajectory hub P0
+## M10 checklist — Trajectory hub P1
 
-**Constraint:** L0 live ledger for **all six** providers (DESIGN §14.6). Entrypoints: run / argv-payload / notify / serve.
+**Constraint:** L0 live path unchanged for all six providers; Claude L2 import only.
 
-### Phase A — Store + catalog
+### Phase A — Search
 
-- [x] m9-a-catalog — draft event types in code (`hook/invoked`, `hook/decided`, …) aligned with DESIGN §14.3; include `provider` + `invocation_mode`
-- [x] m9-a-store — `internal/trajectory` append-only in-memory seq + JSONL under `sessions/<provider>/…`
-- [x] m9-a-test — unit tests: contig seq, immutable after append, truncate `max_event_bytes`
-- [x] m9-a-checkpoint
+- [x] m10-a-events — transcript/message, transcript/thinking, source=transcript
+- [x] m10-a-search — internal/trajectory/search.go (O(n) JSONL scan)
+- [x] m10-a-cli-search — `agentd session search`
+- [x] m10-a-checkpoint
 
-### Phase B — Engine wiring (all providers)
+### Phase B — Config
 
-- [x] m9-b-wire — enqueue trajectory record from Invoke path (after sync / async_only); never block wire
-- [x] m9-b-providers — fixtures or e2e coverage: claude-code, cursor (argv), codex (run+notify), gemini, opencode (serve), kimi-code
-- [x] m9-b-overflow — drop + Status field `trajectory_dropped_count`
-- [x] m9-b-test — server/dispatch tests with trajectory enabled
-- [x] m9-b-checkpoint
+- [x] m10-b-config-schema — trajectory.import.claude-code
+- [x] m10-b-config-compile — fingerprint includes import knobs
+- [x] m10-b-config-test
+- [x] m10-b-config-docs
+- [x] m10-b-checkpoint
 
-### Phase C — Config
+### Phase C — Claude import + merge
 
-- [x] m9-c-schema — `trajectory:` in config (enabled, include_raw, redact, max_event_bytes); default **off**
-- [x] m9-c-compile — merge/validate; fingerprint includes trajectory knobs
-- [x] m9-c-docs — DESIGN §7 snippet
-- [x] m9-c-checkpoint
+- [x] m10-c-import-pkg — internal/trajectory/importer/
+- [x] m10-c-claude-map — agenthooks/transcript + thinking blocks
+- [x] m10-c-checkpoint-dedup — import sidecar .import.json
+- [x] m10-c-import-append — append-only seq merge
+- [x] m10-c-cli-import — reject non-Claude with explicit none
+- [x] m10-c-checkpoint
 
-### Phase D — CLI + docs
+### Phase D — Daemon watcher
 
-- [x] m9-d-cli — `agentd session list|show|export` (`--provider` filter)
-- [x] m9-d-matrix — docs en/ru: trajectory page linking §14.6 limits per agent
-- [x] m9-d-design-cli — DESIGN §6 + `make docs-check`
-- [x] m9-d-checkpoint
+- [x] m10-d-watcher — fsnotify debounced import (async_side)
+- [x] m10-d-watcher-wire — start.go + config reload
+- [x] m10-d-checkpoint
 
-### Phase E — Close M9
+### Phase E — L0 regression + list status
 
-- [x] m9-e-e2e — `scripts/e2e-m9.sh` (multi-provider smoke)
-- [x] m9-e-verify — lint + test + e2e
-- [x] m9-e-checkpoint
+- [x] m10-e-list-status — importer_status in session list --json
+- [x] m10-e-l0-regression — e2e-m9 unchanged
+- [x] m10-e-checkpoint
 
-**M9 acceptance:** see [DESIGN.md §13 M9](./DESIGN.md#m9--trajectory-hub-p0-live-ledger).
+### Phase F — Close M10
 
-## M10–M12 / v1.1 (outline only)
+- [x] m10-f-design-cli — DESIGN §6/§7/§13
+- [x] m10-f-docs — docs en/ru cli, trajectory, configuration
+- [x] m10-f-e2e — scripts/e2e-m10.sh
+- [x] m10-f-verify — lint + test + e2e
+- [x] m10-f-checkpoint
 
-Checklists expand when M10 starts. Summary:
+**M10 acceptance:** see [DESIGN.md §13 M10](./DESIGN.md#m10--trajectory-p1-search--claude-import).
+
+## M11–M12 / v1.1 (outline only)
 
 | Milestone | Focus |
 |-----------|--------|
-| M10 | `session search`; Claude JSONL import; `source=transcript`; other providers stay L0 + importer status `none`/`partial` |
-| M11 | Importers only where format exists; `session replay --policy` **all six** wire dialects; `session fork` |
+| M11 | Importers where format exists; `session replay --policy` all six wire dialects; `session fork` |
 | M12 / v1.1 | Subscribe; versioned contract; README §14.6; tag **v1.1.0** |
-
-Do **not**: invent thinking/tool results; Claude-only L0; agent-loop resume (DESIGN §12.8 / §14.6–§14.7).
 
 ## Session notes
 
-- M9 shipped: `internal/trajectory/`, `trajectory:` config, `session` CLI, `trajectory_dropped_count`, `scripts/e2e-m9.sh`
-- Next: M10 search + Claude import
+- M10 shipped: `session search|import`, Claude transcript import, importer_status, `trajectory.import`, `scripts/e2e-m10.sh`
+- Next: M11 multi-import + policy replay
 
 ## Verify (last green)
 
@@ -89,7 +93,7 @@ make intent-check
 make docs-check
 make test
 go test -tags=integration ./internal/hookedge/ -race -count=1
-make e2e   # includes scripts/e2e-m9.sh
+make e2e   # includes scripts/e2e-m9.sh, e2e-m10.sh
 ```
 
 ## Blockers

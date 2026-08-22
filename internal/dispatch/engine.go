@@ -64,7 +64,7 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 	if in.Snap == nil {
 		return InvokeResult{}, fmt.Errorf("dispatch: nil snapshot")
 	}
-	typed, err := DecodeTyped(ctx, in.Provider, in.RawPayload)
+	typed, err := DecodeTyped(ctx, in.Provider, in.InvocationMode, in.RawPayload)
 	if err != nil {
 		return InvokeResult{}, err
 	}

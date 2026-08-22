@@ -3,9 +3,15 @@ package config
 import "fmt"
 
 const (
-	defaultMaxEventBytes     = 262144
+	defaultMaxEventBytes      = 262144
 	defaultTrajectoryQueueCap = 1024
 )
+
+// ImportProviderConfig is compiled per-provider transcript import settings.
+type ImportProviderConfig struct {
+	Enabled bool
+	Path    string
+}
 
 // TrajectoryConfig is compiled trajectory ledger settings.
 type TrajectoryConfig struct {
@@ -14,6 +20,7 @@ type TrajectoryConfig struct {
 	RedactSecretRules bool
 	MaxEventBytes     int
 	QueueCapacity     int
+	Import            map[string]ImportProviderConfig
 }
 
 func defaultTrajectory() TrajectoryConfig {
@@ -23,15 +30,28 @@ func defaultTrajectory() TrajectoryConfig {
 		RedactSecretRules: true,
 		MaxEventBytes:     defaultMaxEventBytes,
 		QueueCapacity:     defaultTrajectoryQueueCap,
+		Import:            defaultImportProviders(),
+	}
+}
+
+func defaultImportProviders() map[string]ImportProviderConfig {
+	return map[string]ImportProviderConfig{
+		"claude-code": {Enabled: false, Path: ""},
 	}
 }
 
 type fileTrajectory struct {
-	Enabled           *bool  `yaml:"enabled"`
-	IncludeRaw        *bool  `yaml:"include_raw"`
-	RedactSecretRules *bool  `yaml:"redact_secret_rules"`
-	MaxEventBytes     *int   `yaml:"max_event_bytes"`
-	QueueCapacity     *int   `yaml:"queue_capacity"`
+	Enabled           *bool                         `yaml:"enabled"`
+	IncludeRaw        *bool                         `yaml:"include_raw"`
+	RedactSecretRules *bool                         `yaml:"redact_secret_rules"`
+	MaxEventBytes     *int                          `yaml:"max_event_bytes"`
+	QueueCapacity     *int                          `yaml:"queue_capacity"`
+	Import            map[string]*fileImportProvider `yaml:"import"`
+}
+
+type fileImportProvider struct {
+	Enabled *bool  `yaml:"enabled"`
+	Path    string `yaml:"path"`
 }
 
 func parseTrajectory(in *fileTrajectory, base TrajectoryConfig) (TrajectoryConfig, error) {
@@ -60,7 +80,34 @@ func parseTrajectory(in *fileTrajectory, base TrajectoryConfig) (TrajectoryConfi
 		}
 		out.QueueCapacity = *in.QueueCapacity
 	}
+	if len(in.Import) > 0 {
+		merged := defaultImportProviders()
+		for name, prov := range in.Import {
+			if prov == nil {
+				continue
+			}
+			key := canonicalImportProvider(name)
+			cur := merged[key]
+			if prov.Enabled != nil {
+				cur.Enabled = *prov.Enabled
+			}
+			if prov.Path != "" {
+				cur.Path = prov.Path
+			}
+			merged[key] = cur
+		}
+		out.Import = merged
+	}
 	return out, nil
+}
+
+func canonicalImportProvider(name string) string {
+	switch name {
+	case "claude-code":
+		return "claude-code"
+	default:
+		return name
+	}
 }
 
 func mergeTrajectoryPtr(base, user *fileTrajectory) *fileTrajectory {
@@ -89,5 +136,34 @@ func mergeTrajectoryPtr(base, user *fileTrajectory) *fileTrajectory {
 	if user.QueueCapacity != nil {
 		out.QueueCapacity = user.QueueCapacity
 	}
+	if len(user.Import) > 0 {
+		if out.Import == nil {
+			out.Import = map[string]*fileImportProvider{}
+		}
+		for name, prov := range user.Import {
+			if prov == nil {
+				continue
+			}
+			existing := out.Import[name]
+			if existing == nil {
+				existing = &fileImportProvider{}
+			}
+			if prov.Enabled != nil {
+				existing.Enabled = prov.Enabled
+			}
+			if prov.Path != "" {
+				existing.Path = prov.Path
+			}
+			out.Import[name] = existing
+		}
+	}
 	return &out
+}
+
+// ClaudeImport returns compiled claude-code import settings.
+func (c TrajectoryConfig) ClaudeImport() ImportProviderConfig {
+	if c.Import == nil {
+		return ImportProviderConfig{}
+	}
+	return c.Import["claude-code"]
 }

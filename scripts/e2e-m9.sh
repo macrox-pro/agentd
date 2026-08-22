@@ -35,24 +35,6 @@ EOF
 e2e_build
 e2e_daemon_start --config "$CFG"
 
-e2e_run_hook() {
-	if ! "$@" >/dev/null; then
-		e2e_fail "hook failed: $*"
-	fi
-}
-
-e2e_wait_provider_sessions() {
-	local prov="$1" n=0
-	while (( n < 50 )); do
-		if find "$SESSIONS/$prov" -name '*.jsonl' -print -quit 2>/dev/null | grep -q .; then
-			return 0
-		fi
-		sleep 0.1
-		n=$((n + 1))
-	done
-	e2e_fail "timeout waiting for sessions under $SESSIONS/$prov"
-}
-
 STATUS="$("$BIN" daemon status --socket "$SOCK" --json)"
 e2e_assert_contains "$STATUS" '"running":true' status-running
 e2e_assert_contains "$STATUS" 'trajectory_dropped_count' status-trajectory-field
@@ -62,7 +44,7 @@ CLAUDE='{"session_id":"m9-claude","cwd":"'"$PROJ"'","hook_event_name":"PreToolUs
 printf '%s' "$CLAUDE" | e2e_run_hook "$BIN" hook run --socket "$SOCK" --provider=claude-code
 
 # cursor — argv-payload
-CURSOR='{"conversation_id":"m9-cursor","generation_id":"g1","hook_event_name":"preToolUse","workspace_roots":["'"$PROJ"'"],"tool_name":"Read","tool_input":{"path":"'"$PROJ"'/main.go"}}'
+CURSOR='{"conversation_id":"m9-cursor","cwd":"'"$PROJ"'","generation_id":"g1","hook_event_name":"preToolUse","workspace_roots":["'"$PROJ"'"],"tool_name":"Read","tool_input":{"path":"'"$PROJ"'/main.go"}}'
 e2e_run_hook "$BIN" hook run --socket "$SOCK" --provider=cursor --argv-payload "$CURSOR"
 
 # codex — run + notify
@@ -84,6 +66,8 @@ OC_INIT='{"seq":1,"hook":"initialize","input":{"serverUrl":"http://127.0.0.1:1",
 OC_TOOL='{"seq":2,"hook":"tool.execute.before","input":{"sessionID":"m9-opencode","callID":"oc1","tool":"bash"},"output":{"args":{"command":"echo ok","timeout":30}}}'
 printf '%s\n%s\n' "$OC_INIT" "$OC_TOOL" | e2e_run_hook "$BIN" hook serve --socket "$SOCK" --provider=opencode
 
+e2e_trajectory_settle
+e2e_assert_trajectory_no_drops
 for prov in claude-code cursor codex gemini kimi-code opencode; do
 	e2e_wait_provider_sessions "$prov"
 done

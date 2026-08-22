@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"hello agentd"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"thinking","thinking":"plan the response"},{"type":"text","text":"hi there"},{"type":"tool_use","id":"toolu_01","name":"Bash","input":{"command":"echo ok"}}]}}

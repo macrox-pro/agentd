@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -12,18 +13,27 @@ import (
 
 // Persister writes JSONL lines asynchronously with debounced flush.
 type Persister struct {
-	root string
-	mu   sync.Mutex
+	root    string
+	log     *slog.Logger
+	mu      sync.Mutex
+	flushMu sync.Mutex
 	pending map[SessionKey][]Event
-	timer *time.Timer
+	wake    chan struct{}
+	done    chan struct{}
+	once    sync.Once
 }
 
 // NewPersister returns a persister rooted at dir (typically DefaultSessionsDir()).
-func NewPersister(root string) *Persister {
-	return &Persister{
+func NewPersister(root string, log *slog.Logger) *Persister {
+	p := &Persister{
 		root:    root,
+		log:     log,
 		pending: map[SessionKey][]Event{},
+		wake:    make(chan struct{}, 1),
+		done:    make(chan struct{}),
 	}
+	p.once.Do(func() { go p.loop() })
+	return p
 }
 
 // Schedule queues events for debounced disk append.
@@ -32,14 +42,43 @@ func (p *Persister) Schedule(key SessionKey, events []Event) {
 		return
 	}
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	p.pending[key] = append(p.pending[key], events...)
-	if p.timer == nil {
-		p.timer = time.AfterFunc(persistDebounce, func() {
-			_ = p.Flush(context.Background())
-		})
-	} else {
-		p.timer.Reset(persistDebounce)
+	p.mu.Unlock()
+	select {
+	case p.wake <- struct{}{}:
+	default:
+	}
+}
+
+func (p *Persister) loop() {
+	for {
+		select {
+		case <-p.done:
+			return
+		case <-p.wake:
+		}
+		timer := time.NewTimer(persistDebounce)
+		for {
+			select {
+			case <-p.done:
+				timer.Stop()
+				return
+			case <-p.wake:
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
+				timer.Reset(persistDebounce)
+			case <-timer.C:
+				if err := p.Flush(context.Background()); err != nil && p.log != nil {
+					p.log.Warn("trajectory persist flush failed", "error", err)
+				}
+				goto next
+			}
+		}
+	next:
 	}
 }
 
@@ -48,20 +87,38 @@ func (p *Persister) Flush(_ context.Context) error {
 	if p == nil {
 		return nil
 	}
+	p.flushMu.Lock()
+	defer p.flushMu.Unlock()
+
 	p.mu.Lock()
+	if len(p.pending) == 0 {
+		p.mu.Unlock()
+		return nil
+	}
 	batch := p.pending
 	p.pending = map[SessionKey][]Event{}
-	if p.timer != nil {
-		p.timer.Stop()
-		p.timer = nil
-	}
 	p.mu.Unlock()
 
 	var firstErr error
+	failed := map[SessionKey][]Event{}
 	for key, events := range batch {
-		if err := p.appendFile(key, events); err != nil && firstErr == nil {
-			firstErr = err
+		if err := p.appendFile(key, events); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			failed[key] = events
 		}
+	}
+	if len(failed) > 0 {
+		p.mu.Lock()
+		for key, events := range failed {
+			p.pending[key] = append(events, p.pending[key]...)
+		}
+		select {
+		case p.wake <- struct{}{}:
+		default:
+		}
+		p.mu.Unlock()
 	}
 	return firstErr
 }
@@ -83,4 +140,13 @@ func (p *Persister) appendFile(key SessionKey, events []Event) error {
 		}
 	}
 	return nil
+}
+
+// AppendEvents writes events to the session JSONL file immediately (offline import).
+func AppendEvents(root string, key SessionKey, events []Event) error {
+	if len(events) == 0 {
+		return nil
+	}
+	p := NewPersister(root, nil)
+	return p.appendFile(key, events)
 }

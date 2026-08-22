@@ -59,6 +59,10 @@
 | `redact_secret_rules` | `true` |
 | `max_event_bytes` | `262144` |
 | `queue_capacity` | `1024` |
+| `import.claude-code.enabled` | `false` |
+| `import.claude-code.path` | `""` (по умолчанию `~/.claude/projects`) |
+
+При `import.claude-code.enabled: true` демон асинхронно следит за каталогом projects. CLI `session import` работает offline без этого флага.
 
 Переполнение очереди увеличивает `trajectory_dropped_count` в Status.
 

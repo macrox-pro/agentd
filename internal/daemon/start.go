@@ -128,6 +128,10 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	}
 	defer func() { _ = watcher.Close() }()
 
+	importWatcher := NewImportWatcher(store, log)
+	importWatcher.Start(runCtx)
+	defer importWatcher.Stop()
+
 	gs := server.New(server.Options{
 		Store:      store,
 		Engine:     engine,
@@ -179,6 +183,8 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 			if isReloadSignal(sig) {
 				if err := store.Reload(runCtx); err != nil {
 					log.Warn("config reload failed", "error", err)
+				} else {
+					importWatcher.Start(runCtx)
 				}
 				continue
 			}
@@ -187,6 +193,8 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 		case <-reloadCh:
 			if err := store.Reload(context.Background()); err != nil {
 				log.Warn("config reload failed", "error", err)
+			} else {
+				importWatcher.Start(runCtx)
 			}
 		case err := <-errCh:
 			paths.ClearPID()

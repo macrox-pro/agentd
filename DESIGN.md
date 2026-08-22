@@ -541,17 +541,26 @@ routes appear before default-kind fallbacks; target kinds are listed for sync/as
 
 **Hook failure modes:** daemon down → `policy.offline`; timeout → per `policy.fail`; never debug on stdout.
 
-### `agentd session list|show|export`
+### `agentd session list|show|export|search|import`
 
 Inspect local trajectory session ledgers (JSONL under `$XDG_STATE_HOME/agentd/sessions/`). Offline — no daemon required.
 
 | Command | Role |
 |---------|------|
-| `session list [--provider ID] [--json]` | List `(provider, session_id)` keys |
+| `session list [--provider ID] [--json]` | List `(provider, session_id)` keys; `--json` includes `importer_status` |
 | `session show SESSION_ID --provider ID [--json]` | Print events for one session |
 | `session export [--provider ID] [--session ID] [--out PATH]` | Export JSONL for external viewers |
+| `session search [--provider ID] [--session ID] [--kind TYPE]… [--source hook\|transcript\|…] [--query TEXT] [--limit N] [--json]` | Filter events (O(n) JSONL scan; no index) |
+| `session import --provider ID [--session ID] [--path PATH] [--dry-run] [--json]` | Append provider transcript events (Claude Code: `supported`; others: explicit error / `none`) |
 
-Requires `trajectory.enabled` in config and prior hook Invokes while the daemon was running.
+Requires `trajectory.enabled` in config for live hook recording; import/search read existing JSONL without a running daemon.
+
+**Example:**
+
+```bash
+agentd session search --provider claude-code --query thinking
+agentd session import --provider claude-code --session s1 --path ~/.claude/projects/.../s1.jsonl
+```
 
 ---
 
@@ -613,6 +622,10 @@ trajectory:
   redact_secret_rules: true
   max_event_bytes: 262144
   queue_capacity: 1024
+  import:
+    claude-code:
+      enabled: false
+      path: ""
 
 # Runtime layer ($XDG_STATE_HOME/agentd/runtime.yaml) may also carry:
 # approvals: { project: [...], session: [...] }
@@ -712,7 +725,7 @@ agentd/
 | **M7** | done | Approvals / `RecordDecision`; runtime persist; temporary blocks |
 | **M8 / v1** | done | Ops polish, conformance, docs freeze, release gate |
 | **M9** | done | Trajectory hub P0 — **L0 live ledger for all six providers** + export (§14 / §14.6) |
-| **M10** | planned | Trajectory P1 — search + Claude import; others L0 + explicit importer status |
+| **M10** | done | Trajectory P1 — search + Claude import; others L0 + explicit importer status |
 | **M11** | planned | Trajectory P2 — importers where possible; policy replay **all** wire dialects |
 | **M12 / v1.1** | planned | Trajectory P3 — Subscribe; contract freeze; depth = §14.6 matrix; **v1.1 release gate** |
 
@@ -795,10 +808,10 @@ M7 acceptance: Approve once → subsequent matching tool.pre allows within TTL; 
 
 **M10 acceptance:**
 
-- [ ] Imported thinking/assistant records appear in the same session stream with `source=transcript` (Claude)
-- [ ] Hook and transcript events correlate when ids match; no rewrite of prior seqs (append-only)
-- [ ] Non-Claude providers: live ledger still works; importer status is `supported` \| `partial` \| `none` per §14.6 (no silent pretend-import)
-- [ ] Search returns hits without full-file scan for moderately large logs (or document O(n) JSONL scan limit)
+- [x] Imported thinking/assistant records appear in the same session stream with `source=transcript` (Claude)
+- [x] Hook and transcript events correlate when ids match; no rewrite of prior seqs (append-only)
+- [x] Non-Claude providers: live ledger still works; importer status is `supported` \| `partial` \| `none` per §14.6 (no silent pretend-import)
+- [x] Search returns hits without full-file scan for moderately large logs (or document O(n) JSONL scan limit)
 
 ### M11 — Trajectory P2 (multi-import + policy replay)
 

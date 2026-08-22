@@ -22,7 +22,7 @@ test-short:
 	@go test ./... -race -count=1 -short
 
 e2e:
-	@for s in $$(ls scripts/e2e-m*.sh | sort -V); do bash "$$s" || exit 1; done
+	@for s in $$(ls scripts/e2e-m*.sh | sort -V); do bash scripts/e2e-run.sh "$$s" || exit 1; done
 
 # EN/RU user-doc filename parity (same basenames under docs/en and docs/ru).
 docs-check:

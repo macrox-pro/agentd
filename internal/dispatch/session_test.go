@@ -81,7 +81,7 @@ func TestSessionsDifferentIDsParallel(t *testing.T) {
 
 func TestEngineSessionIDOf(t *testing.T) {
 	t.Parallel()
-	typed, err := dispatch.DecodeTyped(context.Background(), agentdv1.Provider_PROVIDER_CLAUDE_CODE, claudeToolPre(t, "echo"))
+	typed, err := dispatch.DecodeTyped(context.Background(), agentdv1.Provider_PROVIDER_CLAUDE_CODE, agentdv1.InvocationMode_INVOCATION_MODE_STDIN, claudeToolPre(t, "echo"))
 	require.NoError(t, err)
 	assert.Equal(t, "s", dispatch.SessionIDOf(typed))
 	assert.Equal(t, "", dispatch.SessionIDOf(nil))

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/speakeasy-api/agenthooks/agenthookstest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -117,10 +118,31 @@ func TestEngineParallelAsyncDoesNotBlock(t *testing.T) {
 	close(block)
 }
 
+func TestEngineInvokeCursorArgv(t *testing.T) {
+	t.Parallel()
+	q := dispatch.NewQueue(config.AsyncConfig{
+		QueueCapacity: 8,
+		WorkerLimit:   2,
+		TargetTimeout: time.Second,
+	}, nil)
+	t.Cleanup(func() { q.Close(2 * time.Second) })
+	eng := dispatch.NewEngine(q, nil)
+	snap := testSnap(t)
+
+	_, err := eng.Invoke(context.Background(), dispatch.InvokeInput{
+		Provider:       agentdv1.Provider_PROVIDER_CURSOR,
+		RawPayload:     agenthookstest.Fixture(t, "cursor/pre_tool_use.json"),
+		InvocationMode: agentdv1.InvocationMode_INVOCATION_MODE_ARGV,
+		Snap:           snap,
+		CWD:            "/work/repo",
+	})
+	require.NoError(t, err, "Invoke(cursor, argv)")
+}
+
 func TestMatchRouteDefaultKind(t *testing.T) {
 	t.Parallel()
 	snap := testSnap(t)
-	typed, err := dispatch.DecodeTyped(context.Background(), agentdv1.Provider_PROVIDER_CLAUDE_CODE, claudeToolPre(t, "x"))
+	typed, err := dispatch.DecodeTyped(context.Background(), agentdv1.Provider_PROVIDER_CLAUDE_CODE, agentdv1.InvocationMode_INVOCATION_MODE_STDIN, claudeToolPre(t, "x"))
 	require.NoError(t, err)
 	r := dispatch.MatchRoute(snap.Routes, typed)
 	require.NotNil(t, r)
@@ -165,7 +187,7 @@ func TestEngineFileAsync(t *testing.T) {
 func TestDecodeTyped(t *testing.T) {
 	t.Parallel()
 	var n atomic.Int32
-	_, err := dispatch.DecodeTyped(context.Background(), agentdv1.Provider_PROVIDER_CLAUDE_CODE, claudeToolPre(t, "x"))
+	_, err := dispatch.DecodeTyped(context.Background(), agentdv1.Provider_PROVIDER_CLAUDE_CODE, agentdv1.InvocationMode_INVOCATION_MODE_STDIN, claudeToolPre(t, "x"))
 	require.NoError(t, err)
 	n.Add(1)
 	assert.Equal(t, int32(1), n.Load())

@@ -70,3 +70,26 @@ trajectory:
 	fpB := store.Current().Fingerprint
 	assert.NotEqual(t, fpA, fpB)
 }
+
+func TestFingerprintIncludesTrajectoryImport(t *testing.T) {
+	t.Parallel()
+	a, err := config.CompileMerged(nil, nil, nil)
+	require.NoError(t, err)
+	fpA, err := config.Fingerprint(a.Merged)
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "agentd.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`version: 1
+trajectory:
+  import:
+    claude-code:
+      enabled: true
+      path: /tmp/claude
+`), 0o600))
+	store, err := config.Load(context.Background(), path)
+	require.NoError(t, err)
+	fpB := store.Current().Fingerprint
+	assert.NotEqual(t, fpA, fpB)
+	assert.True(t, store.Current().Trajectory.ClaudeImport().Enabled)
+}

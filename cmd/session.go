@@ -6,7 +6,7 @@ import (
 
 func init() {
 	rootCmd.AddCommand(sessionCmd)
-	sessionCmd.AddCommand(sessionListCmd, sessionShowCmd, sessionExportCmd)
+	sessionCmd.AddCommand(sessionListCmd, sessionShowCmd, sessionExportCmd, sessionSearchCmd, sessionImportCmd)
 }
 
 var sessionCmd = &cobra.Command{
@@ -18,5 +18,7 @@ agentd state directory.
 These commands read local JSONL files and do not require a running daemon.`,
 	Example: `  agentd session list --provider claude-code
   agentd session show s1 --provider claude-code
+  agentd session search --provider claude-code --query thinking
+  agentd session import --provider claude-code --session s1 --path /path/to/session.jsonl
   agentd session export --provider claude-code --out sessions.jsonl`,
 }

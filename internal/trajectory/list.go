@@ -9,14 +9,16 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
 )
 
 // SessionSummary is one on-disk session ledger.
 type SessionSummary struct {
-	Provider  string `json:"provider"`
-	SessionID string `json:"session_id"`
-	Path      string `json:"path"`
-	Lines     int    `json:"lines,omitempty"`
+	Provider       string `json:"provider"`
+	SessionID      string `json:"session_id"`
+	Path           string `json:"path"`
+	Lines          int    `json:"lines,omitempty"`
+	ImporterStatus string `json:"importer_status,omitempty"`
 }
 
 // ListSessions scans root for session JSONL files, optionally filtered by provider.
@@ -53,9 +55,10 @@ func ListSessions(root, providerFilter string) ([]SessionSummary, error) {
 		}
 		sid := strings.TrimSuffix(parts[1], ".jsonl")
 		out = append(out, SessionSummary{
-			Provider:  prov,
-			SessionID: sid,
-			Path:      path,
+			Provider:       prov,
+			SessionID:      sid,
+			Path:           path,
+			ImporterStatus: string(ProviderImporterStatus(prov)),
 		})
 		return nil
 	})

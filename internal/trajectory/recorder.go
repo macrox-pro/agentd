@@ -18,7 +18,7 @@ type Recorder struct {
 // NewRecorder wires store + persist into a bounded queue.
 func NewRecorder(sessionsDir string, capacity int, log *slog.Logger) *Recorder {
 	store := NewStore()
-	persist := NewPersister(sessionsDir)
+	persist := NewPersister(sessionsDir, log)
 	q := NewQueue(capacity, store, persist, log)
 	return &Recorder{queue: q, log: log}
 }

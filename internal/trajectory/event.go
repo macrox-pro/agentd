@@ -6,17 +6,20 @@ import (
 )
 
 const (
-	TypeSessionOpen     = "session/open"
-	TypeHookInvoked     = "hook/invoked"
-	TypeHookDecided     = "hook/decided"
-	TypeAsyncDispatched = "async/dispatched"
-	TypeAsyncDropped    = "async/dropped"
+	TypeSessionOpen        = "session/open"
+	TypeHookInvoked        = "hook/invoked"
+	TypeHookDecided        = "hook/decided"
+	TypeAsyncDispatched    = "async/dispatched"
+	TypeAsyncDropped       = "async/dropped"
+	TypeTranscriptMessage  = "transcript/message"
+	TypeTranscriptThinking = "transcript/thinking"
 )
 
 const (
-	SourceSystem   = "system"
-	SourceHook     = "hook"
-	SourceDecision = "decision"
+	SourceSystem    = "system"
+	SourceHook      = "hook"
+	SourceDecision  = "decision"
+	SourceTranscript = "transcript"
 )
 
 // Event is one append-only ledger record (DESIGN §14.3).
@@ -68,6 +71,20 @@ type AsyncDispatchedData struct {
 // AsyncDroppedData is the payload for async/dropped (trajectory queue overflow).
 type AsyncDroppedData struct {
 	Reason string `json:"reason"`
+}
+
+// TranscriptMessageData is the payload for transcript/message.
+type TranscriptMessageData struct {
+	Role                 string `json:"role,omitempty"`
+	Text                 string `json:"text,omitempty"`
+	ToolUseID            string `json:"tool_use_id,omitempty"`
+	TranscriptLineIndex  int    `json:"transcript_line_index"`
+}
+
+// TranscriptThinkingData is the payload for transcript/thinking.
+type TranscriptThinkingData struct {
+	Text                string `json:"text,omitempty"`
+	TranscriptLineIndex int    `json:"transcript_line_index"`
 }
 
 func mustJSON(v any) json.RawMessage {
