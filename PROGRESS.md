@@ -4,11 +4,292 @@
 
 ## Current phase
 
-Phase: **m12 done** | Last: m12-subscribe-v1.1 | Next: user tag v1.1.0
+Phase: **R1 in progress** | Last: m12-subscribe-v1.1 | Next: **R1 provider** → tag v1.1.0 (user)
+
+> Milestones M0–M12: **done**. Post-release work is the **R-series** refactor below — one phase = one PR or agent session, one package or one hot path ([AGENTS.md](./AGENTS.md) intent rules).
 
 ## agents_md_ready
 
 true
+
+## Refactoring goals (R-series)
+
+| Goal | How we measure done |
+|------|---------------------|
+| **Code quality** | No duplicate provider/import switches; sentinels not stringly-typed errors; `make lint` + `staticcheck` clean on touched packages |
+| **Architecture** | One owner per concern ([DESIGN §1](./DESIGN.md#1-architecture), [CONVENTIONS § Do not duplicate](./CONVENTIONS.md#do-not-duplicate-or-wrap)); purposeful adapters at boundaries only |
+| **Test coverage** | Repo statements **≥ 70%** (baseline **57.3%**); no touched package regresses; gaps closed in priority order (see baseline) |
+| **Table-driven tests** | ≥2 similar cases → table + `tt.name` ([CONVENTIONS § Table-driven](./CONVENTIONS.md#table-driven-tests-required-pattern)); no scenario prose in `_test.go` |
+| **Corner cases** | Every new behavior row in intent note → named `TestXxx` / `tt.name`; no merge without test |
+| **Duplication** | Litmus: removing helper leaves call sites importing owner package directly → delete helper |
+
+### Coverage baseline (2026-08-23)
+
+| Package | Statements | Priority |
+|---------|------------|----------|
+| `cmd` | 35.8% | **P0** — session/hook RunE mostly untested |
+| `internal/daemon` | 47.1% | **P1** — start/stop/reload lifecycle |
+| `internal/hookclient` | 52.4% | **P1** — gRPC client helpers |
+| `internal/dispatch/targets` | 60.1% | P2 |
+| `internal/trajectory/importer` | 63.8% | P2 — registry phase |
+| `internal/trajectory` | 66.1% | P2 |
+| `internal/dispatch` | 69.5% | P2 |
+| `internal/hookedge` | 70.4% | maintain |
+| `internal/config` | 74.8% | maintain |
+| `internal/transport` | 77.5% | maintain |
+| `internal/server` | 78.3% | maintain |
+| `internal/guard` | 85.9% | maintain |
+| `internal/provider` | 93.0% | R1 target package |
+
+Verify after each phase: `make lint` · `make intent-check` · `make test` · touched-package `-coverprofile`.
+
+### Pitfalls (read before every R-phase)
+
+- **`provider.Parse` on hot paths** — Invoke already carries proto enum; use `provider.FromProto` / `Lookup` where id was validated upstream; reserve `Parse` for CLI and strict entrypoints.
+- **`SessionKey.Provider` is still `string`** — migrate call sites to `provider.ID` gradually; do not change `weakSessionID` hash inputs without a migration test.
+- **Table-driven hub/subscribe tests** — shared `Hub` + channel state: parallelize subtests only when each row uses disjoint hubs ([CONVENTIONS § Parallelism](./CONVENTIONS.md#parallelism)).
+- **`cmd` table tests** — reset Cobra flags between rows (`resetCommandFlags`); stale `Changed` bits cause flaky cross-row pollution.
+- **`internal/` errors** — no `--provider` / flag names in sentinels; map in `cmd/RunE` only.
+- **Importer registry** — must not pull `dispatch.InvokeInput` (PolicyInvoker still out of scope); registry returns `(ImportResult, error)` only.
+- **No drive-by refactors** — one R-phase touches one boundary; unrelated cleanups → separate PR.
+
+---
+
+## R-series roadmap (summary)
+
+| Phase | Status | One-liner |
+|-------|--------|-----------|
+| **R1** | **in progress** | `internal/provider` — single source for ids, proto/agenthooks mapping |
+| **R2** | pending | Trajectory domain — typed ids at boundaries, errors, grpc event mapping |
+| **R3** | pending | Importer registry — kill `import.go` provider switch + string literals |
+| **R4** | pending | `cmd/` coverage — table-driven session + config CLI |
+| **R5** | pending | `daemon` + `hookclient` lifecycle tests |
+| **R6** | pending | `dispatch` decode/targets — provider mapping consolidation |
+| **R7** | pending | Test hygiene — table-driven migration where structure matches |
+| **R8** | pending | Tier-1 package comments audit + docs sync |
+
+---
+
+## R1 intent note — Provider single source of truth
+
+**Problem:** Provider id parsing/mapping duplicated across `hookedge`, `install`, `cmd/session_*`, `dispatch/decode`, `trajectory/session_key` — drift risk and repeated switches.
+
+**Hot path:** `other` (CLI, install, offline import); read-only `Lookup` on `invoke_sync` where enum already validated.
+
+**Invariants:**
+- Canonical ids remain lowercase hyphenated (`claude-code`, …)
+- `internal/provider` owns Parse/Lookup/Proto/Agenthooks/FromProto — no wire I/O
+- Callers import `provider` directly — no passthrough wrappers in `cmd/`
+
+**Corner cases (test names):**
+- `TestParse` / `TestParseFilter` / `TestLookup` / `TestProtoRoundTrip` / `TestAgenthooksRoundTrip` / `TestFromProto` (`provider_test.go`)
+- `TestSessionProviderCLI` (`cmd/session_provider_test.go`) — list/import validation rows
+- `TestCanonicalProvider` — still passes via `trajectory` → `provider.Lookup`
+
+**Out of scope:** Changing proto enum values; Kimi alias policy beyond existing `kimicode`; importer registry (R3).
+
+### R1 checklist
+
+- [x] r1-intent — intent note (this section)
+- [x] r1-package — `internal/provider/{provider,errors}.go` + table tests
+- [x] r1-hookedge — `hookedge/run|notify|serve` use `provider.Parse`; delete `hookedge/provider.go`
+- [x] r1-install — `install/run.go` uses `provider.Agenthooks()`
+- [x] r1-cmd-session — `session_{list,show,export,search,replay,fork,import,subscribe}.go` use `provider.Parse` / `ParseFilter`
+- [x] r1-dispatch-decode — `dispatch/decode.go` uses `provider.FromProto`
+- [x] r1-trajectory-key — `CanonicalProvider` delegates to `provider.Lookup`
+- [x] r1-dispatch-grpc — `dispatch/targets/grpc.go` uses `provider.Parse`
+- [ ] r1-conformance — hookedge conformance table includes all six providers post-move
+- [ ] r1-verify — `make lint` + `make intent-check` + `go test ./internal/provider/... ./cmd/... ./internal/hookedge/... -race`
+
+**R1 acceptance:** zero `switch` on raw provider strings outside `internal/provider` and `trajectory/importer_status.go` (status table — R3 moves it).
+
+---
+
+## R2 intent note — Trajectory domain boundaries
+
+**Problem:** Trajectory still carries provider as bare `string`; errors scattered; `ReplayPolicyFromConfig` and grpc event mapping live beside unrelated concerns.
+
+**Hot path:** `async_side` (append, hub publish); offline `other` (replay, fork, export).
+
+**Invariants:** append-only; `schema_version` on append; Subscribe never blocks Invoke; grpc mapping lossless for `Data`/`Raw`/`Ts`.
+
+**Corner cases (test names):**
+- `TestEventSessionEventRoundTrip` — nil, empty, zero TS, large Raw (`session_event_grpc_test.go`)
+- `TestReplayPolicyFromConfig` — bad config path, missing session, seq bounds
+- `TestResolveSessionKeyUsesCanonicalProvider` — alias + weak id stability
+- `TestProviderImporterStatusTable` — all six providers × status enum
+
+**Out of scope:** Importer file layout; Persister.Close; changing on-disk JSONL layout.
+
+### R2 checklist
+
+- [ ] r2-intent — intent note finalized in PR
+- [ ] r2-errors — extend `trajectory/errors.go`; replace ad-hoc `fmt.Errorf` where message is static
+- [ ] r2-session-key — optional `SessionKey` helpers accepting `provider.ID` (keep string field for disk compat)
+- [ ] r2-importer-status — table-driven `ProviderImporterStatus` test; use `provider.ID` constants in switch
+- [ ] r2-replay-config — `replay_config.go` wired from `cmd/session_replay.go` only (no duplicate config load)
+- [ ] r2-grpc-map — `session_event_grpc.go` covered by roundtrip table
+- [ ] r2-verify — `go test ./internal/trajectory/... -race` + coverage ≥ 68% for package
+
+---
+
+## R3 intent note — Importer registry
+
+**Problem:** `importer/import.go` duplicates provider switch + `"claude-code"` string literals for `ProjectsRoot`; adding a provider touches multiple files.
+
+**Hot path:** `async_side` (daemon watcher); offline `session import`.
+
+**Invariants:** no invented L2 fields; `LastLineIndex` = physical line index; status enum honest per §14.6.
+
+**Corner cases (test names):**
+- `TestImportDispatchesByProvider` — supported / partial / none
+- `TestImportSetsProjectsRootFromConfig` — per-provider cfg path
+- `TestImportSessionFacade` — `import_session.go` single entry for CLI + watcher
+- Existing codex/cursor/claude tests must stay green unchanged
+
+**Out of scope:** New provider formats; Codex/Cursor fsnotify watchers; changing testdata fixtures.
+
+### R3 checklist
+
+- [ ] r3-intent
+- [ ] r3-registry — `var importers = map[provider.ID]importerFunc{…}` or small registry type in `importer/`
+- [ ] r3-import-facade — `ImportSession(provider.ID, ImportOptions)`; CLI calls facade
+- [ ] r3-status-colocate — move `ProviderImporterStatus` next to registry (single table)
+- [ ] r3-delete-switch — `import.go` dispatches via registry only
+- [ ] r3-verify — `go test ./internal/trajectory/importer/... -race` + importer ≥ 70%
+
+---
+
+## R4 intent note — cmd coverage & CLI tables
+
+**Problem:** `cmd` at **35.8%** — most `RunE` paths (hook, session fork/replay/export, config) untested; validation logic hard to regress.
+
+**Hot path:** `other` (all mgmt CLI).
+
+**Invariants:** validation stays in subcommand file; tests use `package cmd_test` + `RootCommand()`; no business logic added to `cmd/`.
+
+**Corner cases (test names):**
+- `TestSessionProviderCLI` — extend rows: show/export/search/replay/fork happy + error
+- `TestSessionReplayPolicy` — `--policy` requires config; missing `--session`
+- `TestSessionSubscribeFilter` — provider/session/source filter flag combos
+- `TestConfigValidate` / `TestDispatchRoutes` — table-driven stdout snapshots
+
+**Out of scope:** E2E replacement; testing `main()`; hook integration (hookedge owns wire).
+
+### R4 checklist
+
+- [ ] r4-intent
+- [ ] r4-helper — shared `resetCommandFlags` + temp state dir helper in `cmd/*_test.go`
+- [ ] r4-session-table — one table per subcommand family (errors + one happy path)
+- [ ] r4-config-dispatch — table tests for validate/show/routes
+- [ ] r4-verify — `go test ./cmd/... -race` + cmd ≥ 55%
+
+---
+
+## R5 intent note — daemon & hookclient lifecycle
+
+**Problem:** `daemon` **47.1%**, `hookclient` **52.4%** — lock/PID/reload and client dial failures under-tested.
+
+**Hot path:** `config_reload` (SIGHUP debounce); mgmt CLI → gRPC.
+
+**Invariants:** one daemon per user; lock released on stop; client respects `AGENTD_SOCKET` / default path.
+
+**Corner cases (test names):**
+- `TestStartStopTable` — already running, stale PID, lock held
+- `TestReloadDebounced` — rapid SIGHUP coalesced
+- `TestHookclientDial` — missing socket, canceled ctx, bufconn success
+- `TestSubscribeClient` — cancel propagation (extend `hookclient` tests)
+
+**Out of scope:** Real system systemd; Windows service integration beyond existing `_windows.go` splits.
+
+### R5 checklist
+
+- [ ] r5-intent
+- [ ] r5-daemon-table — start/stop/status error rows
+- [ ] r5-hookclient — Invoke + Subscribe helpers via bufconn
+- [ ] r5-verify — daemon ≥ 65%, hookclient ≥ 70%
+
+---
+
+## R6 intent note — dispatch boundaries
+
+**Problem:** Residual provider/string routing in dispatch decode and grpc forward target; engine hybrid mode branches under-covered.
+
+**Hot path:** `invoke_sync`, `async_side`.
+
+**Invariants:** sync path never blocks on trajectory; async queue bounded; decode errors map to gRPC status in server only.
+
+**Corner cases (test names):**
+- `TestDecodeProvider` — table: six proto providers → canonical id
+- `TestGRPCTargetForward` — provider header mapping
+- `TestEngineHybrid` — sync deny + async fan-out row
+
+**Out of scope:** New target types; route YAML schema changes.
+
+### R6 checklist
+
+- [ ] r6-intent
+- [ ] r6-decode-table — provider mapping tests in `dispatch/decode_test.go`
+- [ ] r6-targets-grpc — consolidate with `provider.FromProto`
+- [ ] r6-engine-hybrid — table in `engine_test.go`
+- [ ] r6-verify — dispatch ≥ 75%
+
+---
+
+## R7 intent note — Test hygiene (table-driven migration)
+
+**Problem:** Several packages use copy-pasted `TestXxx` functions where assertion skeleton is identical ([CONVENTIONS](./CONVENTIONS.md#when-not-to-use-a-table) allows exceptions — apply selectively).
+
+**Hot path:** n/a (test-only).
+
+**Invariants:** do **not** table-ify multi-step daemon/e2e flows; keep integration tag on slow tests.
+
+**Merge candidates (keep separate tests when setup diverges):**
+
+| File | Current | Target |
+|------|---------|--------|
+| `trajectory/hub_test.go` | 10 top-level tests | `TestHubDeliverTable` (`deliver`, `slow drop`, `unregister`, `no subscribers`) |
+| `trajectory/fork_test.go` | 2 tests | `TestForkSessionTable` (`ok`, `duplicate rejected`) |
+| `server/invoke_test.go` | 3 trajectory variants | `TestInvokeTrajectoryTable` (claude, cursor argv, …) |
+| `guard/approve_test.go` | 3 separate | extend existing `TestTemporaryBlockDenies` pattern |
+
+**Out of scope:** testify/suite; rewriting e2e scripts; 100% coverage chase.
+
+### R7 checklist
+
+- [ ] r7-intent
+- [ ] r7-hub-table — hub deliver/drop/unregister merged where safe
+- [ ] r7-fork-table
+- [ ] r7-invoke-table
+- [ ] r7-audit — grep for `if tt.` blocks inside single `Test` without `t.Run`
+- [ ] r7-verify — full `make test`; total coverage ≥ 70%
+
+---
+
+## R8 intent note — Package comments & docs sync
+
+**Problem:** New packages (`provider`, trajectory splits) need Tier-1 comments; user-facing behavior unchanged but boundaries shifted.
+
+**Hot path:** n/a.
+
+**Invariants:** package comment template per [CONVENTIONS](./CONVENTIONS.md#comments); DESIGN §1.5 hot path tags accurate.
+
+**Corner cases:** `make intent-check` passes; no stale `hookedge/provider` references in docs.
+
+**Out of scope:** New CLI commands; proto changes; README feature marketing.
+
+### R8 checklist
+
+- [ ] r8-intent
+- [ ] r8-provider-comment — verify `internal/provider/provider.go` header
+- [ ] r8-trajectory-comments — `hub.go`, `replay_config.go`, `session_event_grpc.go`
+- [ ] r8-design-15 — DESIGN §1.5 row for `internal/provider` if missing
+- [ ] r8-docs-check — `make docs-check` (only if user-visible text changed)
+- [ ] r8-verify — `make intent-check` + full verify block
+
+**R-series done when:** R1–R8 checklists complete, total coverage ≥ 70%, no duplicate provider switches outside owner tables, user tags v1.1.0.
+
+---
 
 ## Codex rollout importer intent note
 
@@ -203,11 +484,12 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 ## Session notes
 
 - M11 shipped: Cursor/Codex partial import, `session replay --policy`, `session fork`, `scripts/e2e-m11.sh`
-- Trajectory package refactor (pre-M12): AppendEvents sync write (no Persister leak); CanonicalProvider lowercase; importer `Import` facade + file split (`import.go`, `resolve.go`, `mapEntriesFrom` in `map.go`); thin `cmd/session_import`; DESIGN §14.8 `importer/`; skipped PolicyInvoker (would still import `dispatch.InvokeInput`)
-- Files touched: `internal/trajectory/*` (persist, session_key, trajectory, list, replay, import_append, queue, replay_test), `internal/trajectory/importer/*`, `cmd/session_import.go`, `DESIGN.md`
-- Next: M12 Subscribe + trajectory contract freeze + v1.1 release
+- M12 shipped: Subscribe RPC/CLI, hub fan-out, schema_version contract, `scripts/e2e-m12.sh`
+- Trajectory package refactor (pre-M12): AppendEvents sync write (no Persister leak); CanonicalProvider lowercase; importer `Import` facade + file split; thin `cmd/session_import`; DESIGN §14.8 `importer/`
+- **R-series started:** `internal/provider` extracted; session CLI + hookedge + install wired; `cmd/session_provider_test.go` added; R1 checklist partially complete (see above)
+- Next agent session: finish **R1** (`r1-dispatch-grpc`, `r1-conformance`, `r1-verify`) then open **R2** PR
 
-### Refactor intent note
+### Refactor intent note (pre-R-series, archived)
 
 **Problem:** Post-M11 drift — offline AppendEvents leaked Persister goroutine; shared importer API in claude_code.go; provider switch in cmd/; stale Entry/DESIGN paths; CanonicalProvider casing.
 
@@ -228,6 +510,9 @@ make docs-check
 make test
 go test -tags=integration ./internal/hookedge/ -race -count=1
 make e2e   # includes scripts/e2e-m9.sh … e2e-m12.sh
+# Per R-phase (touched packages):
+go test ./internal/provider/... ./cmd/... -race -coverprofile=/tmp/r1.cover
+go tool cover -func=/tmp/r1.cover | tail -1   # track toward ≥70% total
 ```
 
 ## Blockers
