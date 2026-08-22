@@ -133,11 +133,11 @@ func sessionIDFromRolloutFilename(path string) string {
 	// session id is UUID-like suffix after the last timestamp segment;
 	// real names: rollout-2026-07-26T17-33-55-019f9ed8-c891-7dd0-9808-e31c3b38ce48
 	// Take everything after the timestamp (date T time) — five hyphen groups after T.
-	idx := strings.Index(rest, "T")
-	if idx < 0 {
+	_, after, ok := strings.Cut(rest, "T")
+	if !ok {
 		return ""
 	}
-	afterT := rest[idx+1:]
+	afterT := after
 	// afterT like 17-33-55-019f9ed8-c891-7dd0-9808-e31c3b38ce48
 	parts := strings.Split(afterT, "-")
 	if len(parts) < 8 {

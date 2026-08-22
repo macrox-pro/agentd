@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -86,11 +87,11 @@ func TestMapCodexRolloutLineTable(t *testing.T) {
 			t.Parallel()
 			dir := t.TempDir()
 			path := filepath.Join(dir, "t.jsonl")
-			var body string
+			var body strings.Builder
 			for _, line := range tt.lines {
-				body += line + "\n"
+				body.WriteString(line + "\n")
 			}
-			require.NoError(t, os.WriteFile(path, []byte(body), 0o600), "write %s", tt.name)
+			require.NoError(t, os.WriteFile(path, []byte(body.String()), 0o600), "write %s", tt.name)
 
 			result, err := importer.ImportCodex(importer.ImportOptions{
 				SessionID:      "map-" + tt.name,

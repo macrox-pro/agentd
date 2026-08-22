@@ -1,0 +1,4 @@
+{"type":"summary","timestamp":"2026-07-26T14:00:00.000Z","message":{"role":"user","content":"compacted context summary"}}
+{"type":"user","uuid":"u1","sessionId":"sess-on-disk","timestamp":"2026-07-26T14:01:00.000Z","cwd":"/tmp/agentd-project","message":{"role":"user","content":"hello on disk"}}
+{"type":"user","timestamp":"2026-07-26T14:01:30.000Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_prev","content":"ok"}]}}
+{"type":"assistant","uuid":"a1","sessionId":"sess-on-disk","timestamp":"2026-07-26T14:02:00.000Z","cwd":"/tmp/agentd-project","message":{"role":"assistant","content":[{"type":"thinking","thinking":"plan"},{"type":"text","text":"hi there"},{"type":"tool_use","id":"toolu_01","name":"Bash","input":{"command":"echo ok"}}]}}
