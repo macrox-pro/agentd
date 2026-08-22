@@ -12,9 +12,9 @@ const (
 // ProviderImporterStatus returns the importer tier for a canonical provider id.
 func ProviderImporterStatus(provider string) ImporterStatus {
 	switch CanonicalProvider(provider) {
-	case "claude-code":
+	case "claude-code", "codex":
 		return ImporterSupported
-	case "cursor", "codex":
+	case "cursor":
 		return ImporterPartial
 	default:
 		return ImporterNone

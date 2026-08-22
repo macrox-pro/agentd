@@ -50,10 +50,11 @@ trajectory:
 ```bash
 agentd session import --provider claude-code --session SESSION_ID
 agentd session import --provider cursor --path /path/to/transcript.jsonl
-agentd session import --provider codex --path /path/to/transcript.jsonl
+agentd session import --provider codex --session SESSION_ID
+agentd session import --provider codex --path /path/to/rollout-…-SESSION_ID.jsonl
 ```
 
-Transcript-события дописываются после hook-событий (монотонный `seq`). Повторный импорт пропускает строки из sidecar `<session_id>.import.json`. Cursor/Codex — **partial**: предпочитайте `--path`; thinking/tool-output не выдумываются.
+Transcript-события дописываются после hook-событий (монотонный `seq`). Повторный импорт пропускает строки из sidecar `<session_id>.import.json`. Cursor — **partial** (лучше `--path`; thinking/tool-output не выдумываются). Codex — **supported** через `~/.codex/sessions/**/rollout-*-{session_id}.jsonl` (thinking только из plaintext `agent_reasoning`).
 
 ## Policy replay
 
@@ -77,7 +78,7 @@ agentd session fork --provider claude-code --session s1 --new-session s1-fork --
 |----------|------------|---------|------------------|-------------|
 | claude-code | `hook run` | обязательно | **supported** | из session files |
 | cursor | `hook run --argv-payload` | обязательно | **partial** (`--path`) | часто redacted |
-| codex | `run` + `hook notify` | обязательно | **partial** (`--path`) | маловероятно |
+| codex | `run` + `hook notify` | обязательно | **supported** (`~/.codex/sessions` rollouts) | только plaintext `agent_reasoning` |
 | gemini | `hook run` | обязательно | none | unknown |
 | opencode | `hook serve` | обязательно | none | unknown |
 | kimi-code | `hook run` | обязательно | none | unknown |

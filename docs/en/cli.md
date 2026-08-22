@@ -78,6 +78,6 @@ Trajectory ledger inspect/export ([Trajectory](./trajectory.md)). Offline — re
 | `session replay` | `--policy` (required), `--provider`, `--session`, `--seq`, `--json` |
 | `session fork` | `--provider`, `--session`, `--new-session`, `--at-seq`, `--json` |
 
-`session search` scans JSONL line-by-line (O(total bytes); no index). `session import`: Claude Code `supported`; Cursor/Codex `partial` (prefer `--path`); others explicit `none`. `session replay --policy` needs `include_raw` at record time. `session fork` is audit lineage only (source immutable).
+`session search` scans JSONL line-by-line (O(total bytes); no index). `session import`: Claude Code and Codex `supported`; Cursor `partial` (prefer `--path`); others explicit `none`. `session replay --policy` needs `include_raw` at record time. `session fork` is audit lineage only (source immutable).
 
 See also: [Getting started](./getting-started.md), [Providers](./providers.md).

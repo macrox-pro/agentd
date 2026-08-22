@@ -22,7 +22,7 @@ trajectory:
       path: ""                  # optional scan root; prefer CLI --path
     codex:
       enabled: false
-      path: ""                  # optional; prefer hook transcript_path via --path
+      path: ""                  # default $CODEX_HOME/sessions or ~/.codex/sessions
 ```
 
 Storage: `$XDG_STATE_HOME/agentd/sessions/<provider>/<session_id>.jsonl` (Windows: under `%LOCALAPPDATA%\agentd\sessions\`).
@@ -50,10 +50,11 @@ Recording happens on the daemon async path — sync hook latency is unchanged.
 ```bash
 agentd session import --provider claude-code --session SESSION_ID
 agentd session import --provider cursor --path /path/to/transcript.jsonl
-agentd session import --provider codex --path /path/to/transcript.jsonl
+agentd session import --provider codex --session SESSION_ID
+agentd session import --provider codex --path /path/to/rollout-…-SESSION_ID.jsonl
 ```
 
-Transcript events append after existing hook events (monotonic `seq`). Re-import skips lines recorded in `<session_id>.import.json` sidecar. Correlation uses `session_id` and `tool_use_id` when present — never merges unrelated runs. Cursor/Codex are **partial**: prefer `--path`; never invent thinking or tool outputs.
+Transcript events append after existing hook events (monotonic `seq`). Re-import skips lines recorded in `<session_id>.import.json` sidecar. Correlation uses `session_id` and `tool_use_id` / `call_id` when present — never merges unrelated runs. Cursor is **partial** (prefer `--path`; never invent thinking or tool outputs). Codex is **supported** via `~/.codex/sessions/**/rollout-*-{session_id}.jsonl` (thinking only from plaintext `agent_reasoning`).
 
 ## Policy replay
 
@@ -77,7 +78,7 @@ Copies a prefix into a new session id and appends `session/fork` + `session/end-
 |----------|------------|---------|------------------|-------------|
 | claude-code | `hook run` | required | **supported** | from session files, not hooks |
 | cursor | `hook run --argv-payload` | required | **partial** (`--path`) | often redacted / absent |
-| codex | `run` + `hook notify` | required | **partial** (`--path`) | unlikely via hooks |
+| codex | `run` + `hook notify` | required | **supported** (`~/.codex/sessions` rollouts) | plaintext `agent_reasoning` only |
 | gemini | `hook run` | required | none | unknown |
 | opencode | `hook serve` | required | none | unknown |
 | kimi-code | `hook run` | required | none | unknown |

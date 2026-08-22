@@ -92,6 +92,40 @@ e2e_assert_contains "$SEARCH" 'transcript/message' search-cursor-import
 LIST_JSON="$("$BIN" session list --provider cursor --json)"
 e2e_assert_contains "$LIST_JSON" '"importer_status": "partial"' list-cursor-partial
 
+# --- Codex supported import (temp sessions tree; never real ~/.codex) ---
+CODEX_SESSIONS="$WORKDIR/codex/sessions"
+CODEX_TX="$CODEX_SESSIONS/2026/07/26/rollout-2026-07-26T17-33-55-m11-codex.jsonl"
+mkdir -p "$(dirname "$CODEX_TX")"
+cat >"$CODEX_TX" <<'JSONL'
+{"timestamp":"2026-07-26T14:33:55.115Z","type":"session_meta","payload":{"id":"m11-codex","session_id":"m11-codex","cwd":"/tmp"}}
+{"timestamp":"2026-07-26T14:33:57.000Z","type":"event_msg","payload":{"type":"user_message","message":"hello codex m11"}}
+{"timestamp":"2026-07-26T14:33:58.000Z","type":"event_msg","payload":{"type":"agent_reasoning","text":"**Planning m11**"}}
+{"timestamp":"2026-07-26T14:33:59.000Z","type":"event_msg","payload":{"type":"agent_message","message":"imported codex text"}}
+JSONL
+# Point import.codex.path via a small overlay config for offline CLI
+CODEX_CFG="$WORKDIR/codex-import.yaml"
+cat >"$CODEX_CFG" <<EOF
+version: 1
+trajectory:
+  enabled: true
+  include_raw: true
+  import:
+    codex:
+      enabled: false
+      path: "$CODEX_SESSIONS"
+EOF
+CODEX_IMPORT="$("$BIN" session import --provider codex --session m11-codex --config "$CODEX_CFG" --json)"
+e2e_assert_contains "$CODEX_IMPORT" '"importer_status": "supported"' import-codex-status
+e2e_assert_contains "$CODEX_IMPORT" '"imported"' import-codex-count
+
+CODEX_SEARCH="$("$BIN" session search --provider codex --session m11-codex --source transcript --query "imported codex" --json)"
+e2e_assert_contains "$CODEX_SEARCH" 'transcript/message' search-codex-import
+CODEX_THINK="$("$BIN" session search --provider codex --session m11-codex --source transcript --query "Planning m11" --json)"
+e2e_assert_contains "$CODEX_THINK" 'transcript/thinking' search-codex-thinking
+
+LIST_CODEX="$("$BIN" session list --provider codex --json)"
+e2e_assert_contains "$LIST_CODEX" '"importer_status": "supported"' list-codex-supported
+
 LIST_GEMINI="$("$BIN" session list --provider gemini --json)"
 e2e_assert_contains "$LIST_GEMINI" '"importer_status": "none"' list-gemini-none
 

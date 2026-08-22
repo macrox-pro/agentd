@@ -75,7 +75,7 @@
 | `import.cursor.enabled` | `false` |
 | `import.cursor.path` | `""` (лучше CLI `--path`) |
 | `import.codex.enabled` | `false` |
-| `import.codex.path` | `""` (лучше CLI `--path` / hook `transcript_path`) |
+| `import.codex.path` | `""` (по умолчанию `$CODEX_HOME/sessions` или `~/.codex/sessions`) |
 
 При `import.claude-code.enabled: true` демон асинхронно следит за каталогом projects. CLI `session import` работает offline без этого флага. Для `session replay --policy` нужен `include_raw: true` при записи.
 

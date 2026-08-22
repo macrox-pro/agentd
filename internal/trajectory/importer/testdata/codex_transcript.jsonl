@@ -1,2 +1,14 @@
-{"type":"user","message":{"role":"user","content":"run the tests"}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"running tests now"}]}}
+{"timestamp":"2026-07-26T14:33:55.115Z","type":"session_meta","payload":{"id":"019f9ed8-c891-7dd0-9808-e31c3b38ce48","session_id":"019f9ed8-c891-7dd0-9808-e31c3b38ce48","cwd":"/tmp/demo","cli_version":"0.146.0"}}
+{"timestamp":"2026-07-26T14:33:56.000Z","type":"event_msg","payload":{"type":"task_started","turn_id":"t1"}}
+{"timestamp":"2026-07-26T14:33:57.000Z","type":"event_msg","payload":{"type":"user_message","message":"run the tests"}}
+{"timestamp":"2026-07-26T14:33:58.000Z","type":"event_msg","payload":{"type":"agent_reasoning","text":"**Planning test run**"}}
+{"timestamp":"2026-07-26T14:33:59.000Z","type":"event_msg","payload":{"type":"agent_message","message":"running tests now","phase":"commentary"}}
+{"timestamp":"2026-07-26T14:34:00.000Z","type":"response_item","payload":{"type":"reasoning","id":"rs_1","encrypted_content":"aabb","summary":[]}}
+{"timestamp":"2026-07-26T14:34:01.000Z","type":"response_item","payload":{"type":"message","role":"developer","content":[{"type":"input_text","text":"<app-context>skip me</app-context>"}]}}
+{"timestamp":"2026-07-26T14:34:02.000Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","call_id":"call_abc","arguments":"{\"cmd\":\"go test ./...\"}"}}
+{"timestamp":"2026-07-26T14:34:03.000Z","type":"response_item","payload":{"type":"function_call_output","call_id":"call_abc","output":"ok"}}
+{"timestamp":"2026-07-26T14:34:04.000Z","type":"response_item","payload":{"type":"custom_tool_call","name":"mcp_tool","call_id":"call_custom","arguments":"{}"}}
+{"timestamp":"2026-07-26T14:34:05.000Z","type":"response_item","payload":{"type":"custom_tool_call_output","call_id":"call_custom","output":"done"}}
+{"timestamp":"2026-07-26T14:34:06.000Z","type":"event_msg","payload":{"type":"agent_reasoning","text":"   "}}
+{"timestamp":"2026-07-26T14:34:07.000Z","type":"event_msg","payload":{"type":"token_count","info":{}}}
+not-json-line

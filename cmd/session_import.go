@@ -35,10 +35,11 @@ var sessionImportCmd = &cobra.Command{
 	Long: `Pull provider on-disk transcript JSONL into the local session ledger (append-only).
 
 Offline — reads/writes local JSONL under the agentd state directory.
-Supported: claude-code. Partial (path-first): cursor, codex. Others: explicit none.`,
+Supported: claude-code, codex (~/.codex/sessions rollouts). Partial (path-first): cursor. Others: explicit none.`,
 	Example: `  agentd session import --provider claude-code --session s1
+  agentd session import --provider codex --session s1
   agentd session import --provider cursor --path /path/to/transcript.jsonl
-  agentd session import --provider codex --path /path/to/transcript.jsonl --dry-run --json`,
+  agentd session import --provider codex --path /path/to/rollout.jsonl --dry-run --json`,
 	RunE: runSessionImport,
 }
 

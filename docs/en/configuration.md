@@ -75,7 +75,7 @@ Opt-in session ledger ([Trajectory](./trajectory.md)). Default **off**.
 | `import.cursor.enabled` | `false` |
 | `import.cursor.path` | `""` (prefer CLI `--path`) |
 | `import.codex.enabled` | `false` |
-| `import.codex.path` | `""` (prefer CLI `--path` / hook `transcript_path`) |
+| `import.codex.path` | `""` (default `$CODEX_HOME/sessions` or `~/.codex/sessions`) |
 
 When `import.claude-code.enabled` is true, the daemon watches the projects directory and appends new transcript lines asynchronously. CLI `session import` works offline without this flag. Set `include_raw: true` if you need `session replay --policy`.
 

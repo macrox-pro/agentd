@@ -554,7 +554,7 @@ Inspect local trajectory session ledgers (JSONL under `$XDG_STATE_HOME/agentd/se
 | `session show SESSION_ID --provider ID [--json]` | Print events for one session |
 | `session export [--provider ID] [--session ID] [--out PATH]` | Export JSONL for external viewers |
 | `session search [--provider ID] [--session ID] [--kind TYPE]… [--source hook\|transcript\|…] [--query TEXT] [--limit N] [--json]` | Filter events (O(n) JSONL scan; no index) |
-| `session import --provider ID [--session ID] [--path PATH] [--dry-run] [--json]` | Append provider transcript events (`claude-code`: supported; `cursor`/`codex`: partial via `--path`; others: explicit `none`) |
+| `session import --provider ID [--session ID] [--path PATH] [--dry-run] [--json]` | Append provider transcript events (`claude-code`/`codex`: supported; `cursor`: partial via `--path`; others: explicit `none`) |
 | `session replay --policy --provider ID --session ID [--seq N] [--json]` | Dry-run stored `Raw` through Dispatch Engine (requires `include_raw` at record time; no live agent) |
 | `session fork --provider ID --session SRC --new-session DST [--at-seq N] [--json]` | Copy ledger prefix → new session id (audit lineage; source immutable) |
 
@@ -566,6 +566,7 @@ Requires `trajectory.enabled` in config for live hook recording; import/search/r
 agentd session search --provider claude-code --query thinking
 agentd session import --provider claude-code --session s1 --path ~/.claude/projects/.../s1.jsonl
 agentd session import --provider cursor --path /path/to/transcript.jsonl
+agentd session import --provider codex --session s1
 agentd session replay --policy --provider claude-code --session s1 --json
 agentd session fork --provider claude-code --session s1 --new-session s1-fork --at-seq 4
 ```
@@ -956,7 +957,7 @@ trajectory:
   import:
     claude-code: { enabled: false, path: "" }  # default agent home when path empty
     cursor:      { enabled: false, path: "" }  # prefer CLI --path; no stable default root
-    codex:       { enabled: false, path: "" }  # prefer hook transcript_path via --path
+    codex:       { enabled: false, path: "" }  # default $CODEX_HOME/sessions or ~/.codex/sessions
 ```
 
 Persist: debounced / batched append; atomic rotate if needed. Distinct from `runtime.yaml` (approvals/blocks).
@@ -991,7 +992,7 @@ Trajectory must work for **every** agent agentd already supports. Depth is tiere
 |----------|------------|---------|----------------|-----------|--------------------|-----------------------------------|
 | **Claude Code** | `hook run` (stdin) | **required** | Strong (`session_id`, `tool_use_id`) | **supported** — `~/.claude` JSONL | Often yes (thinking in session files; **not** in hooks) | Hooks omit thinking; transcript may lag in-memory turn; PromptSubmitted has no Ask (decision surface ≠ trajectory) |
 | **Cursor** | `hook run --argv-payload` | **required** | Present but dialect-specific | **partial** — explicit `--path` (no stable global layout) | Weak — tool **outputs** often absent; thinking may be `[REDACTED]` | Ask only on shell/MCP natives — trajectory still records Ask/fallback **decisions**; async must not alter sync; argv-payload size limits |
-| **Codex** | `hook run` + `hook notify` | **required** (both paths) | run vs notify may differ — record `invocation_mode` | **partial** — `--path` from hook `transcript_path` | Unlikely via hooks | **No CapAsk**; notify is **async-only** (no blocking decision); neutral wire = empty stdout (export still stores decision enum, not raw stdout) |
+| **Codex** | `hook run` + `hook notify` | **required** (both paths) | run vs notify may differ — record `invocation_mode` | **supported** — `~/.codex/sessions/**/rollout-*-{session_id}.jsonl` (or `$CODEX_HOME/sessions`) | Partial — plaintext from `event_msg.agent_reasoning`; encrypted `response_item.reasoning` skipped | **No CapAsk**; notify is **async-only** (no blocking decision); neutral wire = empty stdout (export still stores decision enum, not raw stdout) |
 | **Gemini** | `hook run` (stdin) | **required** | As provided in payload | **none** — no stable on-disk format in agenthooks | Unknown | stderr discipline — trajectory never logs via hookedge stderr; timeouts in ms (deadline still on Invoke) |
 | **OpenCode** | `hook serve` (NDJSON) | **required** | Per-frame session; daemon **session mutex** | **none** — no documented session JSONL | Unknown | Long-lived serve; many stop/idle frames observe-only; **no CapAsk** on tool.pre; permission channel ≠ Claude Ask |
 | **Kimi Code** | `hook run` | **required** | As provided | **none** — no stable on-disk format | Unknown | **No CapAsk**; many PostTool/Permission events **observe-only** (still L0-record); user-scope install only; empty stdout no-op |
@@ -1004,7 +1005,7 @@ User-facing quirk index remains [docs/en/providers.md](./docs/en/providers.md); 
 
 **Cursor** — L0 must use argv-payload path in tests. Transcript files may list tool inputs without outputs; hooks (esp. post) are the way to capture results when the agent emits them. Do not promise Trajectory “full model context.”
 
-**Codex** — Two live shapes: blocking `run` and `notify`. Trajectory schema must tag `invocation_mode` (`STDIN` / `NOTIFY` / …). Never treat notify events as sync gate outcomes. Trust/hooks path quirks affect install, not ledger format.
+**Codex** — Two live shapes: blocking `run` and `notify`. Trajectory schema must tag `invocation_mode` (`STDIN` / `NOTIFY` / …). Never treat notify events as sync gate outcomes. L2 import reads rollout JSONL under `$CODEX_HOME/sessions` (default `~/.codex/sessions`): `sessions/YYYY/MM/DD/rollout-<ts>-{session_id}.jsonl` with envelope `{timestamp,type,payload}`. Conversational text and thinking come from `event_msg`; tools from `response_item` `function_call` / `custom_tool_call` (+ outputs). Encrypted reasoning is not invented into `transcript/thinking`.
 
 **Gemini** — L0 only until an import path is proven. Keep all trajectory I/O off the hook stderr path (daemon state dir / gRPC only).
 

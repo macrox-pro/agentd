@@ -4,11 +4,41 @@
 
 ## Current phase
 
-Phase: **m11 done** | Last: m11-trajectory-p2 | Next: m12 Subscribe / v1.1
+Phase: **m11 done** (+ Codex rollout L2 fix) | Last: codex-rollout-importer | Next: m12 Subscribe / v1.1
 
 ## agents_md_ready
 
 true
+
+## Codex rollout importer intent note
+
+**Problem:** `ImportCodex` treated Codex like Claude JSONL and resolved `{session_id}.jsonl`; real sessions live at `~/.codex/sessions/YYYY/MM/DD/rollout-*-{session_id}.jsonl` with `{timestamp,type,payload}` → 0 events + misleading checkpoint.
+
+**Hot path:** `async_side` (offline CLI import; no Codex fsnotify watcher).
+
+**Invariants:**
+- Append-only; never invent thinking/tool-output
+- Thinking only from plaintext `event_msg.agent_reasoning`
+- `source=transcript`; `LastLineIndex` = file line index (including skipped lines)
+
+**Corner cases (test names):**
+- `TestResolveCodexBySessionID` (`nested rollout newest`, `not found`, `explicit path`, `exact sid.jsonl absent`)
+- `TestImportCodexSessionIDFromMeta`, `TestImportCodexSessionIDFromFilenameFallback`
+- `TestImportCodexRolloutMapsMessagesAndTools`, `TestImportCodexSkipsEncryptedReasoning`
+- `TestMapCodexRolloutLineTable` (`custom_tool_call`, `agent_reasoning empty`/`present`, `skip meta telemetry`, `malformed line`, …)
+- `TestImportCodexStartIndexResume`, `TestImportCodexEmptyFile`
+- `TestProviderImporterStatus` / `codex` → `supported`
+
+**Out of scope:** Codex daemon watcher; Cursor/Claude importer fixes; agenthooks changes.
+
+**Status:** **done** — verify: `go test ./internal/trajectory/... -race`, `make intent-check`, `make docs-check`, `make lint`, `scripts/e2e-m11.sh`.
+
+**Files touched:**
+- `internal/trajectory/importer/codex.go`, `codex_map.go`, `codex_test.go`, `codex_map_test.go`, `importer.go`, `event.go`, `claude_code.go`, `cursor.go`, `import.go`, `testdata/codex_transcript.jsonl`
+- removed: `map.go`, `resolve.go` (merged into provider files)
+- `internal/trajectory/importer_status.go`, `import_checkpoint_test.go`
+- `cmd/session_import.go`, `scripts/e2e-m11.sh`
+- `DESIGN.md`, `docs/en|ru/{trajectory,configuration,cli}.md`, `PROGRESS.md`
 
 ## M11 intent note
 

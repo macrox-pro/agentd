@@ -18,7 +18,7 @@ func TestProviderImporterStatus(t *testing.T) {
 	}{
 		{provider: "claude-code", want: trajectory.ImporterSupported},
 		{provider: "cursor", want: trajectory.ImporterPartial},
-		{provider: "codex", want: trajectory.ImporterPartial},
+		{provider: "codex", want: trajectory.ImporterSupported},
 		{provider: "gemini", want: trajectory.ImporterNone},
 		{provider: "opencode", want: trajectory.ImporterNone},
 		{provider: "kimi-code", want: trajectory.ImporterNone},

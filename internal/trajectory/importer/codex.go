@@ -2,42 +2,147 @@ package importer
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
-
-	"github.com/speakeasy-api/agenthooks"
-	"github.com/speakeasy-api/agenthooks/transcript"
 
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
-// ResolveCodexTranscriptPath finds a Codex transcript JSONL.
-// Prefer explicit --path from the hook transcript_path field; no stable default root.
+const (
+	codexSessionsDirName = "sessions"
+	codexHomeEnv         = "CODEX_HOME"
+	codexJSONLExt        = ".jsonl"
+	codexRolloutPrefix   = "rollout-"
+)
+
+// ResolveCodexTranscriptPath finds a Codex rollout JSONL.
+// Prefer explicit --path; else scan under configuredRoot or default
+// $CODEX_HOME/sessions (or ~/.codex/sessions) for files ending in -{sessionID}.jsonl
+// (real layout: sessions/YYYY/MM/DD/rollout-<ts>-{sessionID}.jsonl). Newest ModTime wins.
 func ResolveCodexTranscriptPath(sessionID, explicitPath, configuredRoot string) (string, error) {
-	return resolveExplicitOrSessionPath(sessionID, explicitPath, configuredRoot, "codex")
+	if explicitPath != "" {
+		if _, err := os.Stat(explicitPath); err != nil {
+			return "", fmt.Errorf("transcript path: %w", err)
+		}
+		return explicitPath, nil
+	}
+	if sessionID == "" {
+		return "", fmt.Errorf("codex import requires --path (or --session with sessions root)")
+	}
+	root := configuredRoot
+	if root == "" {
+		var err error
+		root, err = defaultCodexSessionsRoot()
+		if err != nil {
+			return "", err
+		}
+	}
+	suffix := "-" + sessionID + codexJSONLExt
+	var best string
+	var bestMod time.Time
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		name := d.Name()
+		if !strings.HasSuffix(name, suffix) {
+			return nil
+		}
+		info, err := d.Info()
+		if err != nil {
+			return nil
+		}
+		mod := info.ModTime()
+		if best == "" || mod.After(bestMod) {
+			best = path
+			bestMod = mod
+		}
+		return nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("scan codex sessions: %w", err)
+	}
+	if best == "" {
+		return "", fmt.Errorf("codex transcript not found for session %q under %s", sessionID, root)
+	}
+	return best, nil
 }
 
-// ImportCodex reads Codex transcript JSONL into trajectory events (partial L2).
-// Uses the same message shape as Claude; thinking only when explicitly present.
+func defaultCodexSessionsRoot() (string, error) {
+	home := os.Getenv(codexHomeEnv)
+	if home == "" {
+		var err error
+		home, err = os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("home dir: %w", err)
+		}
+		home = filepath.Join(home, ".codex")
+	}
+	return filepath.Join(home, codexSessionsDirName), nil
+}
+
+// ImportCodex reads Codex rollout JSONL into trajectory events.
 func ImportCodex(opts ImportOptions) (ImportResult, error) {
 	path, err := ResolveCodexTranscriptPath(opts.SessionID, opts.TranscriptPath, opts.ProjectsRoot)
 	if err != nil {
 		return ImportResult{}, err
 	}
-	entries, err := transcript.ReadFile(agenthooks.ProviderCodex, path)
+	lines, err := readCodexJSONL(path)
 	if err != nil {
 		return ImportResult{}, fmt.Errorf("read transcript: %w", err)
 	}
 	now := time.Now().UTC()
 	sid := opts.SessionID
 	if sid == "" {
-		sid = SessionIDFromTranscriptPath(path)
+		sid = sessionIDFromCodexRollout(path, lines)
 	}
-	events, lastIndex := mapEntriesFrom(opts.StartIndex, entries, func(ent transcript.Entry) []trajectory.Event {
-		return mapClaudeStyleEntry(ent, "codex", sid, now, opts.Cfg)
+	events, lastIndex := mapIndexed(opts.StartIndex, lines, func(line rawLine) int { return line.Index }, func(line rawLine) []trajectory.Event {
+		return mapCodexRolloutLine(line, sid, now, opts.Cfg)
 	})
 	return ImportResult{
 		TranscriptPath: path,
 		Events:         events,
 		LastLineIndex:  lastIndex,
 	}, nil
+}
+
+func sessionIDFromCodexRollout(path string, lines []rawLine) string {
+	for _, line := range lines {
+		if sid := sessionIDFromSessionMeta(line.Raw); sid != "" {
+			return sid
+		}
+	}
+	if sid := sessionIDFromRolloutFilename(path); sid != "" {
+		return sid
+	}
+	return SessionIDFromTranscriptPath(path)
+}
+
+func sessionIDFromRolloutFilename(path string) string {
+	base := strings.TrimSuffix(filepath.Base(path), codexJSONLExt)
+	if !strings.HasPrefix(base, codexRolloutPrefix) {
+		return ""
+	}
+	// rollout-<local-ts>-<session_id>
+	rest := strings.TrimPrefix(base, codexRolloutPrefix)
+	// session id is UUID-like suffix after the last timestamp segment;
+	// real names: rollout-2026-07-26T17-33-55-019f9ed8-c891-7dd0-9808-e31c3b38ce48
+	// Take everything after the timestamp (date T time) — five hyphen groups after T.
+	idx := strings.Index(rest, "T")
+	if idx < 0 {
+		return ""
+	}
+	afterT := rest[idx+1:]
+	// afterT like 17-33-55-019f9ed8-c891-7dd0-9808-e31c3b38ce48
+	parts := strings.Split(afterT, "-")
+	if len(parts) < 8 {
+		// need HH-MM-SS + 5 uuid segments (019f9ed8-c891-7dd0-9808-e31c3b38ce48)
+		return ""
+	}
+	return strings.Join(parts[3:], "-")
 }
