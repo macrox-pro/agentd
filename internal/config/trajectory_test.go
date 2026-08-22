@@ -93,3 +93,25 @@ trajectory:
 	assert.NotEqual(t, fpA, fpB)
 	assert.True(t, store.Current().Trajectory.ClaudeImport().Enabled)
 }
+
+func TestCompileTrajectoryImportCursorCodex(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "agentd.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`version: 1
+trajectory:
+  import:
+    cursor:
+      enabled: true
+      path: /tmp/cursor
+    codex:
+      enabled: true
+      path: /tmp/codex
+`), 0o600))
+	store, err := config.Load(context.Background(), path)
+	require.NoError(t, err)
+	assert.True(t, store.Current().Trajectory.CursorImport().Enabled)
+	assert.Equal(t, "/tmp/cursor", store.Current().Trajectory.CursorImport().Path)
+	assert.True(t, store.Current().Trajectory.CodexImport().Enabled)
+	assert.Equal(t, "/tmp/codex", store.Current().Trajectory.CodexImport().Path)
+}

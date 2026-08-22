@@ -145,11 +145,15 @@ func (w *ImportWatcher) importFile(cfg config.TrajectoryConfig, transcriptPath s
 		w.log.Warn("import watcher: checkpoint", "error", err, "session", sid)
 		return
 	}
+	startIndex := 0
+	if cp.SourcePath != "" {
+		startIndex = cp.LastLineIndex + 1
+	}
 	result, err := importer.ImportClaude(importer.ImportOptions{
 		SessionID:      sid,
 		TranscriptPath: transcriptPath,
 		ProjectsRoot:   cfg.ClaudeImport().Path,
-		StartIndex:     cp.LastLineIndex,
+		StartIndex:     startIndex,
 		Cfg:            cfg,
 	})
 	if err != nil {

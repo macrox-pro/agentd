@@ -60,12 +60,15 @@ func TestImportClaudeDedupCheckpoint(t *testing.T) {
 	require.NoError(t, err, "ImportClaude first")
 	require.NotEmpty(t, first.Events)
 
-	require.NoError(t, trajectory.SaveImportCheckpoint(sidecar, trajectory.ImportCheckpoint{LastLineIndex: first.LastLineIndex}))
+	require.NoError(t, trajectory.SaveImportCheckpoint(sidecar, trajectory.ImportCheckpoint{
+		LastLineIndex: first.LastLineIndex,
+		SourcePath:    path,
+	}))
 
 	second, err := importer.ImportClaude(importer.ImportOptions{
 		SessionID:      sid,
 		TranscriptPath: path,
-		StartIndex:     first.LastLineIndex,
+		StartIndex:     first.LastLineIndex + 1,
 		Cfg:            config.TrajectoryConfig{},
 	})
 	require.NoError(t, err, "ImportClaude second")

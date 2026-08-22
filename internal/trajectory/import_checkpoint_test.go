@@ -12,8 +12,23 @@ import (
 
 func TestProviderImporterStatus(t *testing.T) {
 	t.Parallel()
-	assert.Equal(t, trajectory.ImporterSupported, trajectory.ProviderImporterStatus("claude-code"))
-	assert.Equal(t, trajectory.ImporterNone, trajectory.ProviderImporterStatus("cursor"))
+	tests := []struct {
+		provider string
+		want     trajectory.ImporterStatus
+	}{
+		{provider: "claude-code", want: trajectory.ImporterSupported},
+		{provider: "cursor", want: trajectory.ImporterPartial},
+		{provider: "codex", want: trajectory.ImporterPartial},
+		{provider: "gemini", want: trajectory.ImporterNone},
+		{provider: "opencode", want: trajectory.ImporterNone},
+		{provider: "kimi-code", want: trajectory.ImporterNone},
+	}
+	for _, tt := range tests {
+		t.Run(tt.provider, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, trajectory.ProviderImporterStatus(tt.provider))
+		})
+	}
 }
 
 func TestImportCheckpointRoundTrip(t *testing.T) {

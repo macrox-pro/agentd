@@ -27,7 +27,7 @@ func TestPersisterConcurrentSchedule(t *testing.T) {
 	}}
 
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		for _, prov := range providers {
 			wg.Add(1)
 			go func(provider string) {

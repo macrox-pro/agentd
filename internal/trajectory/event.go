@@ -13,6 +13,8 @@ const (
 	TypeAsyncDropped       = "async/dropped"
 	TypeTranscriptMessage  = "transcript/message"
 	TypeTranscriptThinking = "transcript/thinking"
+	TypeSessionFork        = "session/fork"
+	TypeSessionEndSeed     = "session/end-seed"
 )
 
 const (
@@ -85,6 +87,20 @@ type TranscriptMessageData struct {
 type TranscriptThinkingData struct {
 	Text                string `json:"text,omitempty"`
 	TranscriptLineIndex int    `json:"transcript_line_index"`
+}
+
+// SessionForkData is the payload for session/fork (audit lineage).
+type SessionForkData struct {
+	ParentProvider string `json:"parent_provider"`
+	ParentSession  string `json:"parent_session"`
+	BoundarySeq    uint64 `json:"boundary_seq"`
+}
+
+// SessionEndSeedData marks the lineage boundary after a fork seed copy.
+type SessionEndSeedData struct {
+	ParentProvider string `json:"parent_provider"`
+	ParentSession  string `json:"parent_session"`
+	BoundarySeq    uint64 `json:"boundary_seq"`
 }
 
 func mustJSON(v any) json.RawMessage {

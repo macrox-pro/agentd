@@ -544,7 +544,7 @@ routes appear before default-kind fallbacks; target kinds are listed for sync/as
 
 **Hook failure modes:** daemon down → `policy.offline`; timeout → per `policy.fail`; never debug on stdout.
 
-### `agentd session list|show|export|search|import`
+### `agentd session list|show|export|search|import|replay|fork`
 
 Inspect local trajectory session ledgers (JSONL under `$XDG_STATE_HOME/agentd/sessions/`). Offline — no daemon required.
 
@@ -554,15 +554,20 @@ Inspect local trajectory session ledgers (JSONL under `$XDG_STATE_HOME/agentd/se
 | `session show SESSION_ID --provider ID [--json]` | Print events for one session |
 | `session export [--provider ID] [--session ID] [--out PATH]` | Export JSONL for external viewers |
 | `session search [--provider ID] [--session ID] [--kind TYPE]… [--source hook\|transcript\|…] [--query TEXT] [--limit N] [--json]` | Filter events (O(n) JSONL scan; no index) |
-| `session import --provider ID [--session ID] [--path PATH] [--dry-run] [--json]` | Append provider transcript events (Claude Code: `supported`; others: explicit error / `none`) |
+| `session import --provider ID [--session ID] [--path PATH] [--dry-run] [--json]` | Append provider transcript events (`claude-code`: supported; `cursor`/`codex`: partial via `--path`; others: explicit `none`) |
+| `session replay --policy --provider ID --session ID [--seq N] [--json]` | Dry-run stored `Raw` through Dispatch Engine (requires `include_raw` at record time; no live agent) |
+| `session fork --provider ID --session SRC --new-session DST [--at-seq N] [--json]` | Copy ledger prefix → new session id (audit lineage; source immutable) |
 
-Requires `trajectory.enabled` in config for live hook recording; import/search read existing JSONL without a running daemon.
+Requires `trajectory.enabled` in config for live hook recording; import/search/replay/fork read existing JSONL without a running daemon.
 
 **Example:**
 
 ```bash
 agentd session search --provider claude-code --query thinking
 agentd session import --provider claude-code --session s1 --path ~/.claude/projects/.../s1.jsonl
+agentd session import --provider cursor --path /path/to/transcript.jsonl
+agentd session replay --policy --provider claude-code --session s1 --json
+agentd session fork --provider claude-code --session s1 --new-session s1-fork --at-seq 4
 ```
 
 ---
@@ -631,6 +636,12 @@ trajectory:
   queue_capacity: 1024
   import:
     claude-code:
+      enabled: false
+      path: ""
+    cursor:
+      enabled: false
+      path: ""
+    codex:
       enabled: false
       path: ""
 
@@ -733,7 +744,7 @@ agentd/
 | **M8 / v1** | done | Ops polish, conformance, docs freeze, release gate |
 | **M9** | done | Trajectory hub P0 — **L0 live ledger for all six providers** + export (§14 / §14.6) |
 | **M10** | done | Trajectory P1 — search + Claude import; others L0 + explicit importer status |
-| **M11** | planned | Trajectory P2 — importers where possible; policy replay **all** wire dialects |
+| **M11** | **done** | Trajectory P2 — importers where possible; policy replay **all** wire dialects |
 | **M12 / v1.1** | planned | Trajectory P3 — Subscribe; contract freeze; depth = §14.6 matrix; **v1.1 release gate** |
 
 Session checklists and verify commands: [PROGRESS.md](./PROGRESS.md).
@@ -833,9 +844,9 @@ M7 acceptance: Approve once → subsequent matching tool.pre allows within TTL; 
 
 **M11 acceptance:**
 
-- [ ] Every supported provider has an importer row: implemented **or** documented `none`/`partial` with reason (§14.6)
-- [ ] Policy replay works for fixtures of all six providers (encode/decode via agenthooks); does not talk to a live agent
-- [ ] Fork creates a new ledger with `parent_session` metadata; original immutable
+- [x] Every supported provider has an importer row: implemented **or** documented `none`/`partial` with reason (§14.6)
+- [x] Policy replay works for fixtures of all six providers (encode/decode via agenthooks); does not talk to a live agent
+- [x] Fork creates a new ledger with `parent_session` metadata; original immutable
 
 ### M12 / v1.1 — Trajectory P3 (stream out)
 
@@ -937,13 +948,15 @@ Correlation: prefer provider `session_id` + `tool_use_id` / call ids when presen
 # ~/.agentd.yaml — opt-in
 trajectory:
   enabled: false
-  include_raw: false          # default off — Raw may hold secrets
+  include_raw: false          # default off — Raw may hold secrets; required for session replay --policy
   redact_secret_rules: true   # reuse secrets guard patterns when include_raw
   max_event_bytes: 262144     # truncate oversized tool results
   retention_days: 30          # optional GC later
-  # importers (M10+): explicit enable per provider; absent = none
+  # importers: explicit enable per provider; absent = none
   import:
     claude-code: { enabled: false, path: "" }  # default agent home when path empty
+    cursor:      { enabled: false, path: "" }  # prefer CLI --path; no stable default root
+    codex:       { enabled: false, path: "" }  # prefer hook transcript_path via --path
 ```
 
 Persist: debounced / batched append; atomic rotate if needed. Distinct from `runtime.yaml` (approvals/blocks).
@@ -976,12 +989,12 @@ Trajectory must work for **every** agent agentd already supports. Depth is tiere
 
 | Provider | Entrypoint | L0 Live | L1 Session key | L2 Import | L3 Thinking / rich | Trajectory limits (must document) |
 |----------|------------|---------|----------------|-----------|--------------------|-----------------------------------|
-| **Claude Code** | `hook run` (stdin) | **required** | Strong (`session_id`, `tool_use_id`) | **M10 primary** — `~/.claude` JSONL | Often yes (thinking in session files; **not** in hooks) | Hooks omit thinking; transcript may lag in-memory turn; PromptSubmitted has no Ask (decision surface ≠ trajectory) |
-| **Cursor** | `hook run --argv-payload` | **required** | Present but dialect-specific | **M11 partial** — agent transcript JSONL if path known | Weak — tool **outputs** often absent; thinking may be `[REDACTED]` | Ask only on shell/MCP natives — trajectory still records Ask/fallback **decisions**; async must not alter sync; argv-payload size limits |
-| **Codex** | `hook run` + `hook notify` | **required** (both paths) | run vs notify may differ — record `invocation_mode` | Best-effort / **none** until format confirmed | Unlikely via hooks | **No CapAsk**; notify is **async-only** (no blocking decision); neutral wire = empty stdout (export still stores decision enum, not raw stdout) |
-| **Gemini** | `hook run` (stdin) | **required** | As provided in payload | **none** until stable on-disk format | Unknown | stderr discipline — trajectory never logs via hookedge stderr; timeouts in ms (deadline still on Invoke) |
-| **OpenCode** | `hook serve` (NDJSON) | **required** | Per-frame session; daemon **session mutex** | **none** until plugin/session format documented | Unknown | Long-lived serve; many stop/idle frames observe-only; **no CapAsk** on tool.pre; permission channel ≠ Claude Ask |
-| **Kimi Code** | `hook run` | **required** | As provided | **none** until format confirmed | Unknown | **No CapAsk**; many PostTool/Permission events **observe-only** (still L0-record); user-scope install only; empty stdout no-op |
+| **Claude Code** | `hook run` (stdin) | **required** | Strong (`session_id`, `tool_use_id`) | **supported** — `~/.claude` JSONL | Often yes (thinking in session files; **not** in hooks) | Hooks omit thinking; transcript may lag in-memory turn; PromptSubmitted has no Ask (decision surface ≠ trajectory) |
+| **Cursor** | `hook run --argv-payload` | **required** | Present but dialect-specific | **partial** — explicit `--path` (no stable global layout) | Weak — tool **outputs** often absent; thinking may be `[REDACTED]` | Ask only on shell/MCP natives — trajectory still records Ask/fallback **decisions**; async must not alter sync; argv-payload size limits |
+| **Codex** | `hook run` + `hook notify` | **required** (both paths) | run vs notify may differ — record `invocation_mode` | **partial** — `--path` from hook `transcript_path` | Unlikely via hooks | **No CapAsk**; notify is **async-only** (no blocking decision); neutral wire = empty stdout (export still stores decision enum, not raw stdout) |
+| **Gemini** | `hook run` (stdin) | **required** | As provided in payload | **none** — no stable on-disk format in agenthooks | Unknown | stderr discipline — trajectory never logs via hookedge stderr; timeouts in ms (deadline still on Invoke) |
+| **OpenCode** | `hook serve` (NDJSON) | **required** | Per-frame session; daemon **session mutex** | **none** — no documented session JSONL | Unknown | Long-lived serve; many stop/idle frames observe-only; **no CapAsk** on tool.pre; permission channel ≠ Claude Ask |
+| **Kimi Code** | `hook run` | **required** | As provided | **none** — no stable on-disk format | Unknown | **No CapAsk**; many PostTool/Permission events **observe-only** (still L0-record); user-scope install only; empty stdout no-op |
 
 User-facing quirk index remains [docs/en/providers.md](./docs/en/providers.md); §14.6 is the **trajectory-specific** contract. When provider docs change, update this matrix in the same PR.
 

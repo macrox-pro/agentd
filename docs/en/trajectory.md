@@ -9,7 +9,7 @@ Opt-in append-only ledger of hook Invokes (`hook/invoked`, `hook/decided`, async
 ```yaml
 trajectory:
   enabled: true
-  include_raw: false          # default; Raw may hold secrets
+  include_raw: false          # default; set true to enable session replay --policy
   redact_secret_rules: true   # when include_raw: true
   max_event_bytes: 262144
   queue_capacity: 1024
@@ -17,6 +17,12 @@ trajectory:
     claude-code:
       enabled: false            # optional daemon fsnotify import
       path: ""                  # default ~/.claude/projects
+    cursor:
+      enabled: false
+      path: ""                  # optional scan root; prefer CLI --path
+    codex:
+      enabled: false
+      path: ""                  # optional; prefer hook transcript_path via --path
 ```
 
 Storage: `$XDG_STATE_HOME/agentd/sessions/<provider>/<session_id>.jsonl` (Windows: under `%LOCALAPPDATA%\agentd\sessions\`).
@@ -31,28 +37,47 @@ Recording happens on the daemon async path — sync hook latency is unchanged.
 | `agentd session show ID --provider ID [--json]` | Print events |
 | `agentd session export [--provider ID] [--session ID] [--out PATH]` | Export JSONL |
 | `agentd session search [--provider ID] [--query TEXT] …` | Filter ledger (O(n) JSONL scan) |
-| `agentd session import --provider claude-code …` | Append transcript events (`source=transcript`) |
+| `agentd session import --provider ID …` | Append transcript events (`source=transcript`) |
+| `agentd session replay --policy --provider ID --session ID` | Dry-run stored Raw through Dispatch Engine |
+| `agentd session fork --provider ID --session SRC --new-session DST` | Copy ledger prefix (audit lineage) |
 
 ## Search
 
 `session search` walks matching session JSONL files line-by-line. There is no search index — acceptable for moderate logs; filter with `--provider`, `--session`, `--kind`, `--source`, `--query`, `--limit`.
 
-## Import (Claude Code)
+## Import
 
 ```bash
 agentd session import --provider claude-code --session SESSION_ID
-agentd session import --provider claude-code --path /path/to/session.jsonl
+agentd session import --provider cursor --path /path/to/transcript.jsonl
+agentd session import --provider codex --path /path/to/transcript.jsonl
 ```
 
-Transcript events append after existing hook events (monotonic `seq`). Re-import skips lines recorded in `<session_id>.import.json` sidecar. Correlation uses `session_id` and `tool_use_id` when present — never merges unrelated runs.
+Transcript events append after existing hook events (monotonic `seq`). Re-import skips lines recorded in `<session_id>.import.json` sidecar. Correlation uses `session_id` and `tool_use_id` when present — never merges unrelated runs. Cursor/Codex are **partial**: prefer `--path`; never invent thinking or tool outputs.
+
+## Policy replay
+
+```bash
+agentd session replay --policy --provider claude-code --session s1 --json
+```
+
+Re-invokes stored `Raw` through the Dispatch Engine offline. Requires `trajectory.include_raw: true` when events were recorded. Does **not** talk to a live agent or resume an agent loop.
+
+## Fork
+
+```bash
+agentd session fork --provider claude-code --session s1 --new-session s1-fork --at-seq 4
+```
+
+Copies a prefix into a new session id and appends `session/fork` + `session/end-seed` metadata. Source ledger stays immutable. Audit lineage only — not agent resume.
 
 ## Coverage (L0 vs richer tiers)
 
 | Provider | Entrypoint | L0 live | L2 import status | L3 thinking |
 |----------|------------|---------|------------------|-------------|
 | claude-code | `hook run` | required | **supported** | from session files, not hooks |
-| cursor | `hook run --argv-payload` | required | none (M11 partial) | often redacted / absent |
-| codex | `run` + `hook notify` | required | none | unlikely via hooks |
+| cursor | `hook run --argv-payload` | required | **partial** (`--path`) | often redacted / absent |
+| codex | `run` + `hook notify` | required | **partial** (`--path`) | unlikely via hooks |
 | gemini | `hook run` | required | none | unknown |
 | opencode | `hook serve` | required | none | unknown |
 | kimi-code | `hook run` | required | none | unknown |

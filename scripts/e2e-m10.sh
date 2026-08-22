@@ -79,7 +79,7 @@ e2e_assert_trajectory_no_drops
 e2e_wait_provider_sessions cursor
 LIST_CURSOR="$("$BIN" session list --provider=cursor --json)"
 e2e_assert_contains "$LIST_CURSOR" 'importer_status' list-importer-cursor
-e2e_assert_contains "$LIST_CURSOR" 'none' list-importer-cursor-val
+e2e_assert_contains "$LIST_CURSOR" 'partial' list-importer-cursor-val
 
 e2e_daemon_stop
 e2e_assert_file_contains "$LOG_FILE" "daemon shutdown" log-shutdown

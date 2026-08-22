@@ -37,6 +37,8 @@ func defaultTrajectory() TrajectoryConfig {
 func defaultImportProviders() map[string]ImportProviderConfig {
 	return map[string]ImportProviderConfig{
 		"claude-code": {Enabled: false, Path: ""},
+		"cursor":      {Enabled: false, Path: ""},
+		"codex":       {Enabled: false, Path: ""},
 	}
 }
 
@@ -105,6 +107,10 @@ func canonicalImportProvider(name string) string {
 	switch name {
 	case "claude-code":
 		return "claude-code"
+	case "cursor":
+		return "cursor"
+	case "codex":
+		return "codex"
 	default:
 		return name
 	}
@@ -162,8 +168,22 @@ func mergeTrajectoryPtr(base, user *fileTrajectory) *fileTrajectory {
 
 // ClaudeImport returns compiled claude-code import settings.
 func (c TrajectoryConfig) ClaudeImport() ImportProviderConfig {
+	return c.importProvider("claude-code")
+}
+
+// CursorImport returns compiled cursor import settings.
+func (c TrajectoryConfig) CursorImport() ImportProviderConfig {
+	return c.importProvider("cursor")
+}
+
+// CodexImport returns compiled codex import settings.
+func (c TrajectoryConfig) CodexImport() ImportProviderConfig {
+	return c.importProvider("codex")
+}
+
+func (c TrajectoryConfig) importProvider(name string) ImportProviderConfig {
 	if c.Import == nil {
 		return ImportProviderConfig{}
 	}
-	return c.Import["claude-code"]
+	return c.Import[name]
 }

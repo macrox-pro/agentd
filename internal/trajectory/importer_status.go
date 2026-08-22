@@ -9,11 +9,13 @@ const (
 	ImporterNone      ImporterStatus = "none"
 )
 
-// ProviderImporterStatus returns the M10 importer tier for a canonical provider id.
+// ProviderImporterStatus returns the importer tier for a canonical provider id.
 func ProviderImporterStatus(provider string) ImporterStatus {
 	switch CanonicalProvider(provider) {
 	case "claude-code":
 		return ImporterSupported
+	case "cursor", "codex":
+		return ImporterPartial
 	default:
 		return ImporterNone
 	}

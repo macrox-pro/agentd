@@ -22,7 +22,7 @@ var (
 
 func init() {
 	sessionImportCmd.Flags().StringVar(&sessionImportProvider, "provider", "", "provider id (required)")
-	sessionImportCmd.Flags().StringVar(&sessionImportSession, "session", "", "session id (required for claude-code when --path omitted)")
+	sessionImportCmd.Flags().StringVar(&sessionImportSession, "session", "", "session id (required when --path omitted for some providers)")
 	sessionImportCmd.Flags().StringVar(&sessionImportPath, "path", "", "explicit transcript JSONL path")
 	sessionImportCmd.Flags().BoolVar(&sessionImportDryRun, "dry-run", false, "print import summary without writing")
 	sessionImportCmd.Flags().BoolVar(&sessionImportJSON, "json", false, "print result as JSON")
@@ -34,10 +34,11 @@ var sessionImportCmd = &cobra.Command{
 	Short: "Import provider transcript into session ledger",
 	Long: `Pull provider on-disk transcript JSONL into the local session ledger (append-only).
 
-Offline — reads/writes local JSONL under the agentd state directory.`,
+Offline — reads/writes local JSONL under the agentd state directory.
+Supported: claude-code. Partial (path-first): cursor, codex. Others: explicit none.`,
 	Example: `  agentd session import --provider claude-code --session s1
-  agentd session import --provider claude-code --path ~/.claude/projects/foo/s1.jsonl
-  agentd session import --provider claude-code --session s1 --dry-run --json`,
+  agentd session import --provider cursor --path /path/to/transcript.jsonl
+  agentd session import --provider codex --path /path/to/transcript.jsonl --dry-run --json`,
 	RunE: runSessionImport,
 }
 
@@ -57,9 +58,6 @@ func runSessionImport(cmd *cobra.Command, _ []string) error {
 	if status == trajectory.ImporterNone {
 		return fmt.Errorf("transcript import for provider %q is not supported (importer status: none)", prov)
 	}
-	if prov != "claude-code" {
-		return fmt.Errorf("transcript import for provider %q is not supported (importer status: %s)", prov, status)
-	}
 
 	cfg := loadTrajectoryConfigForImport(cmd)
 	sessionsRoot := trajectory.DefaultSessionsDir()
@@ -72,23 +70,38 @@ func runSessionImport(cmd *cobra.Command, _ []string) error {
 		sid = sessionIDFromTranscriptPath(sessionImportPath)
 	}
 
-	claudeCfg := cfg.ClaudeImport()
 	startIndex := 0
 	if sid != "" {
 		cp, err := trajectory.LoadImportCheckpoint(trajectory.ImportSidecarPath(sessionsRoot, prov, sid))
 		if err != nil {
 			return fmt.Errorf("load import checkpoint: %w", err)
 		}
-		startIndex = cp.LastLineIndex
+		if cp.SourcePath != "" {
+			startIndex = cp.LastLineIndex + 1
+		}
 	}
 
-	result, err := importer.ImportClaude(importer.ImportOptions{
+	opts := importer.ImportOptions{
 		SessionID:      sid,
 		TranscriptPath: sessionImportPath,
-		ProjectsRoot:   claudeCfg.Path,
 		StartIndex:     startIndex,
 		Cfg:            cfg,
-	})
+	}
+	var result importer.ImportResult
+	var err error
+	switch prov {
+	case "claude-code":
+		opts.ProjectsRoot = cfg.ClaudeImport().Path
+		result, err = importer.ImportClaude(opts)
+	case "cursor":
+		opts.ProjectsRoot = cfg.CursorImport().Path
+		result, err = importer.ImportCursor(opts)
+	case "codex":
+		opts.ProjectsRoot = cfg.CodexImport().Path
+		result, err = importer.ImportCodex(opts)
+	default:
+		return fmt.Errorf("transcript import for provider %q is not supported (importer status: %s)", prov, status)
+	}
 	if err != nil {
 		return err
 	}

@@ -75,7 +75,9 @@
 | `session export` | `--provider`, `--session`, `--out` |
 | `session search` | `--provider`, `--session`, `--kind` (повтор), `--source`, `--query`, `--limit`, `--json` |
 | `session import` | `--provider` (обязателен), `--session`, `--path`, `--dry-run`, `--json` |
+| `session replay` | `--policy` (обязателен), `--provider`, `--session`, `--seq`, `--json` |
+| `session fork` | `--provider`, `--session`, `--new-session`, `--at-seq`, `--json` |
 
-`session search` сканирует JSONL построчно (O(объём); без индекса). `session import` offline; для Claude Code — `supported`, для остальных явный `none`.
+`session search` сканирует JSONL построчно (O(объём); без индекса). `session import`: Claude Code — `supported`; Cursor/Codex — `partial` (лучше `--path`); остальные — явный `none`. `session replay --policy` требует `include_raw` при записи. `session fork` — только аудит (исходник неизменяем).
 
 См. также: [Быстрый старт](./getting-started.md), [Провайдеры](./providers.md).

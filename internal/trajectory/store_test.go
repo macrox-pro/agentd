@@ -17,7 +17,7 @@ func TestStoreContiguousSeq(t *testing.T) {
 	store := trajectory.NewStore()
 	key := trajectory.SessionKey{Provider: "claude-code", SessionID: "s1"}
 	ev := []trajectory.Event{{Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, TS: time.Now().UTC()}}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		got := store.Append(key, ev)
 		require.Len(t, got, 1, "append %d", i)
 		assert.Equal(t, uint64(i+1), got[0].Seq, "append %d", i)
