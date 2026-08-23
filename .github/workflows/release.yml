@@ -23,10 +23,14 @@ jobs:
         run: |
           chmod +x scripts/release-notes.sh
           ./scripts/release-notes.sh "${GITHUB_REF_NAME}" > /tmp/release-notes.md
-      - name: Remove prior GitHub release (re-run safe)
+      - name: Drop stale release for this tag (re-run only)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release delete "${GITHUB_REF_NAME}" --yes --cleanup-tag=false || true
+        run: |
+          # New tag (e.g. v0.0.3): no release yet — skip. Same tag re-pushed: remove broken/partial release so goreleaser starts clean. Tag is never deleted.
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release delete "${GITHUB_REF_NAME}" --yes --cleanup-tag=false
+          fi
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
