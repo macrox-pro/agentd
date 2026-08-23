@@ -1,15 +1,22 @@
 # Changelog
 
-## [v0.0.2] — unreleased
+## [v0.0.2] — 2026-08-23
 
-Trajectory P3 (M12): live Subscribe + schema freeze.
+Trajectory hub (M9–M12): live ledger, import, replay/fork, and live Subscribe.
 
 ### Highlights
 
-- gRPC `SessionService.Subscribe` and `agentd session subscribe` — live trajectory firehose from daemon
-- `schema_version: 1` on all ledger events (JSONL + stream)
-- Trajectory contract docs; honest §14.6 coverage matrix in user guide
-- Codex L2 import **supported** (rollout JSONL under `~/.codex/sessions`) — shipped pre-M12
+- **Live trajectory ledger** — opt-in append-only session log for all six providers; `session list`, `show`, `export`
+- **Search & import** — `session search`; Claude transcript import; Codex rollout JSONL import (**supported**); Cursor import with explicit per-provider status matrix (§14.6)
+- **Replay & fork** — `session replay --policy` (dry-run policy re-check from stored raw); log fork for audit lineage
+- **Live Subscribe** — gRPC `SessionService.Subscribe` and `agentd session subscribe` firehose from the daemon
+- **`schema_version: 1`** frozen on all ledger events (JSONL + stream)
+- Trajectory contract docs; honest coverage matrix in user guide
+
+### Architecture (no user-facing behavior change)
+
+- R-series refactor (R1–R11): dispatch/target boundaries, guard registry, provider IDs, test coverage uplift
+- `internal/decision` owns proto↔agenthooks Decision mapping; no rename-only passthrough helpers
 
 ### Explicitly not in v0.0.2
 
