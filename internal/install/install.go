@@ -1,8 +1,11 @@
 // Package install writes provider hook configs via agenthooks/install.
 //
-// Owns: manifest generation and hook shim install/uninstall.
+// Owns: manifest generation, install target resolution, install report.
 // Must not: daemon lifecycle (daemon), hook wire at runtime (hookedge).
 //
-// Entry: Run.
+// Invariants:
+//   - Install merges into existing agent config files; it never removes agent home dirs.
+//
+// Entry: Run, ResolveDir, WriteReport.
 // See DESIGN.md §6 (agentd install).
 package install

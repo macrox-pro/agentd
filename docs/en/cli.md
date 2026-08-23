@@ -54,7 +54,10 @@ Install writes `agentd agenthooks run|notify|serve --provider=…`. Same behavio
 |------|---------|
 | `--provider` | required |
 | `--scope` | `project` (`user`, `plugin`) |
-| `--dir` | CWD |
+| `--global` | false — same as `--scope=user` |
+| `--dir` | `scope=project`: CWD (codex: `./.codex`); `scope=user`: agent home (e.g. `~/.cursor`); `scope=plugin`: required |
+
+`--global` conflicts with an explicit `--scope` other than `user`. On success, prints provider, scope, install root, and per-file `create` / `update` / `unchanged` with absolute paths.
 
 ## dispatch
 

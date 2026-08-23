@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -25,40 +24,41 @@ const (
 
 // Options configures an install into a provider's hook settings.
 type Options struct {
-	Provider string
-	Scope    string
-	Dir      string
-	Command  []string // required: abs path to agentd binary
+	Provider   string
+	Scope      string
+	Dir        string
+	DirFlagSet bool
+	Command    []string // required: abs path to agentd binary
 }
 
 // Run writes provider hook configs via agenthooks/install.
-func Run(ctx context.Context, opts Options) error {
+func Run(ctx context.Context, opts Options) (Result, error) {
 	if len(opts.Command) == 0 {
-		return fmt.Errorf("command is required")
+		return Result{}, fmt.Errorf("command is required")
 	}
 	id, err := provider.Parse(opts.Provider)
 	if err != nil {
-		return err
+		return Result{}, err
 	}
 	ahProv, err := id.Agenthooks()
 	if err != nil {
-		return err
+		return Result{}, err
 	}
-	scope, err := parseScope(opts.Scope)
+	scope, scopeLabel, err := parseScope(opts.Scope)
 	if err != nil {
-		return err
+		return Result{}, err
 	}
-	dir := opts.Dir
-	if dir == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("getwd: %w", err)
-		}
-		dir = cwd
-	}
-	absDir, err := filepath.Abs(dir)
+	cwd, err := resolveWorkingDir()
 	if err != nil {
-		return fmt.Errorf("abs dir: %w", err)
+		return Result{}, err
+	}
+	home, err := resolveHomeDir()
+	if err != nil {
+		return Result{}, err
+	}
+	absDir, err := ResolveDir(id, scope, opts.Dir, opts.DirFlagSet, cwd, home, os.Getenv)
+	if err != nil {
+		return Result{}, err
 	}
 
 	m := ahinstall.Manifest{
@@ -71,23 +71,47 @@ func Run(ctx context.Context, opts Options) error {
 		},
 		Fail: agenthooks.FailClosed,
 	}
-	return ahinstall.Install(ctx, m, ahinstall.Target{
+	target := ahinstall.Target{
 		Provider: ahProv,
 		Scope:    scope,
 		Dir:      absDir,
-	})
+	}
+	changes, err := ahinstall.Diff(m, target)
+	if err != nil {
+		return Result{}, err
+	}
+	if err := ahinstall.Install(ctx, m, target); err != nil {
+		return Result{}, err
+	}
+	return Result{
+		Provider: id.String(),
+		Scope:    scopeLabel,
+		Dir:      absDir,
+		Changes:  mapChanges(changes),
+	}, nil
 }
 
-func parseScope(s string) (ahinstall.Scope, error) {
+func mapChanges(changes []ahinstall.Change) []FileChange {
+	out := make([]FileChange, len(changes))
+	for i, c := range changes {
+		out[i] = FileChange{
+			Path:  c.Path,
+			State: ChangeState(c.State),
+		}
+	}
+	return out
+}
+
+func parseScope(s string) (ahinstall.Scope, string, error) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "", "project":
-		return ahinstall.ScopeProject, nil
+		return ahinstall.ScopeProject, "project", nil
 	case "user":
-		return ahinstall.ScopeUser, nil
+		return ahinstall.ScopeUser, "user", nil
 	case "plugin":
-		return ahinstall.ScopePlugin, nil
+		return ahinstall.ScopePlugin, "plugin", nil
 	default:
-		return "", fmt.Errorf("unknown scope %q", s)
+		return "", "", fmt.Errorf("unknown scope %q", s)
 	}
 }
 

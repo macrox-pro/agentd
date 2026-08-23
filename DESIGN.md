@@ -539,12 +539,22 @@ Install may also invoke the hidden sentinel `agentd agenthooks serve --provider=
 Write provider hook configs via `agenthooks/install`. `Command` = absolute path to the
 `agentd` binary; generated configs append `agenthooks run|serve --provider=…`.
 
+Without `--dir`: `scope=project` uses the current working directory (codex uses
+`./.codex`); `scope=user` (or `--global`) uses the agent home directory (for
+example `~/.cursor`). `scope=plugin` and `provider=opencode` with `scope=user`
+require an explicit `--dir`. `--global` conflicts with an explicit `--scope`
+other than `user`.
+
+Prints a summary to stdout: provider, scope, install root, and per-file
+`create` / `update` / `unchanged` with absolute paths.
+
 **See also:** `hook run`
 
 **Example:**
 
 ```bash
 agentd install --provider=claude-code --scope=project
+agentd install --provider=cursor --global
 agentd install --provider=opencode --scope=project --dir /path/to/repo
 ```
 ### `agentd config validate [--config PATH] [--cwd PATH]`

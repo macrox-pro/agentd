@@ -11,7 +11,8 @@
 agentd install --provider=cursor --scope=project
 
 # Пользователь → hooks.json в ~/.cursor
-agentd install --provider=cursor --scope=user --dir ~/.cursor
+agentd install --provider=cursor --global
+# то же, что: --scope=user
 
 # Плагин → .cursor-plugin/plugin.json + hooks/hooks.json
 agentd install --provider=cursor --scope=plugin --dir /path/to/plugin

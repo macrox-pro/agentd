@@ -54,7 +54,10 @@
 |------|--------------|
 | `--provider` | обязателен |
 | `--scope` | `project` (также `user`, `plugin`) |
-| `--dir` | текущая директория |
+| `--global` | false — то же, что `--scope=user` |
+| `--dir` | `scope=project`: cwd (codex: `./.codex`); `scope=user`: home агента (напр. `~/.cursor`); `scope=plugin`: обязателен |
+
+`--global` конфликтует с явным `--scope`, отличным от `user`. При успехе печатает provider, scope, корень установки и по каждому файлу `create` / `update` / `unchanged` с абсолютными путями.
 
 ## dispatch (маршруты)
 

@@ -38,9 +38,11 @@ agentd install --provider=PROVIDER --scope=SCOPE [--dir PATH]
 
 | `--scope` | Meaning |
 |-----------|---------|
-| `project` (default) | Project-local settings under `--dir` (CWD if omitted) |
-| `user` | User-level agent home (pass that directory as `--dir` when required) |
-| `plugin` | Plugin layout where supported (Claude, Cursor) |
+| `project` (default) | Project-local settings under CWD (codex: `./.codex`) |
+| `user` | Agent home directory (e.g. `~/.cursor`, `~/.claude`; codex: `$CODEX_HOME` or `~/.codex`). Alias: `--global` |
+| `plugin` | Plugin root — `--dir` required (Claude, Cursor) |
+
+On success, `agentd install` prints a summary with absolute paths for each created, updated, or unchanged file.
 
 Generated argv uses `agentd agenthooks …` (same as `hook …`). HookSpec timeouts: ToolPre / PromptSubmitted **30s**; shorter kinds **5s**.
 

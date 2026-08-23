@@ -4,10 +4,22 @@
 
 ## Current phase
 
-Phase: **F4 done** | Last: F1–F4 CONVENTIONS follow-through | Next: **none** (no R12)
+Phase: **install UX done** | Last: install defaults + stdout report | Next: **none**
 
 > Milestones M0–M12: **done**. Post-release **R-series** refactor: **R1–R11 done**. No R12.
 > Post-R follow-through: **F1–F4 done**. Coverage goal ≥70% still not met — exception (no filler).
+
+### Install UX (2026-08-23)
+
+**Problem:** `agentd install --scope=user` without `--dir` wrote into CWD; success was silent.
+
+**Done:**
+- `internal/install`: `ResolveDir`, `WriteReport`, `Result`; user scope defaults to agent home; codex project → `./.codex`; plugin/opencode-user require `--dir`
+- `cmd/install`: report on stdout; `SilenceErrors` removed; sentinel → CLI errors
+- Docs: DESIGN §6, `docs/en`+`docs/ru` cli + providers
+- Tests: `dir_test`, `run_test`, `cmd/install_test`
+
+**Files:** `internal/install/{errors,dir,report,run}.go`, `cmd/install.go`, docs EN/RU
 
 ---
 

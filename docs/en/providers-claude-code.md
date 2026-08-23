@@ -10,8 +10,8 @@
 # Project → .claude/settings.json under --dir
 agentd install --provider=claude-code --scope=project
 
-# User (Dir = ~/.claude → settings.json)
-agentd install --provider=claude-code --scope=user --dir ~/.claude
+# User (→ ~/.claude/settings.json)
+agentd install --provider=claude-code --scope=user
 
 # Plugin → .claude-plugin/plugin.json + hooks/hooks.json
 agentd install --provider=claude-code --scope=plugin --dir /path/to/plugin

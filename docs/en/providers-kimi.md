@@ -9,7 +9,7 @@
 Hooks live only in **user-level** `config.toml` (`$KIMI_CODE_HOME`, default `~/.kimi-code`). **`--scope=project` fails**.
 
 ```bash
-agentd install --provider=kimi-code --scope=user --dir "${KIMI_CODE_HOME:-$HOME/.kimi-code}"
+agentd install --provider=kimi-code --scope=user
 ```
 
 Updates a managed `[[hooks]]` region in `config.toml`.

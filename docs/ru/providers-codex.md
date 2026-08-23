@@ -6,10 +6,12 @@
 
 ## Установка
 
-`--dir` — домашний каталог Codex с `hooks.json` (часто `$CODEX_HOME`).
-
 ```bash
-agentd install --provider=codex --scope=user --dir "${CODEX_HOME:-$HOME/.codex}"
+# Пользователь → $CODEX_HOME или ~/.codex/hooks.json
+agentd install --provider=codex --scope=user
+
+# Проект → .codex/hooks.json в cwd
+agentd install --provider=codex --scope=project
 ```
 
 Пишутся `hooks.json` и управляемый фрагмент `config.toml` (ключи доверия, без интерактивного trust-цикла).

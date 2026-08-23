@@ -9,7 +9,7 @@
 Хуки только в **пользовательском** `config.toml` (`$KIMI_CODE_HOME`, обычно `~/.kimi-code`). **`--scope=project` завершится ошибкой**.
 
 ```bash
-agentd install --provider=kimi-code --scope=user --dir "${KIMI_CODE_HOME:-$HOME/.kimi-code}"
+agentd install --provider=kimi-code --scope=user
 ```
 
 Обновляет управляемый регион `[[hooks]]` в `config.toml`.

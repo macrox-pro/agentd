@@ -6,10 +6,12 @@
 
 ## Install
 
-`--dir` must be the Codex home that owns `hooks.json` (e.g. `$CODEX_HOME`).
-
 ```bash
-agentd install --provider=codex --scope=user --dir "${CODEX_HOME:-$HOME/.codex}"
+# User → $CODEX_HOME or ~/.codex/hooks.json
+agentd install --provider=codex --scope=user
+
+# Project → .codex/hooks.json under CWD
+agentd install --provider=codex --scope=project
 ```
 
 Writes `hooks.json` plus a managed region in `config.toml` (trust keys so Codex does not loop on interactive trust).

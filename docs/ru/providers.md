@@ -38,9 +38,11 @@ agentd install --provider=PROVIDER --scope=SCOPE [--dir PATH]
 
 | `--scope` | Смысл |
 |-----------|--------|
-| `project` (по умолчанию) | Настройки в каталоге проекта |
-| `user` | Домашний каталог настроек агента (укажите `--dir`) |
-| `plugin` | Раскладка плагина (Claude, Cursor) |
+| `project` (по умолчанию) | Настройки проекта в cwd (codex: `./.codex`) |
+| `user` | Home агента (напр. `~/.cursor`, `~/.claude`; codex: `$CODEX_HOME` или `~/.codex`). Алиас: `--global` |
+| `plugin` | Корень плагина — `--dir` обязателен (Claude, Cursor) |
+
+При успехе `agentd install` печатает сводку с абсолютными путями для каждого созданного, обновлённого или неизменённого файла.
 
 В argv агента — `agentd agenthooks …`. Таймауты HookSpec: ToolPre / PromptSubmitted **30 s**; короткие виды **5 s**.
 

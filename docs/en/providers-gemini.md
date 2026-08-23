@@ -11,7 +11,7 @@
 agentd install --provider=gemini --scope=project
 
 # User → settings.json under ~/.gemini
-agentd install --provider=gemini --scope=user --dir ~/.gemini
+agentd install --provider=gemini --scope=user
 ```
 
 ## Runtime
