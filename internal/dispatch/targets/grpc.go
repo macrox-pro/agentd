@@ -27,13 +27,6 @@ type GRPC struct {
 	InvokePeer func(ctx context.Context, endpoint string, req *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error)
 }
 
-// SyncRequest is one sync grpc forward.
-type SyncRequest struct {
-	Provider agentdv1.Provider
-	Raw      []byte
-	Target   config.CompiledTarget
-}
-
 // InvokeSync dials the peer and returns its decision.
 func (t *GRPC) InvokeSync(ctx context.Context, req SyncRequest) (agenthooks.Decision, error) {
 	resp, err := t.invoke(ctx, req.Target, req.Provider, req.Raw)

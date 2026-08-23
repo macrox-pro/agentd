@@ -1,7 +1,8 @@
 // Package dispatch routes hook Invoke through sync and async pipelines.
 //
-// Owns: route match, Engine, queue, session lock, target dispatch.
-// Must not: decode provider wire (hookedge), compile YAML (config), guard Decide (targets/builtin + agenthooks).
+// Owns: route match, Engine, queue, session lock; calls targets factories for Kind→impl.
+// Must not: decode provider wire (hookedge), compile YAML (config), guard Decide (targets/builtin + agenthooks),
+// Kind switch on target type (targets factories only).
 //
 // Invariants:
 //   - Sync response never waits on async queue drain.

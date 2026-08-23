@@ -113,7 +113,8 @@ A plan with fewer than ~5 coarse todos for a multi-file phase is usually under-s
 | `gen/` | Generated — never edit | manual edits |
 | `internal/hookedge` | Provider codecs + wire I/O ([§1.5 invoke_sync](./DESIGN.md#15-hot-paths)) | policy, `Runner.Decide` |
 | `internal/config` | Config merge/compile ([§1.5 config_reload](./DESIGN.md#15-hot-paths)) | dispatch, wire decode |
-| `internal/dispatch` | Routing; new targets → `targets/` ([§1.5 invoke_sync, async_side](./DESIGN.md#15-hot-paths)) | wire decode, YAML compile |
+| `internal/dispatch` | Routing; Engine; queue; session lock ([§1.5 invoke_sync, async_side](./DESIGN.md#15-hot-paths)) | wire decode, YAML compile, Kind→impl switch |
+| `internal/dispatch/targets` | Sync/Async target adapters; factories map CompiledTarget → invokers | route match, YAML compile, session lock |
 | `internal/trajectory` | Session ledger append, persist, list/export ([§1.5 async_side](./DESIGN.md#15-hot-paths), §14) | wire decode, route match, config compile |
 | `internal/guard` | secrets/shell/mcp/paths checks | routing, encode |
 | `internal/daemon` | start/stop, lock, status, reload signal | dispatch, config compile |
@@ -129,6 +130,10 @@ A plan with fewer than ~5 coarse todos for a multi-file phase is usually under-s
 - Hook entrypoint: public `agentd hook run|notify|serve`; `agenthooks/install` writes `agentd agenthooks …` (hidden alias, same `cmd/hook.go` path). Document `hook`, not `agenthooks`.
 - ConfigStore hot path: `store.Current()` only — no disk I/O. Runtime overlay + one debounced reload goroutine.
 - Async dispatch must not block the sync hook response.
+- **Target extensibility:** new sync/async target kinds are added under `internal/dispatch/targets` via factory; `Engine` must not grow a `switch` on target kind.
+- **Guard extensibility:** built-in guards live in `internal/guard`; wiring into the agenthooks Runner stays in `targets` builtin (or a single registrar). Do not call `guard` from `Engine` directly.
+- **Interfaces:** prefer narrow interfaces at package boundaries (`SyncInvoker`, `AsyncInvoker`, optional server-side ports). No kitchen-sink `interfaces.go`; define next to the consumer or implementor concern file.
+- **Behavior-preserving refactors (R-phases):** default acceptance is table/golden parity on Decide outcomes for the same Snapshot + payload; document any intentional policy change in DESIGN.md first.
 - New CLI command → update [DESIGN.md §6](./DESIGN.md#6-cli-reference) **and** [docs/en/cli.md](./docs/en/cli.md) + [docs/ru/cli.md](./docs/ru/cli.md).
 - User-visible behavior / config / Status / install change → update matching pages under [docs/en/](./docs/en/) then mirror [docs/ru/](./docs/ru/) (see [docs/en/maintaining.md](./docs/en/maintaining.md)). Run `make docs-check`.
 

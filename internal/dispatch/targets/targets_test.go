@@ -172,3 +172,66 @@ func TestGRPCInvokeAsync(t *testing.T) {
 	}))
 	assert.True(t, called)
 }
+
+func TestNewSyncInvoker(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		kind    config.TargetKind
+		wantErr bool
+	}{
+		{name: "builtin", kind: config.TargetBuiltin},
+		{name: "grpc", kind: config.TargetGRPC},
+		{name: "log_not_sync", kind: config.TargetLog, wantErr: true},
+		{name: "unknown_kind", kind: config.TargetKind("nope"), wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			inv, err := targets.NewSyncInvoker(config.CompiledTarget{Kind: tt.kind}, &targets.Builtin{}, nil)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Nil(t, inv)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, inv)
+		})
+	}
+}
+
+func TestGRPCSyncFailMode(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		onError  config.FailMode
+		wantKind agenthooks.DecisionKind
+	}{
+		{name: "fail_open", onError: config.FailOpen, wantKind: agenthooks.DecisionNoDecision},
+		{name: "fail_closed", onError: config.FailClosed, wantKind: agenthooks.DecisionDeny},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			w := &targets.GRPCSync{
+				Inner: &targets.GRPC{
+					InvokePeer: func(ctx context.Context, endpoint string, req *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
+						return nil, assert.AnError
+					},
+				},
+			}
+			d, err := w.InvokeSync(context.Background(), targets.SyncRequest{
+				Provider: agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+				Raw:      []byte(`{}`),
+				Target: config.CompiledTarget{
+					Kind:     config.TargetGRPC,
+					Endpoint: "unix:///peer.sock",
+					OnError:  tt.onError,
+				},
+			})
+			require.NoError(t, err)
+			require.NotNil(t, d)
+			assert.Equal(t, tt.wantKind, d.Kind())
+		})
+	}
+}

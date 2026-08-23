@@ -192,3 +192,144 @@ func TestDecodeTyped(t *testing.T) {
 	n.Add(1)
 	assert.Equal(t, int32(1), n.Load())
 }
+
+func paritySnap(t *testing.T, sync []config.CompiledTarget, async []config.CompiledTarget, mode config.DispatchMode) *config.Snapshot {
+	t.Helper()
+	base := testSnap(t)
+	base.Routes = []config.CompiledRoute{{
+		Name:  "parity",
+		Match: config.RouteMatch{Kinds: []string{"tool.pre"}},
+		Mode:  mode,
+		Sync:  sync,
+		Async: async,
+	}}
+	return base
+}
+
+func TestEngine_RunSyncParity(t *testing.T) {
+	t.Parallel()
+	missingPeer := "unix://" + filepath.Join(t.TempDir(), "missing.sock")
+
+	tests := []struct {
+		name     string
+		sync     []config.CompiledTarget
+		command  string
+		wantKind agentdv1.DecisionKind
+	}{
+		{
+			name: "builtin_deny_first",
+			sync: []config.CompiledTarget{{
+				Kind:   config.TargetBuiltin,
+				Guards: []string{"secrets"},
+			}},
+			command:  "export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE",
+			wantKind: agentdv1.DecisionKind_DECISION_KIND_ASK,
+		},
+		{
+			name: "grpc_fail_open",
+			sync: []config.CompiledTarget{{
+				Kind:     config.TargetGRPC,
+				Endpoint: missingPeer,
+				Timeout:  200 * time.Millisecond,
+				OnError:  config.FailOpen,
+			}},
+			command:  "echo ok",
+			wantKind: agentdv1.DecisionKind_DECISION_KIND_NO_DECISION,
+		},
+		{
+			name: "grpc_fail_closed",
+			sync: []config.CompiledTarget{{
+				Kind:     config.TargetGRPC,
+				Endpoint: missingPeer,
+				Timeout:  200 * time.Millisecond,
+				OnError:  config.FailClosed,
+			}},
+			command:  "echo ok",
+			wantKind: agentdv1.DecisionKind_DECISION_KIND_DENY,
+		},
+		{
+			name: "skip_non_sync_kind",
+			sync: []config.CompiledTarget{
+				{Kind: config.TargetLog},
+				{Kind: config.TargetBuiltin, Guards: []string{"secrets"}},
+			},
+			command:  "export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE",
+			wantKind: agentdv1.DecisionKind_DECISION_KIND_ASK,
+		},
+		{
+			name: "first_conclusive_stops",
+			sync: []config.CompiledTarget{
+				{Kind: config.TargetBuiltin, Guards: []string{"secrets"}},
+				{
+					Kind:     config.TargetGRPC,
+					Endpoint: missingPeer,
+					Timeout:  200 * time.Millisecond,
+					OnError:  config.FailClosed,
+				},
+			},
+			command:  "export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE",
+			wantKind: agentdv1.DecisionKind_DECISION_KIND_ASK,
+		},
+		{
+			name:     "empty_sync_list_neutral",
+			sync:     nil,
+			command:  "echo ok",
+			wantKind: agentdv1.DecisionKind_DECISION_KIND_NO_DECISION,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			eng := dispatch.NewEngine(nil, nil)
+			snap := paritySnap(t, tt.sync, nil, config.ModeSyncOnly)
+			res, err := eng.Invoke(context.Background(), dispatch.InvokeInput{
+				Provider:   agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+				RawPayload: claudeToolPre(t, tt.command),
+				Snap:       snap,
+			})
+			require.NoError(t, err)
+			require.NotNil(t, res.Decision)
+			assert.Equal(t, tt.wantKind, res.Decision.Kind)
+			assert.Equal(t, uint32(0), res.AsyncDispatchedCount)
+		})
+	}
+}
+
+func TestEngineHybrid(t *testing.T) {
+	t.Parallel()
+	audit := filepath.Join(t.TempDir(), "audit.jsonl")
+	q := dispatch.NewQueue(config.AsyncConfig{
+		QueueCapacity: 8,
+		WorkerLimit:   2,
+		TargetTimeout: time.Second,
+	}, nil)
+	t.Cleanup(func() { q.Close(2 * time.Second) })
+	eng := dispatch.NewEngine(q, nil)
+	snap := paritySnap(t,
+		[]config.CompiledTarget{{Kind: config.TargetBuiltin, Guards: []string{"secrets"}}},
+		[]config.CompiledTarget{{Kind: config.TargetFile, Path: audit}},
+		config.ModeParallel,
+	)
+
+	res, err := eng.Invoke(context.Background(), dispatch.InvokeInput{
+		Provider:   agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+		RawPayload: claudeToolPre(t, "export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"),
+		Snap:       snap,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res.Decision)
+	assert.Equal(t, agentdv1.DecisionKind_DECISION_KIND_ASK, res.Decision.Kind)
+	assert.GreaterOrEqual(t, res.AsyncDispatchedCount, uint32(1))
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		if b, err := os.ReadFile(audit); err == nil && len(b) > 0 {
+			assert.Contains(t, string(b), "tool.pre")
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("async audit file not written; sync decision must not wait but async should still run")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}

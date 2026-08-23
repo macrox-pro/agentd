@@ -65,6 +65,7 @@ Package-specific ownership (do not reimplement elsewhere):
 - Hook wire I/O: `internal/hookedge` + agenthooks — do not reimplement provider codecs.
 - Config merge/compile: `internal/config` only.
 - Dispatch routing: `internal/dispatch` only.
+- Target Kind → implementation mapping has **one** home: the `targets` factory (`NewSyncInvoker` / `NewAsyncInvoker`). Do not duplicate Kind switches in `Engine` and the factory.
 - Provider ids / enum mapping: `internal/provider` only.
 
 Before adding a helper, search `internal/` for an existing entry point. Extract shared test helpers once; use `t.Helper()`.

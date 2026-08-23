@@ -161,33 +161,16 @@ func (e *Engine) logInvokeDebug(provider, eventKind, routeName string, decision 
 func (e *Engine) runSync(ctx context.Context, b *targets.Builtin, syncTargets []config.CompiledTarget, typed any, provider agentdv1.Provider, raw []byte) (agenthooks.Decision, error) {
 	var last agenthooks.Decision = agenthooks.NoDecision()
 	for _, t := range syncTargets {
-		var (
-			d   agenthooks.Decision
-			err error
-		)
-		switch t.Kind {
-		case config.TargetBuiltin:
-			d, err = b.Decide(ctx, typed, t.Guards)
-		case config.TargetGRPC:
-			g := &targets.GRPC{Logger: e.log}
-			d, err = g.InvokeSync(ctx, targets.SyncRequest{
-				Provider: provider,
-				Raw:      raw,
-				Target:   t,
-			})
-			if err != nil {
-				if t.OnError == config.FailOpen {
-					if e.log != nil {
-						e.log.Warn("grpc sync target failed (fail_open)", "error", err)
-					}
-					d, err = agenthooks.NoDecision(), nil
-				} else {
-					d, err = agenthooks.Deny("grpc forward failed"), nil
-				}
-			}
-		default:
+		inv, err := targets.NewSyncInvoker(t, b, e.log)
+		if err != nil {
 			continue
 		}
+		d, err := inv.InvokeSync(ctx, targets.SyncRequest{
+			Typed:    typed,
+			Raw:      raw,
+			Provider: provider,
+			Target:   t,
+		})
 		if err != nil {
 			return nil, err
 		}

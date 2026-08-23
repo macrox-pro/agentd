@@ -250,6 +250,8 @@ Routes evaluated top-down; first match wins.
 | `log` | — | structured log | metadata |
 | `file` | — | append JSONL | audit |
 
+**Kind → implementation:** `internal/dispatch/targets` owns sync/async factories (`NewSyncInvoker`, `NewAsyncInvoker`). `Engine` must not switch on target kind.
+
 **Sync merge policies:** `first_conclusive` (Any), `all_restrictive` (All), `sequential_neutral_merge` (context append).
 
 ### Provider-aware dispatch

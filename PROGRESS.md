@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase: **R5 done** | Last: r5-daemon-hookclient | Next: **R6 dispatch boundaries**
+Phase: **R6 done** | Last: r6-syncinvoker | Next: **R7 aggregation policy**
 
 > Milestones M0–M12: **done**. Post-release work is the **R-series** refactor below — one phase = one PR or agent session, one package or one hot path ([AGENTS.md](./AGENTS.md) intent rules).
 
@@ -30,10 +30,10 @@ true
 | `cmd` | 60.7% | maintain — R4 table tests done |
 | `internal/daemon` | 65.0% | maintain — R5 lifecycle tests done |
 | `internal/hookclient` | 81.0% | maintain — R5 client tests done |
-| `internal/dispatch/targets` | 60.1% | P2 |
+| `internal/dispatch/targets` | 60.7% | maintain — R6 SyncInvoker done |
 | `internal/trajectory/importer` | 71.8% | maintain — registry done |
 | `internal/trajectory` | 68.3% | P2 — was 66.1% |
-| `internal/dispatch` | 69.5% | P2 |
+| `internal/dispatch` | 73.7% | maintain — R6 SyncInvoker done |
 | `internal/hookedge` | 70.4% | maintain |
 | `internal/config` | 74.8% | maintain |
 | `internal/transport` | 77.5% | maintain |
@@ -66,9 +66,12 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 | **R3** | **done** | Importer registry — `registry.go` + `ImportSession` facade |
 | **R4** | **done** | `cmd/` coverage — table-driven session + config CLI |
 | **R5** | **done** | `daemon` + `hookclient` lifecycle tests |
-| **R6** | **next** | `dispatch` decode/targets — provider mapping consolidation |
-| **R7** | pending | Test hygiene — table-driven migration where structure matches |
-| **R8** | pending | Tier-1 package comments audit + docs sync |
+| **R6** | **done** | `dispatch/targets` — SyncInvoker + factory; Engine Kind switch removed |
+| **R7** | **next** | `dispatch` — extract `first_conclusive` aggregation |
+| **R8** | pending | `guard` + `targets/builtin` — Checker registry (incremental) |
+| **R9** | pending | `server` — narrow ports only if tests require |
+| **R10** | pending | Test hygiene — table-driven migration where structure matches |
+| **R11** | pending | Tier-1 package comments audit + docs sync |
 
 ---
 
@@ -221,32 +224,96 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 
 ---
 
-## R6 intent note — dispatch boundaries
+## R6 intent note — SyncInvoker boundary
 
-**Problem:** Residual provider/string routing in dispatch decode and grpc forward target; engine hybrid mode branches under-covered.
+**Problem:** Sync target Kind switch lives in `Engine.runSync` while async already uses `NewAsyncInvoker`; adding sync kinds forces Engine edits and duplicates the Kind→impl map.
 
-**Hot path:** `invoke_sync`, `async_side`.
+**Hot path:** `invoke_sync` (call-site in `dispatch`; factory in `targets`).
 
-**Invariants:** sync path never blocks on trajectory; async queue bounded; decode errors map to gRPC status in server only.
+**Invariants:**
+- Identical Decide outcomes for same Snapshot + payload (builtin / grpc / fail_open / fail_closed / unknown kind skip)
+- Sync response never waits on async queue
+- No disk I/O on Invoke; `Event.Raw` unchanged
+- Kind→impl mapping has **one** home: `targets` factory (not Engine)
+- `OnError` applies to grpc sync only; `GRPC.InvokeSync` returns raw errors (FailMode is a factory wrapper)
 
 **Corner cases (test names):**
-- `TestDecodeProvider` — table: six proto providers → canonical id
-- `TestGRPCTargetForward` — provider header mapping
-- `TestEngineHybrid` — sync deny + async fan-out row
+- `TestNewSyncInvoker` — tt: `builtin`, `grpc`, `log_not_sync`, `unknown_kind`
+- `TestEngine_RunSyncParity` — tt: `builtin_deny_first`, `grpc_fail_open`, `grpc_fail_closed`, `skip_non_sync_kind`, `first_conclusive_stops`, `empty_sync_list_neutral`
+- `TestEngineHybrid` — sync deny + async fan-out; async must not change sync decision
+- `TestGRPCInvokeSync` / `peer error` — raw error from `GRPC.InvokeSync` (FailMode not at that layer)
 
-**Out of scope:** New target types; route YAML schema changes.
+**Out of scope:** aggregation extract (R7); guard registry (R8); YAML merge-policy schema; new target kinds; fail_mode semantic changes; `config.Store` rewrite; trajectory; cmd/.
+
+**Old R6 disposition (parked):**
+- `r6-decode-table` / `TestDecodeProvider` — done-by-R1 (`provider.FromProto`); residual → R10
+- `r6-targets-grpc` / `TestGRPCTargetForward` — done-by-R1 (`r1-dispatch-grpc`); residual → R10
+- dispatch ≥ 75% hard gate — dropped; no-regress vs baseline
 
 ### R6 checklist
 
-- [ ] r6-intent
-- [ ] r6-decode-table — provider mapping tests in `dispatch/decode_test.go`
-- [ ] r6-targets-grpc — consolidate with `provider.FromProto`
-- [ ] r6-engine-hybrid — table in `engine_test.go`
-- [ ] r6-verify — dispatch ≥ 75%
+- [x] r6-intent — SyncInvoker intent + R6–R11 roadmap remap
+- [x] r6-agents-targets-row / r6-conventions-kind-home
+- [x] r6-sync-iface + builtin adapter + grpc FailMode wrapper + `NewSyncInvoker`
+- [x] r6-engine-callsite — `runSync` uses factory; no Kind switch in Engine
+- [x] r6-test-factory / r6-test-parity / r6-test-hybrid
+- [x] r6-verify — race + lint + intent-check; dispatch **73.7%**, targets **60.7%** (no regress)
+- [x] r6-design / package comments / PROGRESS handoff → R7
+
+**R6 acceptance:** zero `switch` on target Kind in `Engine`; Kind→impl only in `targets.NewSyncInvoker` / `NewAsyncInvoker`; Decide parity for SyncInvoker corner cases.
+
+**Files touched:** `internal/dispatch/{dispatch,engine}.go`, `internal/dispatch/engine_test.go`, `internal/dispatch/targets/{sync,factory,grpc,targets}.go`, `internal/dispatch/targets/targets_test.go`, `AGENTS.md`, `CONVENTIONS.md`, `DESIGN.md` §2, `PROGRESS.md`.
 
 ---
 
-## R7 intent note — Test hygiene (table-driven migration)
+## R7 intent note — Aggregation policy (roadmap stub)
+
+**Problem:** `first_conclusive` is inline in `runSync`; DESIGN names other merge policies.
+
+**Hot path:** `invoke_sync`.
+
+**Out of scope until phase starts:** implementing `all_restrictive` / `sequential_neutral_merge`; YAML schema unless compile already has a field.
+
+### R7 checklist
+
+- [ ] r7-intent (full note when phase starts)
+- [ ] r7-extract — named aggregation type/func
+- [ ] r7-tests — stop-on-conclusive + fail modes
+- [ ] r7-verify
+
+---
+
+## R8 intent note — Guard Checker registry (roadmap stub)
+
+**Problem:** Guard wiring in `targets/builtin` is an ad-hoc switch; wants incremental named registry.
+
+**Hot path:** `invoke_sync`.
+
+**Out of scope until phase starts:** YAML schema change; breaking agenthooks `Runner` wiring in one jump.
+
+### R8 checklist
+
+- [ ] r8-intent (full note when phase starts)
+- [ ] r8-registry — incremental Checker registry
+- [ ] r8-verify
+
+---
+
+## R9 intent note — Server narrow ports (roadmap stub)
+
+**Problem:** Optional test ports at `server` ↔ `dispatch` / `config`.
+
+**Out of scope:** god-interface over `Store`; add only if a concrete unit test requires it.
+
+### R9 checklist
+
+- [ ] r9-intent (full note when phase starts)
+- [ ] r9-ports — only if needed
+- [ ] r9-verify
+
+---
+
+## R10 intent note — Test hygiene (table-driven migration)
 
 **Problem:** Several packages use copy-pasted `TestXxx` functions where assertion skeleton is identical ([CONVENTIONS](./CONVENTIONS.md#when-not-to-use-a-table) allows exceptions — apply selectively).
 
@@ -263,22 +330,24 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 | `server/invoke_test.go` | 3 trajectory variants | `TestInvokeTrajectoryTable` (claude, cursor argv, …) |
 | `guard/approve_test.go` | 3 separate | extend existing `TestTemporaryBlockDenies` pattern |
 
+**Also parked from old R6:** residual `TestDecodeProvider` / `TestGRPCTargetForward` if gaps remain after R1.
+
 **Out of scope:** testify/suite; rewriting e2e scripts; 100% coverage chase.
 
-### R7 checklist
+### R10 checklist
 
-- [ ] r7-intent
-- [ ] r7-hub-table — hub deliver/drop/unregister merged where safe
-- [ ] r7-fork-table
-- [ ] r7-invoke-table
-- [ ] r7-audit — grep for `if tt.` blocks inside single `Test` without `t.Run`
-- [ ] r7-verify — full `make test`; total coverage ≥ 70%
+- [ ] r10-intent
+- [ ] r10-hub-table — hub deliver/drop/unregister merged where safe
+- [ ] r10-fork-table
+- [ ] r10-invoke-table
+- [ ] r10-audit — grep for `if tt.` blocks inside single `Test` without `t.Run`
+- [ ] r10-verify — full `make test`; total coverage ≥ 70%
 
 ---
 
-## R8 intent note — Package comments & docs sync
+## R11 intent note — Package comments & docs sync
 
-**Problem:** New packages (`provider`, trajectory splits) need Tier-1 comments; user-facing behavior unchanged but boundaries shifted.
+**Problem:** New packages (`provider`, trajectory splits, SyncInvoker boundary) need Tier-1 comments; user-facing behavior unchanged but boundaries shifted.
 
 **Hot path:** n/a.
 
@@ -288,16 +357,16 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 
 **Out of scope:** New CLI commands; proto changes; README feature marketing.
 
-### R8 checklist
+### R11 checklist
 
-- [ ] r8-intent
-- [ ] r8-provider-comment — verify `internal/provider/provider.go` header
-- [ ] r8-trajectory-comments — `hub.go`, `replay_config.go`, `session_event_grpc.go`
-- [ ] r8-design-15 — DESIGN §1.5 row for `internal/provider` if missing
-- [ ] r8-docs-check — `make docs-check` (only if user-visible text changed)
-- [ ] r8-verify — `make intent-check` + full verify block
+- [ ] r11-intent
+- [ ] r11-provider-comment — verify `internal/provider/provider.go` header
+- [ ] r11-trajectory-comments — `hub.go`, `replay_config.go`, `session_event_grpc.go`
+- [ ] r11-design-15 — DESIGN §1.5 row for `internal/provider` if missing
+- [ ] r11-docs-check — `make docs-check` (only if user-visible text changed)
+- [ ] r11-verify — `make intent-check` + full verify block
 
-**R-series done when:** R1–R8 checklists complete, total coverage ≥ 70%, no duplicate provider switches outside owner tables, user tags v1.1.0.
+**R-series done when:** R1–R11 checklists complete, total coverage ≥ 70%, no duplicate provider switches outside owner tables, user tags v1.1.0.
 
 ---
 
@@ -500,7 +569,8 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 - **R3 done:** importer registry + status colocated; `ImportSession` facade for CLI + watcher; `session list --json` enriches status in `cmd/`
 - **R4 done:** shared `cmd/root_test.go` harness; table-driven session/config/dispatch CLI tests; cmd **60.7%**
 - **R5 done:** daemon lifecycle tables + hookclient client tests + cmd daemon CLI; daemon **65.0%**, hookclient **81.0%**
-- Next agent session: open **R6** — dispatch decode/targets provider mapping
+- **R6 done:** `SyncInvoker` + `NewSyncInvoker`; `GRPCSync` FailMode wrapper; Engine Kind switch removed; Decide parity + hybrid tests; dispatch **73.7%**, targets **60.7%**
+- Next agent session: open **R7** — extract `first_conclusive` aggregation from `runSync`
 
 ### Refactor intent note (pre-R-series, archived)
 
@@ -519,12 +589,14 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 ```bash
 make lint
 make intent-check
-go test ./internal/daemon/... ./internal/hookclient/... ./cmd/... -race -count=1 -timeout=20s
-go test ./internal/daemon/... -coverprofile=/tmp/daemon_r5.out -count=1
-go tool cover -func=/tmp/daemon_r5.out | tail -1   # daemon 65.0%
-go test ./internal/hookclient/... -coverprofile=/tmp/hookclient_r5.out -count=1
-go tool cover -func=/tmp/hookclient_r5.out | tail -1   # hookclient 81.0%
+go test ./internal/dispatch/... ./internal/dispatch/targets/... -race -count=1
+go test ./internal/dispatch -coverprofile=/tmp/dispatch_r6.out -count=1
+go tool cover -func=/tmp/dispatch_r6.out | tail -1   # dispatch 73.7%
+go test ./internal/dispatch/targets -coverprofile=/tmp/targets_r6.out -count=1
+go tool cover -func=/tmp/targets_r6.out | tail -1   # targets 60.7%
 ```
+
+**R6 files touched:** `internal/dispatch/{dispatch,engine}.go`, `internal/dispatch/engine_test.go`, `internal/dispatch/targets/{sync,factory,grpc,targets}.go`, `internal/dispatch/targets/targets_test.go`, `AGENTS.md`, `CONVENTIONS.md`, `DESIGN.md`, `PROGRESS.md`
 
 **R5 files touched:** `internal/daemon/{start,stop,status,reload,reload_unix,paths}_test.go`, `internal/hookclient/client_test.go`, `cmd/{root,daemon_status,daemon_stop,daemon_reload,session_subscribe}_test.go`, `PROGRESS.md`
 
