@@ -52,11 +52,11 @@ Recording happens on the daemon async path — sync hook latency is unchanged.
 - `raw` on the stream follows the same redaction rules as JSONL (`include_raw`, `redact_secret_rules`).
 - Global ledger mirror: `trajectory.enabled` records all Invokes — no separate webhook or `target: trajectory` in M12.
 
-## Trajectory contract (v1.1)
+## Trajectory contract
 
 | Field | Meaning |
 |-------|---------|
-| `schema_version` | Frozen at `1` for v1.1 |
+| `schema_version` | Frozen at `1` for v0.0.2 |
 | `seq` | Contiguous per session |
 | `type` | Event catalog (`hook/invoked`, `transcript/message`, …) |
 | `source` | `hook`, `decision`, `transcript`, `system` |

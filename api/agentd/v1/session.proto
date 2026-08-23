@@ -14,13 +14,13 @@ service SessionService {
 }
 
 message SubscribeRequest {
-  string provider = 1;   // optional filter (canonical provider id)
+  string provider = 1; // optional filter (canonical provider id)
   string session_id = 2; // optional filter
-  string source = 3;     // optional: hook|decision|transcript|system
+  string source = 3; // optional: hook|decision|transcript|system
 }
 
 message SessionEvent {
-  uint32 schema_version = 1; // frozen at 1 for v1.1
+  uint32 schema_version = 1; // frozen at 1 for v0.0.2
   uint64 seq = 2;
   string type = 3;
   string source = 4;
@@ -31,7 +31,7 @@ message SessionEvent {
   string project_root = 9;
   string cwd = 10;
   bytes data = 11; // JSON object
-  bytes raw = 12;  // optional; may be empty/redacted
+  bytes raw = 12; // optional; may be empty/redacted
   bool ignorable = 13;
 }
 

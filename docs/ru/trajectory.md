@@ -52,11 +52,11 @@ trajectory:
 - `raw` на потоке следует тем же правилам redaction, что и JSONL.
 - Зеркало ledger: `trajectory.enabled` — отдельный webhook / `target: trajectory` в M12 нет.
 
-## Контракт trajectory (v1.1)
+## Контракт trajectory
 
 | Поле | Смысл |
 |------|-------|
-| `schema_version` | Зафиксировано `1` для v1.1 |
+| `schema_version` | Зафиксировано `1` для v0.0.2 |
 | `seq` | Монотонный в рамках сессии |
 | `type` | Каталог событий |
 | `source` | `hook`, `decision`, `transcript`, `system` |

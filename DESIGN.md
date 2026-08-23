@@ -757,11 +757,11 @@ agentd/
 | **M5** | done | Config layers (project + runtime); ConfigService; config CLI; merged fingerprint |
 | **M6** | done | Guards: shell, mcp, paths |
 | **M7** | done | Approvals / `RecordDecision`; runtime persist; temporary blocks |
-| **M8 / v1** | done | Ops polish, conformance, docs freeze, release gate |
+| **M8 / v0.0.1** | done | Ops polish, conformance, docs freeze, release gate |
 | **M9** | done | Trajectory hub P0 — **L0 live ledger for all six providers** + export (§14 / §14.6) |
 | **M10** | done | Trajectory P1 — search + Claude import; others L0 + explicit importer status |
 | **M11** | **done** | Trajectory P2 — importers where possible; policy replay **all** wire dialects |
-| **M12 / v1.1** | **done** | Trajectory P3 — Subscribe; contract freeze; depth = §14.6 matrix |
+| **M12 / v0.0.2** | **done** | Trajectory P3 — Subscribe; contract freeze; depth = §14.6 matrix |
 
 Session checklists and verify commands: [PROGRESS.md](./PROGRESS.md).
 
@@ -864,18 +864,18 @@ M7 acceptance: Approve once → subsequent matching tool.pre allows within TTL; 
 - [x] Policy replay works for fixtures of all six providers (encode/decode via agenthooks); does not talk to a live agent
 - [x] Fork creates a new ledger with `parent_session` metadata; original immutable
 
-### M12 / v1.1 — Trajectory P3 (stream out)
+### M12 / v0.0.2 — Trajectory P3 (stream out)
 
-**Goal:** Live subscribe / push so external Trajectory UIs can tail the same event stream. Still **no** agentd-owned agent loop. Stream includes events from **all** providers under one schema; UI filters by `provider` / `source`. **Ships as v1.1** (M9–M11 must be done).
+**Goal:** Live subscribe / push so external Trajectory UIs can tail the same event stream. Still **no** agentd-owned agent loop. Stream includes events from **all** providers under one schema; UI filters by `provider` / `source`. **Ships as v0.0.2** (M9–M11 must be done).
 
 | Phase | Work |
 |-------|------|
 | A | gRPC `SessionService.Subscribe` (or extend DaemonService) — post-commit firehose |
 | B | Optional async target `trajectory` mirror already covered by store; http webhook of events |
 | C | Public event schema freeze + docs “Trajectory contract” + §14.6 matrix in README/user guide |
-| D | e2e-m12 + changelog / tag **v1.1.0** |
+| D | e2e-m12 + changelog / tag **v0.0.2** |
 
-**M12 / v1.1 acceptance:**
+**M12 / v0.0.2 acceptance:**
 
 - [x] Subscriber receives events after append without blocking Invoke (any provider)
 - [x] Schema versioned; unknown `ignorable` types skippable by readers
@@ -940,7 +940,7 @@ flowchart LR
 
 ### 14.3 Event model (draft catalog)
 
-Contiguous `seq` per session; JSON-serializable `data`; `schema_version` frozen at **1** (v1.1); optional `ignorable` for forward-compatible readers (skip unknown **types**; not a Subscribe filter).
+Contiguous `seq` per session; JSON-serializable `data`; `schema_version` frozen at **1** (v0.0.2); optional `ignorable` for forward-compatible readers (skip unknown **types**; not a Subscribe filter).
 
 | Type | Source | When | Notes |
 |------|--------|------|-------|

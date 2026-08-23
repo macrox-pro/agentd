@@ -1,6 +1,6 @@
 # Changelog
 
-## [v1.1.0] — unreleased
+## [v0.0.2] — unreleased
 
 Trajectory P3 (M12): live Subscribe + schema freeze.
 
@@ -11,13 +11,13 @@ Trajectory P3 (M12): live Subscribe + schema freeze.
 - Trajectory contract docs; honest §14.6 coverage matrix in user guide
 - Codex L2 import **supported** (rollout JSONL under `~/.codex/sessions`) — shipped pre-M12
 
-### Explicitly not in v1.1
+### Explicitly not in v0.0.2
 
 Historical catch-up on Subscribe (`after_seq`), HTTP webhook mirror, agent-loop resume, git tag automation in-repo.
 
-## [v1.0.0] — 2026-08-20
+## [v0.0.1] — 2026-08-20
 
-First v1 release (M0–M8).
+First version release (M0–M8).
 
 ### Highlights
 
@@ -31,6 +31,6 @@ First v1 release (M0–M8).
 - Conformance fixtures via agenthookstest; optional `//go:build integration` round-trip
 - GitHub Releases binaries via goreleaser (linux/darwin/windows)
 
-### Explicitly not in v1
+### Explicitly not in v0.0.1
 
 Agent auth, transcripts, plugins, hooks DSL, async retry storms, exec sync JSON decisions.

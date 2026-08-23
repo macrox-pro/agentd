@@ -86,7 +86,7 @@ func (x *SubscribeRequest) GetSource() string {
 
 type SessionEvent struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	SchemaVersion  uint32                 `protobuf:"varint,1,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"` // frozen at 1 for v1.1
+	SchemaVersion  uint32                 `protobuf:"varint,1,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"` // frozen at 1 for v0.0.2
 	Seq            uint64                 `protobuf:"varint,2,opt,name=seq,proto3" json:"seq,omitempty"`
 	Type           string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
 	Source         string                 `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`

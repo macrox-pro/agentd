@@ -366,7 +366,7 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 - [ ] r11-docs-check — `make docs-check` (only if user-visible text changed)
 - [ ] r11-verify — `make intent-check` + full verify block
 
-**R-series done when:** R1–R11 checklists complete, total coverage ≥ 70%, no duplicate provider switches outside owner tables, user tags v1.1.0.
+**R-series done when:** R1–R11 checklists complete, total coverage ≥ 70%, no duplicate provider switches outside owner tables, user tags v0.0.2.
 
 ---
 
@@ -424,11 +424,11 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 | Milestone | Status | One-liner |
 |-----------|--------|-----------|
 | M0–M7 | **done** | Daemon through approvals / RecordDecision / runtime persist |
-| M8 / v1 | **done** | Overflow counters, conformance, docs freeze, release |
+| M8 / v0.0.1 | **done** | Overflow counters, conformance, docs freeze, release |
 | **M9** | **done** | Trajectory P0 — L0 live ledger for all six providers + export |
 | **M10** | **done** | Trajectory P1 — search + Claude import; others stay L0 |
 | **M11** | **done** | Trajectory P2 — importers if format exists; policy replay all dialects |
-| **M12 / v1.1** | **done** | Trajectory P3 — Subscribe; contract freeze; depth = §14.6 matrix |
+| **M12 / v0.0.2** | **done** | Trajectory P3 — Subscribe; contract freeze; depth = §14.6 matrix |
 
 Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
@@ -480,7 +480,7 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
 ## M12 intent note
 
-**Problem:** External Trajectory UIs cannot live-tail the ledger; schema/docs not frozen for v1.1.
+**Problem:** External Trajectory UIs cannot live-tail the ledger; schema/docs not frozen for v0.0.2.
 
 **Hot path:** Fan-out after in-memory append → `async_side`; Subscribe RPC / CLI → `other`.
 
@@ -496,7 +496,7 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
 **Out of scope:** grpc-gateway; webhook; `after_seq` catch-up; Codex/Cursor fsnotify watchers; importer refactors; git tag (user).
 
-## M12 checklist — Trajectory P3 / v1.1
+## M12 checklist — Trajectory P3 / v0.0.2
 
 ### Phase 0 — Process
 
@@ -547,14 +547,14 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
 - [x] m12-c-contract-en — docs/en/trajectory.md
 - [x] m12-c-contract-ru — docs/ru/trajectory.md
-- [x] m12-c-readme — README v1.1 + matrix
+- [x] m12-c-readme — README v0.0.2 + matrix
 - [x] m12-c-design-accept — DESIGN §13/§14.3/§14.5/§14.8
 - [x] m12-c-docs-check — `make docs-check`
 
 ### Phase D — e2e + CHANGELOG
 
 - [x] m12-d-e2e — `scripts/e2e-m12.sh`
-- [x] m12-d-changelog — CHANGELOG `[v1.1.0]`
+- [x] m12-d-changelog — CHANGELOG `[v0.0.2]`
 - [x] m12-d-progress-done — m12 done + verify block
 - [x] m12-d-verify — lint + intent-check + test + e2e
 

@@ -18,7 +18,7 @@ agentd sits between your AI coding agents (Claude Code, Cursor, Codex, Gemini CL
 ![Go Version](https://img.shields.io/badge/go-1.26+-00ADD8?logo=go)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-> **Status:** v1.1 (M12 Subscribe). Roadmap history: [DESIGN.md §13](./DESIGN.md#13-milestones).
+> **Status:** v0.0.2 (M12 Subscribe). Roadmap history: [DESIGN.md §13](./DESIGN.md#13-milestones).
 
 ## Documentation
 
