@@ -21,21 +21,57 @@ func sampleEvent(typ, source, provider, session string) trajectory.Event {
 	}
 }
 
-func TestHubDeliverAfterAppend(t *testing.T) {
+func TestHubDeliverTable(t *testing.T) {
 	t.Parallel()
-	hub := trajectory.NewHub(nil)
-	ch, unregister := hub.Register(trajectory.SubscribeFilter{})
-	t.Cleanup(unregister)
 
-	ev := sampleEvent(trajectory.TypeHookInvoked, trajectory.SourceHook, "claude-code", "s1")
-	hub.Publish([]trajectory.Event{ev})
+	tests := []struct {
+		name     string
+		filter   trajectory.SubscribeFilter
+		ev       trajectory.Event
+		wantType string
+		wantProv string
+		checkIgn bool
+	}{
+		{
+			name:     "deliver",
+			filter:   trajectory.SubscribeFilter{},
+			ev:       sampleEvent(trajectory.TypeHookInvoked, trajectory.SourceHook, "claude-code", "s1"),
+			wantType: trajectory.TypeHookInvoked,
+			wantProv: "claude-code",
+		},
+		{
+			name:   "ignorable preserved",
+			filter: trajectory.SubscribeFilter{Source: trajectory.SourceTranscript},
+			ev: func() trajectory.Event {
+				ev := sampleEvent(trajectory.TypeTranscriptMessage, trajectory.SourceTranscript, "claude-code", "s1")
+				ev.Ignorable = true
+				return ev
+			}(),
+			wantType: trajectory.TypeTranscriptMessage,
+			wantProv: "claude-code",
+			checkIgn: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			hub := trajectory.NewHub(nil)
+			ch, unregister := hub.Register(tt.filter)
+			t.Cleanup(unregister)
 
-	select {
-	case got := <-ch:
-		assert.Equal(t, trajectory.TypeHookInvoked, got.Type)
-		assert.Equal(t, "claude-code", got.Provider)
-	case <-time.After(time.Second):
-		t.Fatal("expected delivered event")
+			hub.Publish([]trajectory.Event{tt.ev})
+
+			select {
+			case got := <-ch:
+				assert.Equal(t, tt.wantType, got.Type, "Publish(%q)", tt.name)
+				assert.Equal(t, tt.wantProv, got.Provider, "Publish(%q)", tt.name)
+				if tt.checkIgn {
+					assert.True(t, got.Ignorable, "Publish(%q)", tt.name)
+				}
+			case <-time.After(time.Second):
+				t.Fatalf("Publish(%q): expected delivered event", tt.name)
+			}
+		})
 	}
 }
 
@@ -45,7 +81,7 @@ func TestHubSlowConsumerDrop(t *testing.T) {
 	ch, unregister := hub.Register(trajectory.SubscribeFilter{})
 	t.Cleanup(unregister)
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		hub.Publish([]trajectory.Event{sampleEvent(trajectory.TypeHookInvoked, trajectory.SourceHook, "cursor", "s1")})
 	}
 
@@ -140,7 +176,7 @@ func TestSubscribeDoesNotBlockEnqueue(t *testing.T) {
 	key := trajectory.SessionKey{Provider: "cursor", SessionID: "block-test"}
 	done := make(chan struct{})
 	go func() {
-		for i := 0; i < 200; i++ {
+		for range 200 {
 			q.Enqueue(key, []trajectory.Event{sampleEvent(trajectory.TypeHookInvoked, trajectory.SourceHook, "cursor", "block-test")})
 		}
 		close(done)
@@ -176,33 +212,12 @@ func TestSchemaVersionOnAppend(t *testing.T) {
 	assert.Equal(t, trajectory.SchemaVersion, events[0].SchemaVersion)
 }
 
-func TestIgnorablePreserved(t *testing.T) {
-	t.Parallel()
-	hub := trajectory.NewHub(nil)
-	ch, unregister := hub.Register(trajectory.SubscribeFilter{Source: trajectory.SourceTranscript})
-	t.Cleanup(unregister)
-
-	ev := sampleEvent(trajectory.TypeTranscriptMessage, trajectory.SourceTranscript, "claude-code", "s1")
-	ev.Ignorable = true
-	hub.Publish([]trajectory.Event{ev})
-
-	select {
-	case got := <-ch:
-		assert.True(t, got.Ignorable)
-		assert.Equal(t, trajectory.TypeTranscriptMessage, got.Type)
-	case <-time.After(time.Second):
-		t.Fatal("expected ignorable transcript event")
-	}
-}
-
 func TestHubConcurrentRegisterPublish(t *testing.T) {
 	t.Parallel()
 	hub := trajectory.NewHub(nil)
 	var wg sync.WaitGroup
-	for i := 0; i < 8; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 8 {
+		wg.Go(func() {
 			ch, unregister := hub.Register(trajectory.SubscribeFilter{})
 			defer unregister()
 			hub.Publish([]trajectory.Event{sampleEvent(trajectory.TypeHookInvoked, trajectory.SourceHook, "opencode", "s1")})
@@ -210,7 +225,7 @@ func TestHubConcurrentRegisterPublish(t *testing.T) {
 			case <-ch:
 			case <-time.After(time.Second):
 			}
-		}()
+		})
 	}
 	wg.Wait()
 }

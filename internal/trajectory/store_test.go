@@ -88,15 +88,13 @@ func TestQueueOverflowDrop(t *testing.T) {
 	var dropped atomic.Bool
 	var wg sync.WaitGroup
 	for range 32 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range 64 {
 				if !q.Enqueue(key, ev) {
 					dropped.Store(true)
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	require.True(t, dropped.Load(), "expected overflow drop")

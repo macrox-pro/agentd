@@ -14,37 +14,10 @@ import (
 	"github.com/macrox-pro/agentd/internal/dispatch"
 )
 
-func TestDecodeTypedCursorArgv(t *testing.T) {
+func TestDecodeTypedTable(t *testing.T) {
 	t.Parallel()
-	raw := agenthookstest.Fixture(t, "cursor/pre_tool_use.json")
-	typed, err := dispatch.DecodeTyped(context.Background(), agentdv1.Provider_PROVIDER_CURSOR, agentdv1.InvocationMode_INVOCATION_MODE_ARGV, raw)
-	require.NoError(t, err, "DecodeTyped(cursor, argv)")
-	_, ok := typed.(*agenthooks.ToolPreEvent)
-	assert.True(t, ok, "typed event kind")
-}
 
-func TestDecodeTypedCodexNotify(t *testing.T) {
-	t.Parallel()
-	raw := agenthookstest.Fixture(t, "codex/pre_tool_use.json")
-	typed, err := dispatch.DecodeTyped(context.Background(), agentdv1.Provider_PROVIDER_CODEX, agentdv1.InvocationMode_INVOCATION_MODE_NOTIFY, raw)
-	require.NoError(t, err, "DecodeTyped(codex, notify)")
-	base := agenthooks.EventOf(typed)
-	require.NotNil(t, base, "EventOf")
-	assert.Equal(t, agenthooks.KindNotification, base.Kind)
-}
-
-func TestDecodeTypedCursorUnspecified(t *testing.T) {
-	t.Parallel()
-	raw := agenthookstest.Fixture(t, "cursor/pre_tool_use.json")
-	typed, err := dispatch.DecodeTyped(context.Background(), agentdv1.Provider_PROVIDER_CURSOR, agentdv1.InvocationMode_INVOCATION_MODE_UNSPECIFIED, raw)
-	require.NoError(t, err, "DecodeTyped(cursor, unspecified)")
-	_, ok := typed.(*agenthooks.ToolPreEvent)
-	assert.True(t, ok, "typed event kind")
-}
-
-func TestDecodeTypedClaudeStdin(t *testing.T) {
-	t.Parallel()
-	raw, err := json.Marshal(map[string]any{
+	claudeRaw, err := json.Marshal(map[string]any{
 		"session_id":      "s",
 		"cwd":             "/w",
 		"hook_event_name": "PreToolUse",
@@ -53,8 +26,53 @@ func TestDecodeTypedClaudeStdin(t *testing.T) {
 		"tool_input":      map[string]any{"command": "echo"},
 	})
 	require.NoError(t, err)
-	typed, err := dispatch.DecodeTyped(context.Background(), agentdv1.Provider_PROVIDER_CLAUDE_CODE, agentdv1.InvocationMode_INVOCATION_MODE_STDIN, raw)
-	require.NoError(t, err, "DecodeTyped(claude, stdin)")
-	_, ok := typed.(*agenthooks.ToolPreEvent)
-	assert.True(t, ok, "typed event kind")
+
+	tests := []struct {
+		name        string
+		provider    agentdv1.Provider
+		mode        agentdv1.InvocationMode
+		raw         []byte
+		checkNotify bool
+	}{
+		{
+			name:     "cursor argv",
+			provider: agentdv1.Provider_PROVIDER_CURSOR,
+			mode:     agentdv1.InvocationMode_INVOCATION_MODE_ARGV,
+			raw:      agenthookstest.Fixture(t, "cursor/pre_tool_use.json"),
+		},
+		{
+			name:        "codex notify",
+			provider:    agentdv1.Provider_PROVIDER_CODEX,
+			mode:        agentdv1.InvocationMode_INVOCATION_MODE_NOTIFY,
+			raw:         agenthookstest.Fixture(t, "codex/pre_tool_use.json"),
+			checkNotify: true,
+		},
+		{
+			name:     "cursor unspecified",
+			provider: agentdv1.Provider_PROVIDER_CURSOR,
+			mode:     agentdv1.InvocationMode_INVOCATION_MODE_UNSPECIFIED,
+			raw:      agenthookstest.Fixture(t, "cursor/pre_tool_use.json"),
+		},
+		{
+			name:     "claude stdin",
+			provider: agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+			mode:     agentdv1.InvocationMode_INVOCATION_MODE_STDIN,
+			raw:      claudeRaw,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			typed, err := dispatch.DecodeTyped(context.Background(), tt.provider, tt.mode, tt.raw)
+			require.NoError(t, err, "DecodeTyped(%q)", tt.name)
+			if tt.checkNotify {
+				base := agenthooks.EventOf(typed)
+				require.NotNil(t, base, "DecodeTyped(%q)", tt.name)
+				assert.Equal(t, agenthooks.KindNotification, base.Kind, "DecodeTyped(%q)", tt.name)
+				return
+			}
+			_, ok := typed.(*agenthooks.ToolPreEvent)
+			assert.True(t, ok, "DecodeTyped(%q)", tt.name)
+		})
+	}
 }

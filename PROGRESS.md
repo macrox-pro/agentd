@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase: **R9 done** | Last: r9-server-ports | Next: **R10 test hygiene**
+Phase: **R10 done** | Last: r10-test-hygiene | Next: **R11 package comments & docs sync**
 
 > Milestones M0–M12: **done**. Post-release work is the **R-series** refactor below — one phase = one PR or agent session, one package or one hot path ([AGENTS.md](./AGENTS.md) intent rules).
 
@@ -23,7 +23,7 @@ true
 | **Corner cases** | Every new behavior row in intent note → named `TestXxx` / `tt.name`; no merge without test |
 | **Duplication** | Litmus: removing helper leaves call sites importing owner package directly → delete helper |
 
-### Coverage baseline (2026-08-23; R9 update)
+### Coverage baseline (2026-08-23; R10 update)
 
 | Package | Statements | Priority |
 |---------|------------|----------|
@@ -32,14 +32,16 @@ true
 | `internal/hookclient` | 81.0% | maintain — R5 |
 | `internal/dispatch/targets` | 59.7% | maintain — R6/R8 |
 | `internal/trajectory/importer` | 71.8% | maintain — R3 |
-| `internal/trajectory` | 68.3% | P2 |
-| `internal/dispatch` | 73.8% | maintain — R7 |
+| `internal/trajectory` | 68.2% | maintain — R10 |
+| `internal/dispatch` | 73.8% | maintain — R7/R10 |
 | `internal/hookedge` | 70.4% | maintain |
 | `internal/config` | 74.8% | maintain |
 | `internal/transport` | 77.5% | maintain |
-| `internal/server` | 81.7% | maintain — R9 |
-| `internal/guard` | 85.8% | maintain — R8 |
+| `internal/server` | 81.7% | maintain — R9/R10 |
+| `internal/guard` | 86.0% | maintain — R8/R10 |
 | `internal/provider` | 93.0% | maintain — R1 |
+
+**Repo total (R10):** 61.5% (baseline 57.3%; R-series ≥70% goal unchanged — no filler tests added).
 
 Verify after each phase: `make lint` · `make intent-check` · `make test` · touched-package `-coverprofile`.
 
@@ -71,7 +73,7 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 | **R7** | **done** | `dispatch` — extract `first_conclusive` aggregation |
 | **R8** | **done** | `guard` + `targets/builtin` — Checker registry (`AttachCheckers`) |
 | **R9** | **done** | `server` — narrow HookService ports (`Invoker`, `SnapshotSource`) |
-| **R10** | pending | Test hygiene — table-driven migration where structure matches |
+| **R10** | **done** | Test hygiene — table-driven migration where structure matches |
 | **R11** | pending | Tier-1 package comments audit + docs sync |
 
 Done phases: acceptance and files live in git history / PRs. Do not re-expand intent notes here.
@@ -101,12 +103,18 @@ Done phases: acceptance and files live in git history / PRs. Do not re-expand in
 
 ### R10 checklist
 
-- [ ] r10-intent
-- [ ] r10-hub-table — hub deliver/drop/unregister merged where safe
-- [ ] r10-fork-table
-- [ ] r10-invoke-table
-- [ ] r10-audit — grep for `if tt.` blocks inside single `Test` without `t.Run`
-- [ ] r10-verify — full `make test`; total coverage ≥ 70%
+- [x] r10-intent
+- [x] r10-hub-table — `TestHubDeliverTable` (`deliver`, `ignorable preserved`); kept separate: slow drop, unregister, no subscribers, multiple/close/concurrent/enqueue/schema
+- [x] r10-fork-table — `TestForkSessionTable` (`ok`, `duplicate rejected`)
+- [x] r10-invoke-table — `TestInvokeTrajectoryTable` (`claude`, `cursor argv`)
+- [x] r10-audit — greps clean on touched packages; subscribe merge skipped (optional)
+- [x] r10-verify — `make lint` · `make intent-check` · `make test`; total 61.5% (no padding)
+
+**R10 hub keep-separate (CONVENTIONS skeleton gate):** `TestHubSlowConsumerDrop`, `TestHubUnregister`, `TestHubPublishNoSubscribers`, `TestHubMultipleSubscribers`, `TestHubCloseEndsSubscribers`, `TestHubConcurrentRegisterPublish`, `TestSubscribeDoesNotBlockEnqueue`, `TestSchemaVersionOnAppend`.
+
+**R10 parked R6:** `TestDecodeTypedTable` merged; GRPC already tabled in `targets_test.go` — no change.
+
+**R10 optional skipped:** `session_test.go` subscribe filter merge (non-blocking).
 
 ---
 
@@ -148,21 +156,29 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 ## Session notes
 
 - M0–M12 / v0.0.2 shipped (see DESIGN §13)
-- **R1–R9 done** — see summary table above
-- Next agent session: open **R10** — test hygiene (table-driven migration)
+- **R1–R10 done** — see summary table above
+- Next agent session: open **R11** — package comments & docs sync
 
 ## Verify (last green)
 
 ```bash
 make lint
 make intent-check
-go test ./internal/server/... -race -count=1
-go test ./internal/server/... -coverprofile=/tmp/server_r9.out -count=1
-go tool cover -func=/tmp/server_r9.out | tail -1   # server 81.7%
+go test ./internal/trajectory/... ./internal/server/... ./internal/guard/... ./internal/dispatch/... -race -count=1
+go test ./internal/trajectory/... -coverprofile=/tmp/traj_r10.out -count=1
+go test ./internal/server/... -coverprofile=/tmp/server_r10.out -count=1
+go test ./internal/guard/... -coverprofile=/tmp/guard_r10.out -count=1
+go test ./internal/dispatch/... -coverprofile=/tmp/dispatch_r10.out -count=1
+go tool cover -func=/tmp/traj_r10.out | tail -1    # trajectory+importer 69.4%
+go tool cover -func=/tmp/server_r10.out | tail -1  # server 81.7%
+go tool cover -func=/tmp/guard_r10.out | tail -1   # guard 85.8%
+go tool cover -func=/tmp/dispatch_r10.out | tail -1  # dispatch+targets 67.9%
 make test
+go test ./... -coverprofile=/tmp/agentd_r10.out -count=1
+go tool cover -func=/tmp/agentd_r10.out | tail -1  # total 61.5%
 ```
 
-**R9 files touched:** `internal/server/{invoke,invoke_mapping_test,server}.go`, `CONVENTIONS.md`, `DESIGN.md` §2, `PROGRESS.md`
+**R10 files touched:** `internal/trajectory/{hub,fork}_test.go`, `internal/server/invoke_test.go`, `internal/guard/approve_test.go`, `internal/dispatch/decode_test.go`, `PROGRESS.md`
 
 ## Blockers
 

@@ -120,35 +120,76 @@ func TestSecretsApprovalSkipsAsk(t *testing.T) {
 func TestShellApprovalSkipsAsk(t *testing.T) {
 	t.Parallel()
 	fp := config.ApprovalFingerprint(config.ApprovalKindShell, "Bash", "curl")
-	r := agenthooks.New()
-	guard.AttachShell(r, config.ShellGuard{
-		Enabled: true,
-		AskOn:   []string{"curl"},
-	}, guard.DecisionContext{
-		Approvals: config.Approvals{
-			Shell: []config.Approval{{
-				Kind:        config.ApprovalKindShell,
-				Fingerprint: fp,
-				Scope:       config.ApprovalScopeSession,
-				SessionID:   "sess",
-			}},
+	shellInput := json.RawMessage(`{"command":"curl https://example.com"}`)
+
+	tests := []struct {
+		name     string
+		dctx     guard.DecisionContext
+		session  string
+		wantKind agenthooks.DecisionKind
+	}{
+		{
+			name: "matching session skips",
+			dctx: guard.DecisionContext{
+				Approvals: config.Approvals{
+					Shell: []config.Approval{{
+						Kind:        config.ApprovalKindShell,
+						Fingerprint: fp,
+						Scope:       config.ApprovalScopeSession,
+						SessionID:   "sess",
+					}},
+				},
+			},
+			session:  "sess",
+			wantKind: agenthooks.DecisionNoDecision,
 		},
-	})
-	ev := &agenthooks.ToolPreEvent{
-		Event: agenthooks.Event{
-			Provider: agenthooks.ProviderClaudeCode,
-			Kind:     agenthooks.KindToolPre,
-			Session:  agenthooks.SessionInfo{ID: "sess"},
+		{
+			name:     "no approval asks",
+			dctx:     guard.DecisionContext{},
+			session:  "sess",
+			wantKind: agenthooks.DecisionAsk,
 		},
-		Tool: agenthooks.ToolCall{
-			Name:      "Bash",
-			Canonical: agenthooks.ToolShell,
-			Input:     json.RawMessage(`{"command":"curl https://example.com"}`),
+		{
+			name: "wrong session still asks",
+			dctx: guard.DecisionContext{
+				Approvals: config.Approvals{
+					Shell: []config.Approval{{
+						Kind:        config.ApprovalKindShell,
+						Fingerprint: fp,
+						Scope:       config.ApprovalScopeSession,
+						SessionID:   "sess",
+					}},
+				},
+			},
+			session:  "other",
+			wantKind: agenthooks.DecisionAsk,
 		},
 	}
-	d, err := r.Decide(context.Background(), ev)
-	require.NoError(t, err)
-	assert.Equal(t, agenthooks.DecisionNoDecision, d.Kind())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r := agenthooks.New()
+			guard.AttachShell(r, config.ShellGuard{
+				Enabled: true,
+				AskOn:   []string{"curl"},
+			}, tt.dctx)
+			ev := &agenthooks.ToolPreEvent{
+				Event: agenthooks.Event{
+					Provider: agenthooks.ProviderClaudeCode,
+					Kind:     agenthooks.KindToolPre,
+					Session:  agenthooks.SessionInfo{ID: tt.session},
+				},
+				Tool: agenthooks.ToolCall{
+					Name:      "Bash",
+					Canonical: agenthooks.ToolShell,
+					Input:     shellInput,
+				},
+			}
+			d, err := r.Decide(context.Background(), ev)
+			require.NoError(t, err, "Decide(%q)", tt.name)
+			assert.Equal(t, tt.wantKind, d.Kind(), "Decide(%q)", tt.name)
+		})
+	}
 }
 
 func TestTemporaryBlockDenies(t *testing.T) {
