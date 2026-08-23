@@ -38,6 +38,13 @@ func dialBuf(t *testing.T, srv *grpc.Server) *grpc.ClientConn {
 	return conn
 }
 
+func dialHook(t *testing.T, hook agentdv1.HookServiceServer) *grpc.ClientConn {
+	t.Helper()
+	s := grpc.NewServer()
+	agentdv1.RegisterHookServiceServer(s, hook)
+	return dialBuf(t, s)
+}
+
 func TestDaemonService(t *testing.T) {
 	t.Parallel()
 

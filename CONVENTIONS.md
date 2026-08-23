@@ -46,6 +46,7 @@ This rule targets **indirection without purpose**, not design patterns. Adapters
 - Same `switch` / parse table in `hookedge`, `install`, `dispatch`, and `cmd/`.
 - `cmd/foo.go` that only wraps `internal/bar.Parse` with no Cobra or I/O reason.
 - `func requireX(s string) { return bar.Parse(s) }` in `cmd/` when `RunE` can call `bar.Parse` directly.
+- `func fromProto(d *Decision) { return decision.FromProto(d) }` in `hookedge` when `encode.go` / `serve.go` can call `decision.FromProto` directly.
 - Helper file whose sole purpose is renaming or forwarding to avoid an import path.
 - “Factory” or “adapter” that only renames a single call with no boundary to protect.
 
@@ -62,7 +63,7 @@ This rule targets **indirection without purpose**, not design patterns. Adapters
 
 Package-specific ownership (do not reimplement elsewhere):
 
-- Hook wire I/O: `internal/hookedge` + agenthooks — do not reimplement provider codecs.
+- Hook wire I/O: `internal/hookedge` + agenthooks — do not reimplement provider codecs; call `internal/decision` for proto↔agenthooks Decision (`FromProto` / `ToProto`), do not wrap with local aliases.
 - Config merge/compile: `internal/config` only.
 - Dispatch routing: `internal/dispatch` only.
 - Target Kind → implementation mapping has **one** home: the `targets` factory (`NewSyncInvoker` / `NewAsyncInvoker`). Do not duplicate Kind switches in `Engine` and the factory.

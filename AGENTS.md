@@ -26,6 +26,7 @@ When a milestone ships `scripts/e2e-mN.sh`, name it `e2e-mN.sh` under `scripts/`
 No unused symbols. No “for later” APIs. No drive-by refactors. Comments only for non-obvious **why**.
 
 - **Call directly** — use the owning `internal/` API from the call site. No passthrough helpers or duplicate `switch`/parse tables for the same concern.
+- **No rename-only forwards** — do not add `func foo() { return bar.Baz() }` when the call site can import `bar` and call `Baz` directly. Especially: one call site + one-line body → inline or delete the helper (`hookedge` must call `decision.FromProto`, not wrap it in `fromProto`). Keep a helper only when it adds real logic (type narrowing, error context, test seam) or serves ≥2 non-trivial call sites.
 - **One source of truth** — extend the package that owns the behavior; do not copy or re-export it elsewhere to “keep layers clean”.
 - **Real abstractions welcome** — adapters, factories, and interfaces at package boundaries are fine when they encode a design decision (see [CONVENTIONS.md](./CONVENTIONS.md#do-not-duplicate-or-wrap)).
 
@@ -115,6 +116,7 @@ A plan with fewer than ~5 coarse todos for a multi-file phase is usually under-s
 | `internal/config` | Config merge/compile ([§1.5 config_reload](./DESIGN.md#15-hot-paths)) | dispatch, wire decode |
 | `internal/dispatch` | Routing; Engine; queue; session lock ([§1.5 invoke_sync, async_side](./DESIGN.md#15-hot-paths)) | wire decode, YAML compile, Kind→impl switch |
 | `internal/dispatch/targets` | Sync/Async target adapters; factories map CompiledTarget → invokers | route match, YAML compile, session lock |
+| `internal/decision` | proto↔agenthooks Decision mapping (ToProto/FromProto/Neutral) | routing, wire I/O, guards |
 | `internal/trajectory` | Session ledger append, persist, list/export ([§1.5 async_side](./DESIGN.md#15-hot-paths), §14) | wire decode, route match, config compile |
 | `internal/guard` | secrets/shell/mcp/paths checks | routing, encode |
 | `internal/daemon` | start/stop, lock, status, reload signal | dispatch, config compile |

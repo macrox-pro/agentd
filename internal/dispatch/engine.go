@@ -10,6 +10,7 @@ import (
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/decision"
 	"github.com/macrox-pro/agentd/internal/dispatch/targets"
 	"github.com/macrox-pro/agentd/internal/provider"
 )
@@ -81,9 +82,9 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 	route := MatchRoute(in.Snap.Routes, typed)
 	if route == nil {
 		meta := MetaFromTyped(providerName, typed, false)
-		e.logInvokeDebug(providerName, meta.EventKind, "", NeutralDecision())
+		e.logInvokeDebug(providerName, meta.EventKind, "", decision.Neutral())
 		return InvokeResult{
-			Decision: NeutralDecision(),
+			Decision: decision.Neutral(),
 			Meta:     meta,
 		}, nil
 	}
@@ -114,7 +115,7 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 	switch mode {
 	case config.ModeAsyncOnly:
 		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
-		res := InvokeResult{Decision: NeutralDecision(), AsyncDispatchedCount: n, Meta: meta}
+		res := InvokeResult{Decision: decision.Neutral(), AsyncDispatchedCount: n, Meta: meta}
 		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
 		return res, nil
 
@@ -124,7 +125,7 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		if err != nil {
 			return InvokeResult{}, err
 		}
-		res := InvokeResult{Decision: DecisionToProto(d), AsyncDispatchedCount: n, Meta: meta}
+		res := InvokeResult{Decision: decision.ToProto(d), AsyncDispatchedCount: n, Meta: meta}
 		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
 		return res, nil
 
@@ -133,7 +134,7 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		if err != nil {
 			return InvokeResult{}, err
 		}
-		proto := DecisionToProto(d)
+		proto := decision.ToProto(d)
 		outcome := &targets.SyncOutcome{Kind: proto.GetKind(), Reason: proto.GetReason()}
 		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, outcome)
 		res := InvokeResult{Decision: proto, AsyncDispatchedCount: n, Meta: meta}
@@ -145,7 +146,7 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		if err != nil {
 			return InvokeResult{}, err
 		}
-		res := InvokeResult{Decision: DecisionToProto(d), AsyncDispatchedCount: 0, Meta: meta}
+		res := InvokeResult{Decision: decision.ToProto(d), AsyncDispatchedCount: 0, Meta: meta}
 		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
 		return res, nil
 	}

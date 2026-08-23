@@ -3,7 +3,12 @@
 // Owns: proto ↔ internal type mapping; HookService maps via Invoker and SnapshotSource.
 // Must not: policy logic, route match, guard checks, config compile.
 //
-// Entry: HookService.Invoke (Invoker, SnapshotSource), ConfigService handlers, SessionService.Subscribe.
+// Invariants:
+//   - nil SnapshotSource → neutral decision and empty generation.
+//   - typed-nil-safe New (opts.Store / opts.Engine assigned only when non-nil).
+//   - handler does not route, run guards, or compile config.
+//
+// Entry: NewHookService, HookService.Invoke (Invoker, SnapshotSource), ConfigService handlers, SessionService.Subscribe.
 // See DESIGN.md §1.5 (invoke_sync, config_reload, async_side).
 package server
 
@@ -63,12 +68,7 @@ func New(opts Options) *grpc.Server {
 	if opts.Engine != nil {
 		inv = opts.Engine
 	}
-	agentdv1.RegisterHookServiceServer(s, &hookService{
-		snap:     snap,
-		engine:   inv,
-		recorder: opts.Recorder,
-		log:      opts.Logger,
-	})
+	agentdv1.RegisterHookServiceServer(s, NewHookService(snap, inv, opts.Recorder, opts.Logger))
 	agentdv1.RegisterConfigServiceServer(s, &configService{store: opts.Store})
 	if opts.Recorder != nil {
 		agentdv1.RegisterSessionServiceServer(s, &sessionService{hub: opts.Recorder.Hub()})

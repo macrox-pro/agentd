@@ -200,6 +200,101 @@ func TestNewSyncInvoker(t *testing.T) {
 	}
 }
 
+func TestNewAsyncInvoker(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		kind    config.TargetKind
+		wantErr bool
+	}{
+		{name: "builtin", kind: config.TargetBuiltin},
+		{name: "log", kind: config.TargetLog},
+		{name: "file", kind: config.TargetFile},
+		{name: "http", kind: config.TargetHTTP},
+		{name: "exec", kind: config.TargetExec},
+		{name: "grpc", kind: config.TargetGRPC},
+		{name: "unknown", kind: config.TargetKind("nope"), wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			inv, err := targets.NewAsyncInvoker(config.CompiledTarget{Kind: tt.kind}, &targets.Builtin{}, nil)
+			if tt.wantErr {
+				require.Error(t, err, "NewAsyncInvoker(%q)", tt.name)
+				assert.Nil(t, inv)
+				return
+			}
+			require.NoError(t, err, "NewAsyncInvoker(%q)", tt.name)
+			require.NotNil(t, inv)
+		})
+	}
+}
+
+func TestEventKindOf(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		typed any
+		want  string
+	}{
+		{name: "nil", typed: nil, want: string(agenthooks.KindOther)},
+		{name: "tool pre", typed: &agenthooks.ToolPreEvent{Event: agenthooks.Event{Kind: agenthooks.KindToolPre}}, want: string(agenthooks.KindToolPre)},
+		{name: "empty kind", typed: &agenthooks.ToolPreEvent{}, want: string(agenthooks.KindOther)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, targets.EventKindOf(tt.typed), "EventKindOf(%q)", tt.name)
+		})
+	}
+}
+
+func TestProjectRootOf(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		snap *config.Snapshot
+		want string
+	}{
+		{name: "nil", snap: nil, want: ""},
+		{name: "empty path", snap: &config.Snapshot{}, want: ""},
+		{name: "with project file", snap: &config.Snapshot{ProjectPath: "/repo/.agentd.yaml"}, want: "/repo"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, targets.ProjectRootOf(tt.snap), "ProjectRootOf(%q)", tt.name)
+		})
+	}
+}
+
+func TestLogInvokeAsyncLevels(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		level string
+	}{
+		{name: "debug", level: "debug"},
+		{name: "warn", level: "warn"},
+		{name: "error", level: "error"},
+		{name: "default info", level: "nope"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var buf bytes.Buffer
+			log := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+			l := &targets.Log{Logger: log}
+			require.NoError(t, l.InvokeAsync(context.Background(), targets.AsyncRequest{
+				Provider:  "claude-code",
+				EventKind: "tool.pre",
+				Target:    config.CompiledTarget{Kind: config.TargetLog, Level: tt.level},
+			}), "Log.InvokeAsync(%q)", tt.name)
+			assert.Contains(t, buf.String(), "dispatch async", "Log.InvokeAsync(%q)", tt.name)
+		})
+	}
+}
+
 func TestGRPCSyncFailMode(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

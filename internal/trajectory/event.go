@@ -24,7 +24,7 @@ const (
 	SourceTranscript = "transcript"
 )
 
-// SchemaVersion is the frozen trajectory event contract version (v1.1).
+// SchemaVersion is the frozen trajectory event contract version (v0.0.2).
 const SchemaVersion uint32 = 1
 
 // Event is one append-only ledger record (DESIGN §14.3).

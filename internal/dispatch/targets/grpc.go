@@ -14,6 +14,7 @@ import (
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/decision"
 	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/transport"
 )
@@ -33,7 +34,7 @@ func (t *GRPC) InvokeSync(ctx context.Context, req SyncRequest) (agenthooks.Deci
 	if err != nil {
 		return nil, err
 	}
-	return decisionFromProto(resp.GetDecision()), nil
+	return decision.FromProto(resp.GetDecision()), nil
 }
 
 // InvokeAsync forwards Invoke and discards the decision.
@@ -97,43 +98,4 @@ func dialAndInvoke(ctx context.Context, endpoint string, req *agentdv1.InvokeReq
 		return nil, fmt.Errorf("grpc target invoke: %w", err)
 	}
 	return resp, nil
-}
-
-func decisionFromProto(d *agentdv1.Decision) agenthooks.Decision {
-	if d == nil {
-		return agenthooks.NoDecision()
-	}
-	switch d.GetKind() {
-	case agentdv1.DecisionKind_DECISION_KIND_DENY:
-		out := agenthooks.Deny(d.GetReason())
-		if msg := d.GetSystemMessage(); msg != "" {
-			out = out.WithSystemMessage(msg)
-		}
-		if c := d.GetContext(); c != "" {
-			out = out.WithContext(c)
-		}
-		return out
-	case agentdv1.DecisionKind_DECISION_KIND_ASK:
-		out := agenthooks.AskUser(d.GetReason())
-		if msg := d.GetSystemMessage(); msg != "" {
-			out = out.WithSystemMessage(msg)
-		}
-		if c := d.GetContext(); c != "" {
-			out = out.WithContext(c)
-		}
-		return out
-	case agentdv1.DecisionKind_DECISION_KIND_ALLOW:
-		out := agenthooks.Allow()
-		if msg := d.GetSystemMessage(); msg != "" {
-			out = out.WithSystemMessage(msg)
-		}
-		if c := d.GetContext(); c != "" {
-			out = out.WithContext(c)
-		}
-		return out
-	case agentdv1.DecisionKind_DECISION_KIND_BLOCK_PROMPT:
-		return agenthooks.BlockPrompt(d.GetReason())
-	default:
-		return agenthooks.NoDecision()
-	}
 }

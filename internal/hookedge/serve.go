@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
+	"github.com/macrox-pro/agentd/internal/decision"
 	"github.com/macrox-pro/agentd/internal/hookclient"
 	"github.com/macrox-pro/agentd/internal/provider"
 )
@@ -73,7 +74,7 @@ func Serve(ctx context.Context, opts Options) int {
 		if err != nil {
 			return nil, fmt.Errorf("daemon invoke: %w", err)
 		}
-		return fromProto(resp.GetDecision()), nil
+		return decision.FromProto(resp.GetDecision()), nil
 	})
 
 	return r.Run(ctx, []string{"serve", "--provider=opencode"}, stdin, stdout, stderr)

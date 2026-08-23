@@ -45,85 +45,93 @@ func newSessionTestServer(t *testing.T) (*trajectory.Hub, *grpc.Server, *grpc.Cl
 	return rec.Hub(), srv, conn
 }
 
-func TestSubscribeNoFilter(t *testing.T) {
+func TestSubscribeFilterTable(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
-	hub, _, conn := newSessionTestServer(t)
-	sess := agentdv1.NewSessionServiceClient(conn)
+	tests := []struct {
+		name    string
+		req     *agentdv1.SubscribeRequest
+		publish func(t *testing.T, hub *trajectory.Hub)
+		check   func(t *testing.T, msg *agentdv1.SubscribeResponse)
+	}{
+		{
+			name: "no filter",
+			req:  &agentdv1.SubscribeRequest{},
+			publish: func(t *testing.T, hub *trajectory.Hub) {
+				t.Helper()
+				publishTestEvent(t, hub, sampleLedgerEvent(trajectory.TypeHookInvoked, trajectory.SourceHook, "claude-code", "s1"))
+			},
+			check: func(t *testing.T, msg *agentdv1.SubscribeResponse) {
+				t.Helper()
+				assert.Equal(t, trajectory.TypeHookInvoked, msg.GetEvent().GetType(), "type")
+				assert.Equal(t, trajectory.SchemaVersion, msg.GetEvent().GetSchemaVersion(), "schema")
+			},
+		},
+		{
+			name: "provider",
+			req:  &agentdv1.SubscribeRequest{Provider: "cursor"},
+			publish: func(t *testing.T, hub *trajectory.Hub) {
+				t.Helper()
+				publishTestEvent(t, hub, sampleLedgerEvent(trajectory.TypeHookInvoked, trajectory.SourceHook, "claude-code", "s1"))
+				publishTestEvent(t, hub, sampleLedgerEvent(trajectory.TypeHookInvoked, trajectory.SourceHook, "cursor", "c1"))
+			},
+			check: func(t *testing.T, msg *agentdv1.SubscribeResponse) {
+				t.Helper()
+				assert.Equal(t, "cursor", msg.GetEvent().GetProvider(), "provider")
+			},
+		},
+		{
+			name: "session",
+			req: &agentdv1.SubscribeRequest{
+				Provider:  "codex",
+				SessionId: "target",
+			},
+			publish: func(t *testing.T, hub *trajectory.Hub) {
+				t.Helper()
+				publishTestEvent(t, hub, sampleLedgerEvent(trajectory.TypeHookDecided, trajectory.SourceDecision, "codex", "other"))
+				publishTestEvent(t, hub, sampleLedgerEvent(trajectory.TypeHookDecided, trajectory.SourceDecision, "codex", "target"))
+			},
+			check: func(t *testing.T, msg *agentdv1.SubscribeResponse) {
+				t.Helper()
+				assert.Equal(t, "target", msg.GetEvent().GetSessionId(), "session")
+			},
+		},
+		{
+			name: "source",
+			req:  &agentdv1.SubscribeRequest{Source: trajectory.SourceTranscript},
+			publish: func(t *testing.T, hub *trajectory.Hub) {
+				t.Helper()
+				ev := sampleLedgerEvent(trajectory.TypeTranscriptMessage, trajectory.SourceTranscript, "claude-code", "s1")
+				ev.Ignorable = true
+				publishTestEvent(t, hub, ev)
+			},
+			check: func(t *testing.T, msg *agentdv1.SubscribeResponse) {
+				t.Helper()
+				assert.Equal(t, trajectory.SourceTranscript, msg.GetEvent().GetSource(), "source")
+				assert.True(t, msg.GetEvent().GetIgnorable(), "ignorable")
+			},
+		},
+	}
 
-	stream, err := sess.Subscribe(ctx, &agentdv1.SubscribeRequest{})
-	require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
 
-	publishTestEvent(t, hub, sampleLedgerEvent(trajectory.TypeHookInvoked, trajectory.SourceHook, "claude-code", "s1"))
+			hub, _, conn := newSessionTestServer(t)
+			sess := agentdv1.NewSessionServiceClient(conn)
 
-	msg, err := stream.Recv()
-	require.NoError(t, err)
-	assert.Equal(t, trajectory.TypeHookInvoked, msg.GetEvent().GetType())
-	assert.Equal(t, trajectory.SchemaVersion, msg.GetEvent().GetSchemaVersion())
-}
+			stream, err := sess.Subscribe(ctx, tt.req)
+			require.NoError(t, err, "Subscribe(%q)", tt.name)
 
-func TestSubscribeFilterProvider(t *testing.T) {
-	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+			tt.publish(t, hub)
 
-	hub, _, conn := newSessionTestServer(t)
-	sess := agentdv1.NewSessionServiceClient(conn)
-
-	stream, err := sess.Subscribe(ctx, &agentdv1.SubscribeRequest{Provider: "cursor"})
-	require.NoError(t, err)
-
-	publishTestEvent(t, hub, sampleLedgerEvent(trajectory.TypeHookInvoked, trajectory.SourceHook, "claude-code", "s1"))
-	publishTestEvent(t, hub, sampleLedgerEvent(trajectory.TypeHookInvoked, trajectory.SourceHook, "cursor", "c1"))
-
-	msg, err := stream.Recv()
-	require.NoError(t, err)
-	assert.Equal(t, "cursor", msg.GetEvent().GetProvider())
-}
-
-func TestSubscribeFilterSession(t *testing.T) {
-	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	hub, _, conn := newSessionTestServer(t)
-	sess := agentdv1.NewSessionServiceClient(conn)
-
-	stream, err := sess.Subscribe(ctx, &agentdv1.SubscribeRequest{
-		Provider:  "codex",
-		SessionId: "target",
-	})
-	require.NoError(t, err)
-
-	publishTestEvent(t, hub, sampleLedgerEvent(trajectory.TypeHookDecided, trajectory.SourceDecision, "codex", "other"))
-	publishTestEvent(t, hub, sampleLedgerEvent(trajectory.TypeHookDecided, trajectory.SourceDecision, "codex", "target"))
-
-	msg, err := stream.Recv()
-	require.NoError(t, err)
-	assert.Equal(t, "target", msg.GetEvent().GetSessionId())
-}
-
-func TestSubscribeFilterSource(t *testing.T) {
-	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	hub, _, conn := newSessionTestServer(t)
-	sess := agentdv1.NewSessionServiceClient(conn)
-
-	stream, err := sess.Subscribe(ctx, &agentdv1.SubscribeRequest{Source: trajectory.SourceTranscript})
-	require.NoError(t, err)
-
-	ev := sampleLedgerEvent(trajectory.TypeTranscriptMessage, trajectory.SourceTranscript, "claude-code", "s1")
-	ev.Ignorable = true
-	publishTestEvent(t, hub, ev)
-
-	msg, err := stream.Recv()
-	require.NoError(t, err)
-	assert.Equal(t, trajectory.SourceTranscript, msg.GetEvent().GetSource())
-	assert.True(t, msg.GetEvent().GetIgnorable())
+			msg, err := stream.Recv()
+			require.NoError(t, err, "Recv(%q)", tt.name)
+			tt.check(t, msg)
+		})
+	}
 }
 
 func TestSubscribeCancel(t *testing.T) {

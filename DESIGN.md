@@ -168,6 +168,7 @@ Sync pipeline returns before async workers finish. Async failure does not change
 | `internal/server` | `invoke_sync` | Thin gRPC mapping to Engine / Snapshot |
 | `internal/dispatch` | `invoke_sync`, `async_side` | Route match, Engine, queue, session lock |
 | `internal/dispatch/targets` | `invoke_sync`, `async_side` | Sync/Async target adapters via factory |
+| `internal/decision` | `invoke_sync` | proto↔agenthooks Decision |
 | `internal/guard` | `invoke_sync` | secrets/shell/mcp/paths checks |
 | `internal/config` | `config_reload` | Merge/compile; hot path reads Snapshot only |
 | `internal/trajectory` | `async_side` | Session ledger append, persist, Hub, replay/fork |

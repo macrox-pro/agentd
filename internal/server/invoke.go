@@ -2,9 +2,11 @@ package server
 
 import (
 	"context"
+	"log/slog"
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/decision"
 	"github.com/macrox-pro/agentd/internal/dispatch"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
@@ -22,9 +24,19 @@ var (
 	_ Invoker        = (*dispatch.Engine)(nil)
 )
 
+// NewHookService builds the HookService gRPC handler with injectable ports.
+func NewHookService(snap SnapshotSource, inv Invoker, rec *trajectory.Recorder, log *slog.Logger) agentdv1.HookServiceServer {
+	return &hookService{
+		snap:     snap,
+		engine:   inv,
+		recorder: rec,
+		log:      log,
+	}
+}
+
 func (h *hookService) Invoke(ctx context.Context, req *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
 	resp := &agentdv1.InvokeResponse{
-		Decision: dispatch.NeutralDecision(),
+		Decision: decision.Neutral(),
 		Config:   &agentdv1.ConfigGeneration{},
 	}
 	if h.snap == nil {

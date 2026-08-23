@@ -1,19 +1,18 @@
-package server
+package server_test
 
 import (
 	"context"
-	"net"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/test/bufconn"
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/decision"
 	"github.com/macrox-pro/agentd/internal/dispatch"
+	"github.com/macrox-pro/agentd/internal/server"
 )
 
 type fakeSnapshotSource struct {
@@ -33,25 +32,22 @@ func (f fakeInvoker) Invoke(context.Context, dispatch.InvokeInput) (dispatch.Inv
 	return f.result, f.err
 }
 
-func dialHookService(t *testing.T, h *hookService) *grpc.ClientConn {
-	t.Helper()
-	s := grpc.NewServer()
-	agentdv1.RegisterHookServiceServer(s, h)
-	lis := bufconn.Listen(1024 * 1024)
-	go func() { _ = s.Serve(lis) }()
-	t.Cleanup(func() {
-		s.Stop()
-		_ = lis.Close()
-	})
-	conn, err := grpc.NewClient("passthrough:///bufnet",
-		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
-			return lis.Dial()
-		}),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err, "dial bufconn")
-	t.Cleanup(func() { _ = conn.Close() })
-	return conn
+type recordingInvoker struct {
+	mu   sync.Mutex
+	last dispatch.InvokeInput
+}
+
+func (r *recordingInvoker) Invoke(_ context.Context, in dispatch.InvokeInput) (dispatch.InvokeResult, error) {
+	r.mu.Lock()
+	r.last = in
+	r.mu.Unlock()
+	return dispatch.InvokeResult{Decision: decision.Neutral()}, nil
+}
+
+func (r *recordingInvoker) mode() agentdv1.InvocationMode {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.last.InvocationMode
 }
 
 func TestHookServiceInvokeMapping(t *testing.T) {
@@ -62,8 +58,8 @@ func TestHookServiceInvokeMapping(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		snap       SnapshotSource
-		inv        Invoker
+		snap       server.SnapshotSource
+		inv        server.Invoker
 		wantKind   agentdv1.DecisionKind
 		wantGen    uint64
 		wantFP     string
@@ -105,7 +101,7 @@ func TestHookServiceInvokeMapping(t *testing.T) {
 		{
 			name:     "snap_generation_in_response",
 			snap:     fakeSnapshotSource{snap: &config.Snapshot{Generation: 99, Fingerprint: "proj-fp"}},
-			inv:      fakeInvoker{result: dispatch.InvokeResult{Decision: dispatch.NeutralDecision()}},
+			inv:      fakeInvoker{result: dispatch.InvokeResult{Decision: decision.Neutral()}},
 			wantKind: agentdv1.DecisionKind_DECISION_KIND_NO_DECISION,
 			wantGen:  99,
 			wantFP:   "proj-fp",
@@ -114,7 +110,7 @@ func TestHookServiceInvokeMapping(t *testing.T) {
 			name: "async_count_forwarded",
 			snap: fakeSnapshotSource{snap: baseSnap},
 			inv: fakeInvoker{result: dispatch.InvokeResult{
-				Decision:             dispatch.NeutralDecision(),
+				Decision:             decision.Neutral(),
 				AsyncDispatchedCount: 3,
 			}},
 			wantKind:  agentdv1.DecisionKind_DECISION_KIND_NO_DECISION,
@@ -126,10 +122,7 @@ func TestHookServiceInvokeMapping(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			conn := dialHookService(t, &hookService{
-				snap:   tt.snap,
-				engine: tt.inv,
-			})
+			conn := dialHook(t, server.NewHookService(tt.snap, tt.inv, nil, nil))
 			hook := agentdv1.NewHookServiceClient(conn)
 
 			resp, err := hook.Invoke(ctx, &agentdv1.InvokeRequest{
@@ -149,6 +142,62 @@ func TestHookServiceInvokeMapping(t *testing.T) {
 			if tt.wantAsync != 0 {
 				assert.Equal(t, tt.wantAsync, resp.GetAsyncDispatchedCount(), "Invoke(%q) async", tt.name)
 			}
+		})
+	}
+}
+
+func TestHookServiceInvocationMode(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	baseSnap := &config.Snapshot{Generation: 1, Fingerprint: "fp"}
+
+	tests := []struct {
+		name     string
+		provider agentdv1.Provider
+		in       agentdv1.InvocationMode
+		want     agentdv1.InvocationMode
+	}{
+		{
+			name:     "cursor unspecified to argv",
+			provider: agentdv1.Provider_PROVIDER_CURSOR,
+			in:       agentdv1.InvocationMode_INVOCATION_MODE_UNSPECIFIED,
+			want:     agentdv1.InvocationMode_INVOCATION_MODE_ARGV,
+		},
+		{
+			name:     "cursor argv preserved",
+			provider: agentdv1.Provider_PROVIDER_CURSOR,
+			in:       agentdv1.InvocationMode_INVOCATION_MODE_ARGV,
+			want:     agentdv1.InvocationMode_INVOCATION_MODE_ARGV,
+		},
+		{
+			name:     "claude unspecified stays unspecified",
+			provider: agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+			in:       agentdv1.InvocationMode_INVOCATION_MODE_UNSPECIFIED,
+			want:     agentdv1.InvocationMode_INVOCATION_MODE_UNSPECIFIED,
+		},
+		{
+			name:     "codex unspecified to stdin",
+			provider: agentdv1.Provider_PROVIDER_CODEX,
+			in:       agentdv1.InvocationMode_INVOCATION_MODE_UNSPECIFIED,
+			want:     agentdv1.InvocationMode_INVOCATION_MODE_STDIN,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			rec := &recordingInvoker{}
+			conn := dialHook(t, server.NewHookService(fakeSnapshotSource{snap: baseSnap}, rec, nil, nil))
+			hook := agentdv1.NewHookServiceClient(conn)
+
+			_, err := hook.Invoke(ctx, &agentdv1.InvokeRequest{
+				Provider:       tt.provider,
+				RawPayload:     []byte(`{}`),
+				InvocationMode: tt.in,
+			})
+			require.NoError(t, err, "Invoke(%q)", tt.name)
+			assert.Equal(t, tt.want, rec.mode(), "Invoke(%q) mode", tt.name)
 		})
 	}
 }

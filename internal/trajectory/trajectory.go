@@ -10,7 +10,7 @@
 //   - No disk I/O on the sync Invoke path; enqueue only.
 //   - Contiguous seq per session; events immutable after append.
 //   - Opt-in via config.Trajectory.Enabled (default off).
-//   - schema_version frozen at SchemaVersion for v1.1 contract.
+//   - schema_version frozen at SchemaVersion for v0.0.2 contract.
 //
 // Entry: Recorder.Record, Hub.Publish, ListSessions, Export, ExportToFile, Search,
 // AppendImported, ReplayPolicy, ReplayPolicyFromConfig, ForkSession,

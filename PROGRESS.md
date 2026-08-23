@@ -4,10 +4,126 @@
 
 ## Current phase
 
-Phase: **R11 done** | Last: r11-comments-docs + audit follow-through | Next: **none (R-series complete; leftover = coverage only)**
+Phase: **F4 done** | Last: F1–F4 CONVENTIONS follow-through | Next: **none** (no R12)
 
 > Milestones M0–M12: **done**. Post-release **R-series** refactor: **R1–R11 done**. No R12.
+> Post-R follow-through: **F1–F4 done**. Coverage goal ≥70% still not met — exception (no filler).
 
+---
+
+## F1 intent note — Server black-box tests + comment hygiene
+
+**Problem:** `invoke_mapping_test.go` / `invoke_mode_test.go` use `package server` (CONVENTIONS requires `package xxx_test`); server package comment missing Invariants; stale `v1.1` in trajectory comments (product is v0.0.2).
+
+**Hot path:** `other`.
+
+**Invariants:**
+- black-box `*_test.go` only (`package server_test`)
+- `hookService` stays unexported; seam is `NewHookService`
+- do not export `normalizeInvocationMode`
+- `Options.Store` / `Options.Engine` stay concrete types
+- `SchemaVersion` value unchanged (`1`)
+
+**Corner cases (`tt.name`):**
+- mapping: `snap_nil_neutral`, `engine_nil_neutral`, `engine_error_neutral`, `engine_success_maps_decision`, `snap_generation_in_response`, `async_count_forwarded`
+- mode: `cursor unspecified to argv`, `cursor argv preserved`, `claude unspecified stays unspecified`, `codex unspecified to stdin`
+
+**Out of scope:** F2 decision codec; F3 Subscribe table; F4 coverage; proto/`gen/`; Options interface change.
+
+### F1 checklist
+
+- [x] f1-intent
+- [x] f1-factory (`NewHookService` + wire `New`)
+- [x] f1-mapping-blackbox
+- [x] f1-mode-table (+ delete white-box)
+- [x] f1-invariants + v0.0.2 comments
+- [x] f1-verify
+
+**F1 done.**
+
+---
+
+## F2 intent note — internal/decision codec
+
+**Problem:** Duplicate proto↔agenthooks Decision Kind switches in `dispatch.DecisionToProto`, `hookedge.fromProto`, and `targets/grpc.decisionFromProto`. `targets` cannot import `dispatch` (cycle).
+
+**Hot path:** `invoke_sync`.
+
+**Invariants:**
+- one Kind table in `internal/decision` (ToProto / FromProto / Neutral)
+- no `targets` → `dispatch` import
+- no re-export aliases in `dispatch`
+- keep `promptFromProto` Kind switch in hookedge (wire-only)
+
+**Corner cases (`tt.name`):** FromProto `nil`, `no decision`, `deny+extras`, `ask+extras`, `allow+extras`, `block_prompt`; round-trip `deny`, `ask`, `allow`, `block_prompt`, `no decision`.
+
+**Out of scope:** SyncInvoker contract change; process globals; F3/F4.
+
+### F2 checklist
+
+- [x] f2-intent
+- [x] f2-pkg + move ToProto/Neutral/FromProto
+- [x] f2-callers (engine, hookedge, grpc, server)
+- [x] f2-tests + DESIGN/AGENTS
+- [x] f2-verify
+
+**F2 done.**
+
+---
+
+## F3 intent note — Subscribe filter table
+
+**Problem:** Four structurally identical Subscribe filter tests should be one table (R10 leftover).
+
+**Hot path:** `other` (test-only).
+
+**Invariants:** per-row hub via `newSessionTestServer`; keep Cancel / IdleThenEvent / NilHub separate.
+
+**Corner cases (`tt.name`):** `no filter`, `provider`, `session`, `source`.
+
+**Out of scope:** rewriting Cancel/IdleThenEvent/NilHub; F4 coverage.
+
+### F3 checklist
+
+- [x] f3-intent
+- [x] f3-table
+- [x] f3-verify
+
+**F3 done.**
+
+---
+
+## F4 intent note — Coverage toward 70%
+
+**Problem:** Repo cover ~61.5% vs ≥70% goal. Fill real behavior holes only.
+
+**Hot path:** `other` (test-only).
+
+**Invariants:** no filler; stop at init/Cobra/`_other.go`; measure before writing tests.
+
+**Out of scope:** padding to 100%; new CLI commands; drive-by refactors.
+
+### F4 checklist
+
+- [x] f4-intent
+- [x] f4-measure + gap list
+- [x] f4-cmd tables
+- [x] f4-targets / trajectory redact (daemon skipped — detach/import_watch/signals)
+- [x] f4-stop + verify + handoff
+
+### F4 coverage gap list (2026-08-23 measure; start total **61.8%**)
+
+| Package | Cover | Gaps to fill (behavior) | Skip (boilerplate / hard) |
+|---------|-------|---------------------------|---------------------------|
+| `cmd` | 66.9% → **76.1%** | `session list` empty/json/provider/unknown; `config patch` missing file / unavailable; `record-decision` invalid scope / unavailable; `install` unknown provider; `hook` notify/run argv errors | `Execute`; hook success → `os.Exit` |
+| `dispatch/targets` | 61.8% → **71.7%** | `NewAsyncInvoker` kinds; `EventKindOf`; `ProjectRootOf`; log levels | `dialAndInvoke` real dial |
+| `daemon` | 65.0% | (none this phase) | `detach`, `import_watch`, unix signals |
+| `trajectory` | 68.2% → **72.0%** | `PrepareRaw` / `PrepareTranscriptText` | recorder accessors via other pkgs |
+| `decision` | — → **100%** | new package | — |
+
+**F4 stop:** remaining holes are `gen/`, `version`, daemon detach/import_watch, hook `os.Exit` success paths, `dialAndInvoke`. **No filler.** Repo total **62.8%** (vs ≥70% — exception accepted, same rule as R11).
+
+**F4 done.**
 ## agents_md_ready
 
 true
@@ -164,8 +280,8 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 ## Session notes
 
 - M0–M12 / v0.0.2 shipped (see DESIGN §13)
-- **R1–R11 done** — R-series complete; leftover = coverage only (61.5%)
-- No R12
+- **R1–R11 done** — R-series complete; no R12
+- **F1–F4 done** — CONVENTIONS follow-through; coverage **62.8%** (exception vs ≥70%; no pad)
 
 ## Verify (last green)
 
@@ -173,13 +289,12 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 make lint
 make intent-check
 make docs-check
-go test ./internal/trajectory/... ./internal/dispatch/... ./internal/server/... ./internal/guard/... ./internal/config/... -race -count=1
 make test
-go test ./... -coverprofile=/tmp/agentd_r11.out -count=1
-go tool cover -func=/tmp/agentd_r11.out | tail -1  # total 61.5%
+go test ./... -coverprofile=/tmp/agentd_f.out -count=1
+go tool cover -func=/tmp/agentd_f.out | tail -1  # total 62.8%
 ```
 
-**R11 files touched:** `internal/provider/provider.go`, `DESIGN.md` §1.5, `PROGRESS.md`, `internal/trajectory/{session_key,paths,store,fork,recorder,import_append,replay,trajectory}.go` + tests, `internal/dispatch/{engine,decode}.go`, `internal/server/invoke.go` + `invoke_mapping_test.go`, `internal/config/{guards,trajectory}.go`, `internal/guard/registry.go`
+**F-series files touched:** `internal/server/{invoke,server,daemon_test,invoke_mapping_test,session_test}.go` (deleted `invoke_mode_test.go`), `internal/trajectory/{trajectory,event}.go` + `redact_test.go`, `internal/decision/{decision,decision_test}.go`, `internal/dispatch/engine.go` (deleted `decision.go`/`decision_test.go`), `internal/hookedge/decision.go`, `internal/dispatch/targets/{grpc,targets_test}.go`, `cmd/{session_list,config_patch,config_record_decision,install,hook}_test.go`, `AGENTS.md`, `DESIGN.md` §1.5, `PROGRESS.md`
 
 ## Blockers
 
