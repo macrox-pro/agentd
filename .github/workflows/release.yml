@@ -23,6 +23,10 @@ jobs:
         run: |
           chmod +x scripts/release-notes.sh
           ./scripts/release-notes.sh "${GITHUB_REF_NAME}" > /tmp/release-notes.md
+      - name: Remove prior GitHub release (re-run safe)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release delete "${GITHUB_REF_NAME}" --yes --cleanup-tag=false || true
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
