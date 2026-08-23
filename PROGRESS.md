@@ -4,6 +4,30 @@
 
 ## Current phase
 
+Phase: **CLI version** | Last: `agentd version` + daemon status running-process version | Next: **none**
+
+### CLI version (2026-08-23)
+
+**Problem:** Users need this binary's version without a daemon (`agentd version`). `daemon status` must keep reporting the **running process** version from Status RPC (can differ from this CLI after an upgrade).
+
+**Hot path:** other
+
+**Invariants:**
+- `internal/version.Version` is the only build string for this binary
+- `agentd version` does not dial the daemon
+- `daemon status` `version` comes from the Status RPC, not `version.Version`
+- JSON key stays `version` (proto field)
+
+**Corner cases (`tt.name`):**
+- version: `default dev`, `release semver`
+- daemon status: `running human daemon version`, `running json daemon version`, `running uses daemon version not cli`
+
+**Out of scope:** `--json` on `version`; root `--version`; proto changes; git commit
+
+**Done:** `cmd/version.go`; CLI tables in `cmd/version_test.go` + `cmd/daemon_status_test.go`; DESIGN §6; docs EN/RU cli + operations + installation; CONTRIBUTING
+
+---
+
 Phase: **install UX done** | Last: install defaults + stdout report | Next: **none**
 
 > Milestones M0–M12: **done**. Post-release **R-series** refactor: **R1–R11 done**. No R12.

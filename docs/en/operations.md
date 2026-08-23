@@ -21,7 +21,7 @@ JSON when running:
 |-------|---------|
 | `running` | bool |
 | `socket` | path / pipe |
-| `version` | build version (`dev` unless ldflags/tag) |
+| `version` | daemon version (`dev` if that process was built without a release tag) |
 | `started_at` | RFC3339 UTC |
 | `generation` | config generation |
 | `fingerprint` | merged config fingerprint |

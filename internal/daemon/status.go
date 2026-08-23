@@ -12,7 +12,7 @@ import (
 type StatusReport struct {
 	Running            bool
 	Socket             string
-	Version            string
+	Version            string // process that answered Status, not this CLI binary
 	StartedAt          time.Time
 	Generation         uint64
 	Fingerprint        string

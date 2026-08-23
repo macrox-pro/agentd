@@ -23,7 +23,7 @@ others who are seeking help. Harassment of any kind will not be tolerated.
 1. Before filing an issue, search [existing issues](https://github.com/macrox-pro/agentd/issues) for a similar report. If one exists, comment there.
 2. **Bug reports** should include:
    - Steps to reproduce
-   - `agentd` version (`agentd daemon status` / release tag / `dev` build)
+   - `agentd` version (`agentd version` / release tag / `dev` build)
    - OS (linux / darwin / windows) and Go version if building from source
    - Coding agent / `--provider` (claude-code, cursor, codex, gemini, opencode, kimi-code)
    - Relevant config snippets (redact secrets)

@@ -24,9 +24,12 @@ cd agentd
 make build
 ```
 
-`make build` создаёт `./agentd` и через флаги компоновщика (`ldflags`) задаёт `internal/version.Version` (локально по умолчанию `dev`). При выпуске тега goreleaser подставляет semver.
+`make build` собирает `./agentd` и линкует версию в `internal/version.Version` через ldflags (`dev` локально). Релизный тег: goreleaser подставляет semver.
 
-Поле `version` видно в `agentd daemon status`.
+| Команда | Назначение |
+|---------|------------|
+| `agentd version` | версия CLI |
+| `agentd daemon status` | статус демона; поле `version` — версия его процесса |
 
 ## Требования
 

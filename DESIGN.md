@@ -438,6 +438,7 @@ CLI families mirror process roles:
 
 ```
 agentd
+├── version      # binary build version (no daemon)
 ├── daemon/      # lifecycle
 ├── hook/        # agent entrypoint
 ├── agenthooks/  # Hidden install argv sentinel (same as hook *)
@@ -447,6 +448,18 @@ agentd
 ```
 
 **Persistent flags:** `--config`, `--socket`, `-v` (stderr only; never hook stdout).
+
+### `agentd version`
+
+Print the build version of this binary (`internal/version.Version`; `dev` unless ldflags/tag).
+
+Does not contact the daemon. Distinct from `daemon status`, which is a runtime snapshot of a running service (and includes that process's version when it is up).
+
+**Example:**
+
+```bash
+agentd version
+```
 
 ### `agentd daemon start [--foreground] [--log-level LEVEL] [--log-file PATH]`
 
@@ -480,9 +493,10 @@ Graceful shutdown: drain sync `Invoke`, async queue, remove socket/PID.
 
 ### `agentd daemon status [--json]`
 
-Runtime state: uptime, config generation, fingerprint, routes, queue depth, async drop count.
+Runtime state: running-process version, uptime, config generation, fingerprint, routes, queue depth, async drop count.
 
 - `--json` for CI/scripts
+- `version` is the daemon that answered Status, not `agentd version` (this CLI binary)
 - Not the same as `config show` (declarative vs runtime)
 
 **Example:**

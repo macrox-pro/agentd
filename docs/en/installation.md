@@ -24,9 +24,12 @@ cd agentd
 make build
 ```
 
-`make build` writes `./agentd` with ldflags setting `internal/version.Version` (default `dev` for local builds). Release tags inject the semver via goreleaser.
+`make build` writes `./agentd` and links the version into `internal/version.Version` via ldflags (`dev` locally). Release tags: goreleaser injects semver.
 
-`agentd daemon status` reports the wired `version` field.
+| Command | Purpose |
+|---------|---------|
+| `agentd version` | CLI version |
+| `agentd daemon status` | daemon status; field `version` is that process's version |
 
 ## Requirements
 

@@ -17,6 +17,10 @@ var daemonStatusCmd = &cobra.Command{
 	Short: "Show whether the service is running",
 	Long: `Print whether the agentd service is running and basic health details.
 
+When the service is running, the output includes that process's build version
+from the Status RPC. That can differ from this CLI binary after an upgrade;
+use "agentd version" for this binary without contacting the daemon.
+
 Use --json for machine-readable output in scripts. For configuration contents,
 use "agentd config show".`,
 	Example: `  agentd daemon status

@@ -12,13 +12,23 @@ Commands and flags as implemented under `cmd/`. Narrative rationale: [DESIGN.md 
 | `--socket` | OS default | Daemon IPC endpoint |
 | `-v` / `--verbose` | off | Extra stderr (never hook stdout) |
 
+## version
+
+Print the CLI version (`dev` unless linked with ldflags or a release tag). Does not contact the daemon.
+
+Daemon process version: field `version` on `agentd daemon status`.
+
+| Command | Flags | Notes |
+|---------|-------|-------|
+| `version` | — | CLI version on stdout |
+
 ## daemon
 
 | Command | Flags | Notes |
 |---------|-------|-------|
 | `daemon start` | `--foreground`, `--log-level`, `--log-file` | Detach by default; waits until Health succeeds; logs to state-dir file |
 | `daemon stop` | `--timeout` (`10s`) | gRPC Shutdown, then SIGTERM fallback |
-| `daemon status` | `--json` | Runtime snapshot ([Operations](./operations.md)) |
+| `daemon status` | `--json` | Status of the running daemon, including process version (`version`; [Operations](./operations.md)) |
 | `daemon reload` | — | Force config re-merge |
 
 ## hook
