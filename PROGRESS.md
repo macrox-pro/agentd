@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase: **R6 done** | Last: r6-syncinvoker | Next: **R7 aggregation policy**
+Phase: **R7 done** | Last: r7-aggregation | Next: **R8 guard Checker registry**
 
 > Milestones M0–M12: **done**. Post-release work is the **R-series** refactor below — one phase = one PR or agent session, one package or one hot path ([AGENTS.md](./AGENTS.md) intent rules).
 
@@ -33,7 +33,7 @@ true
 | `internal/dispatch/targets` | 60.7% | maintain — R6 SyncInvoker done |
 | `internal/trajectory/importer` | 71.8% | maintain — registry done |
 | `internal/trajectory` | 68.3% | P2 — was 66.1% |
-| `internal/dispatch` | 73.7% | maintain — R6 SyncInvoker done |
+| `internal/dispatch` | 73.8% | maintain — R7 first_conclusive extract |
 | `internal/hookedge` | 70.4% | maintain |
 | `internal/config` | 74.8% | maintain |
 | `internal/transport` | 77.5% | maintain |
@@ -67,7 +67,7 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 | **R4** | **done** | `cmd/` coverage — table-driven session + config CLI |
 | **R5** | **done** | `daemon` + `hookclient` lifecycle tests |
 | **R6** | **done** | `dispatch/targets` — SyncInvoker + factory; Engine Kind switch removed |
-| **R7** | **next** | `dispatch` — extract `first_conclusive` aggregation |
+| **R7** | **done** | `dispatch` — extract `first_conclusive` aggregation |
 | **R8** | pending | `guard` + `targets/builtin` — Checker registry (incremental) |
 | **R9** | pending | `server` — narrow ports only if tests require |
 | **R10** | pending | Test hygiene — table-driven migration where structure matches |
@@ -266,20 +266,46 @@ Verify after each phase: `make lint` · `make intent-check` · `make test` · to
 
 ---
 
-## R7 intent note — Aggregation policy (roadmap stub)
+## R7 intent note — Aggregation policy (`first_conclusive`)
 
-**Problem:** `first_conclusive` is inline in `runSync`; DESIGN names other merge policies.
+**Problem:** `first_conclusive` stop logic is inline in `runSync` (`d != nil && d.Kind() != DecisionNoDecision`). DESIGN §2 names sync merge policies; the policy should be a named concern.
 
-**Hot path:** `invoke_sync`.
+**Hot path:** `invoke_sync`
 
-**Out of scope until phase starts:** implementing `all_restrictive` / `sequential_neutral_merge`; YAML schema unless compile already has a field.
+**Invariants:**
+- Identical Decide outcomes for same Snapshot + payload
+- List-level merge over `route.Sync` only — today’s `first_conclusive`; do not read `CompiledTarget.Merge`
+- Short-circuit: conclusive decision → later sync targets not invoked
+- Sync never waits on async; no disk I/O on Invoke; `Event.Raw` unchanged
+- Factory error → `continue`; InvokeSync error → abort `runSync`
+
+**Corner cases (test names):**
+- `TestFirstConclusive` — `nil_continues`, `no_decision_continues`, `deny_stops`, `ask_stops`, `allow_stops`, `block_prompt_stops`
+- `TestEngine_RunSyncParity` — `builtin_deny_first`, `grpc_fail_open`, `grpc_fail_closed`, `skip_non_sync_kind`, `first_conclusive_stops`, `empty_sync_list_neutral`
+- `TestEngineHybrid` — async must not change sync decision
+
+**Out of scope:**
+- `all_restrictive`, `sequential_neutral_merge`
+- YAML / schema / `config.SyncMerge` / compile / `CompiledTarget.Merge` semantics
+- `targets` factory, guard registry (R8), server, trajectory, cmd/, config/
 
 ### R7 checklist
 
-- [ ] r7-intent (full note when phase starts)
-- [ ] r7-extract — named aggregation type/func
-- [ ] r7-tests — stop-on-conclusive + fail modes
-- [ ] r7-verify
+- [x] r7-intent — full intent note (this section)
+- [x] r7-pkg-comment — `dispatch.go` Owns list-level `first_conclusive`
+- [x] r7-conventions — sync list merge one home (`merge.go` + `runSync` fold)
+- [x] r7-design-s2 — DESIGN §2 implemented vs DESIGN-only policies
+- [x] r7-design-s15 — DESIGN §1.5 invoke_sync one-liner
+- [x] r7-merge-go — `merge.go` + `FirstConclusive`
+- [x] r7-runsync — wire `runSync` to `FirstConclusive`
+- [x] r7-merge-test — `TestFirstConclusive` table (six `tt.name` rows)
+- [x] r7-parity — `TestEngine_RunSyncParity` + `TestEngineHybrid` green
+- [x] r7-verify — `go fix` + lint + intent-check + race + coverprofile
+- [x] r7-handoff — phase R7 done → next R8; session notes
+
+**R7 acceptance:** `FirstConclusive` in `merge.go`; `runSync` calls it; Decide parity unchanged; no YAML/config/`CompiledTarget.Merge` / other-policy stubs.
+
+**Files touched:** `internal/dispatch/{merge,merge_test,engine,dispatch}.go`, `CONVENTIONS.md`, `DESIGN.md` §1.5/§2, `PROGRESS.md`.
 
 ---
 
@@ -570,7 +596,8 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 - **R4 done:** shared `cmd/root_test.go` harness; table-driven session/config/dispatch CLI tests; cmd **60.7%**
 - **R5 done:** daemon lifecycle tables + hookclient client tests + cmd daemon CLI; daemon **65.0%**, hookclient **81.0%**
 - **R6 done:** `SyncInvoker` + `NewSyncInvoker`; `GRPCSync` FailMode wrapper; Engine Kind switch removed; Decide parity + hybrid tests; dispatch **73.7%**, targets **60.7%**
-- Next agent session: open **R7** — extract `first_conclusive` aggregation from `runSync`
+- **R7 done:** `FirstConclusive` in `merge.go`; `runSync` fold wired; Decide parity + hybrid green; dispatch **73.8%**
+- Next agent session: open **R8** — guard Checker registry (incremental)
 
 ### Refactor intent note (pre-R-series, archived)
 
@@ -589,12 +616,12 @@ Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
 ```bash
 make lint
 make intent-check
-go test ./internal/dispatch/... ./internal/dispatch/targets/... -race -count=1
-go test ./internal/dispatch -coverprofile=/tmp/dispatch_r6.out -count=1
-go tool cover -func=/tmp/dispatch_r6.out | tail -1   # dispatch 73.7%
-go test ./internal/dispatch/targets -coverprofile=/tmp/targets_r6.out -count=1
-go tool cover -func=/tmp/targets_r6.out | tail -1   # targets 60.7%
+go test ./internal/dispatch/... -race -count=1
+go test ./internal/dispatch -coverprofile=/tmp/dispatch_r7.out -count=1
+go tool cover -func=/tmp/dispatch_r7.out | tail -1   # dispatch 73.8%
 ```
+
+**R7 files touched:** `internal/dispatch/{merge,merge_test,engine,dispatch}.go`, `CONVENTIONS.md`, `DESIGN.md`, `PROGRESS.md`
 
 **R6 files touched:** `internal/dispatch/{dispatch,engine}.go`, `internal/dispatch/engine_test.go`, `internal/dispatch/targets/{sync,factory,grpc,targets}.go`, `internal/dispatch/targets/targets_test.go`, `AGENTS.md`, `CONVENTIONS.md`, `DESIGN.md`, `PROGRESS.md`
 

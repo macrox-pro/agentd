@@ -138,7 +138,7 @@ sequenceDiagram
   HookCLI-->>Agent: encoded response
 ```
 
-Flow: `hook run|serve` → hookedge decode → gRPC `HookService.Invoke` → `dispatch.Engine.Invoke` with `config.Snapshot` from `Store.Current()` → route match → sync targets (builtin guards via `Runner.Decide`) → decision proto → encode.
+Flow: `hook run|serve` → hookedge decode → gRPC `HookService.Invoke` → `dispatch.Engine.Invoke` with `config.Snapshot` from `Store.Current()` → route match → sync targets folded with `first_conclusive` (builtin guards via `Runner.Decide`) → decision proto → encode.
 
 Policy `fail_closed` denies on guard/dispatch errors. Sync budget from `dispatch.SyncBudget` (`timeout.go`) — must fit provider hook timeout.
 
@@ -253,6 +253,7 @@ Routes evaluated top-down; first match wins.
 **Kind → implementation:** `internal/dispatch/targets` owns sync/async factories (`NewSyncInvoker`, `NewAsyncInvoker`). `Engine` must not switch on target kind.
 
 **Sync merge policies:** `first_conclusive` (Any), `all_restrictive` (All), `sequential_neutral_merge` (context append).
+Implemented today: list-level `first_conclusive` in `dispatch` (`FirstConclusive` + `runSync` fold). `all_restrictive` / `sequential_neutral_merge` are DESIGN-only names (not implemented).
 
 ### Provider-aware dispatch
 

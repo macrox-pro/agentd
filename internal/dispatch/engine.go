@@ -175,8 +175,8 @@ func (e *Engine) runSync(ctx context.Context, b *targets.Builtin, syncTargets []
 			return nil, err
 		}
 		last = d
-		if d != nil && d.Kind() != agenthooks.DecisionNoDecision {
-			return d, nil // first_conclusive
+		if FirstConclusive(d) {
+			return d, nil
 		}
 	}
 	return last, nil

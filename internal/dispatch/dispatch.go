@@ -1,6 +1,7 @@
 // Package dispatch routes hook Invoke through sync and async pipelines.
 //
-// Owns: route match, Engine, queue, session lock; calls targets factories for Kind→impl.
+// Owns: route match, Engine, queue, session lock; list-level sync merge (first_conclusive);
+// calls targets factories for Kind→impl.
 // Must not: decode provider wire (hookedge), compile YAML (config), guard Decide (targets/builtin + agenthooks),
 // Kind switch on target type (targets factories only).
 //
