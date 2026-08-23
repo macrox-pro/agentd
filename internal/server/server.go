@@ -1,9 +1,9 @@
 // Package server implements thin gRPC mapping for DaemonService, HookService, ConfigService, and SessionService.
 //
-// Owns: proto ↔ internal type mapping; delegates Invoke to dispatch.Engine.
+// Owns: proto ↔ internal type mapping; HookService maps via Invoker and SnapshotSource.
 // Must not: policy logic, route match, guard checks, config compile.
 //
-// Entry: HookService.Invoke, ConfigService handlers, SessionService.Subscribe.
+// Entry: HookService.Invoke (Invoker, SnapshotSource), ConfigService handlers, SessionService.Subscribe.
 // See DESIGN.md §1.5 (invoke_sync, config_reload, async_side).
 package server
 
@@ -39,8 +39,8 @@ type daemonService struct {
 
 type hookService struct {
 	agentdv1.UnimplementedHookServiceServer
-	store    *config.Store
-	engine   *dispatch.Engine
+	snap     SnapshotSource
+	engine   Invoker
 	recorder *trajectory.Recorder
 	log      *slog.Logger
 }
@@ -55,9 +55,17 @@ func New(opts Options) *grpc.Server {
 	}
 	s := grpc.NewServer()
 	agentdv1.RegisterDaemonServiceServer(s, &daemonService{opts: opts})
+	var snap SnapshotSource
+	if opts.Store != nil {
+		snap = opts.Store
+	}
+	var inv Invoker
+	if opts.Engine != nil {
+		inv = opts.Engine
+	}
 	agentdv1.RegisterHookServiceServer(s, &hookService{
-		store:    opts.Store,
-		engine:   opts.Engine,
+		snap:     snap,
+		engine:   inv,
 		recorder: opts.Recorder,
 		log:      opts.Logger,
 	})

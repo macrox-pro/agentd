@@ -54,18 +54,7 @@ func (b *Builtin) newRunner(guardNames []string, observeOnly bool) *agenthooks.R
 		ProjectRoot:     b.ProjectRoot,
 	}
 	guard.AttachBlocks(r, b.TemporaryBlocks)
-	for _, name := range guardNames {
-		switch name {
-		case "secrets":
-			guard.AttachSecrets(r, b.Guards.Secrets, dctx)
-		case "shell":
-			guard.AttachShell(r, b.Guards.Shell, dctx)
-		case "mcp":
-			guard.AttachMCP(r, b.Guards.MCP)
-		case "paths":
-			guard.AttachPaths(r, b.Guards.Paths)
-		}
-	}
+	guard.AttachCheckers(r, b.Guards, dctx, guardNames)
 	return r
 }
 

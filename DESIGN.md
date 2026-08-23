@@ -252,6 +252,10 @@ Routes evaluated top-down; first match wins.
 
 **Kind → implementation:** `internal/dispatch/targets` owns sync/async factories (`NewSyncInvoker`, `NewAsyncInvoker`). `Engine` must not switch on target kind.
 
+**Guard name → attach:** `internal/guard` owns the Checker registry (`AttachCheckers`); `targets/builtin` wires it into `Runner.Decide`.
+
+**HookService ports:** `internal/server/invoke.go` owns `Invoker` and `SnapshotSource`; production uses `*dispatch.Engine` and `*config.Store`.
+
 **Sync merge policies:** `first_conclusive` (Any), `all_restrictive` (All), `sequential_neutral_merge` (context append).
 Implemented today: list-level `first_conclusive` in `dispatch` (`FirstConclusive` + `runSync` fold). `all_restrictive` / `sequential_neutral_merge` are DESIGN-only names (not implemented).
 

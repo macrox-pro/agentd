@@ -67,6 +67,8 @@ Package-specific ownership (do not reimplement elsewhere):
 - Dispatch routing: `internal/dispatch` only.
 - Target Kind → implementation mapping has **one** home: the `targets` factory (`NewSyncInvoker` / `NewAsyncInvoker`). Do not duplicate Kind switches in `Engine` and the factory.
 - Sync list merge (`first_conclusive`) has **one** home: `dispatch/merge.go` (`FirstConclusive`) + the fold/short-circuit in `Engine.runSync`. Do not re-inline the conclusive check elsewhere.
+- Guard name → attach mapping has **one** home: `guard/registry.go` (`AttachCheckers`). `targets/builtin` calls it; do not duplicate guard-name switches elsewhere.
+- Server-side HookService ports (`Invoker`, `SnapshotSource`) belong next to the handler in `server/invoke.go`. Do not add a kitchen-sink `ConfigStore` interface; keep `*config.Store` / `*dispatch.Engine` in `Options` for daemon/config.
 - Provider ids / enum mapping: `internal/provider` only.
 
 Before adding a helper, search `internal/` for an existing entry point. Extract shared test helpers once; use `t.Helper()`.

@@ -4,12 +4,28 @@ import (
 	"context"
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
+	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/dispatch"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
+// SnapshotSource supplies project-aware compiled config for one Invoke.
+type SnapshotSource interface {
+	SnapshotFor(cwd, projectRoot string) *config.Snapshot
+}
+
+// Invoker runs the dispatch sync/async pipeline for one hook invocation.
+type Invoker interface {
+	Invoke(ctx context.Context, in dispatch.InvokeInput) (dispatch.InvokeResult, error)
+}
+
+var (
+	_ SnapshotSource = (*config.Store)(nil)
+	_ Invoker        = (*dispatch.Engine)(nil)
+)
+
 func (h *hookService) Invoke(ctx context.Context, req *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
-	snap := h.store.SnapshotFor(req.GetCwd(), req.GetProjectRoot())
+	snap := h.snap.SnapshotFor(req.GetCwd(), req.GetProjectRoot())
 	resp := &agentdv1.InvokeResponse{
 		Config: &agentdv1.ConfigGeneration{
 			Generation:  snap.Generation,
