@@ -38,3 +38,4 @@ release:
   draft: false
   prerelease: auto
   mode: replace
+  replace_existing_artifacts: true
