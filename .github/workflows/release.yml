@@ -18,10 +18,14 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26.x"
+      - name: Release notes from CHANGELOG
+        run: |
+          chmod +x scripts/release-notes.sh
+          ./scripts/release-notes.sh "${GITHUB_REF_NAME}" > /tmp/release-notes.md
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean --release-notes-file /tmp/release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
