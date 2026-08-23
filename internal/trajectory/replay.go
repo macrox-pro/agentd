@@ -22,7 +22,7 @@ type ReplayOptions struct {
 	SessionID    string
 	Seq          uint64 // 0 = all hook/invoked with Raw
 	Snap         *config.Snapshot
-	Engine       *dispatch.Engine
+	Engine       dispatch.Invoker
 }
 
 // ReplayHit is one replayed hook/invoked event.
@@ -148,7 +148,7 @@ func eventProviderProto(name string) (agentdv1.Provider, error) {
 	return id.Proto()
 }
 
-func invocationModeFromString(mode, provider string) agentdv1.InvocationMode {
+func invocationModeFromString(mode, providerName string) agentdv1.InvocationMode {
 	switch strings.ToLower(strings.TrimSpace(mode)) {
 	case "argv":
 		return agentdv1.InvocationMode_INVOCATION_MODE_ARGV
@@ -157,7 +157,7 @@ func invocationModeFromString(mode, provider string) agentdv1.InvocationMode {
 	case "stdin":
 		return agentdv1.InvocationMode_INVOCATION_MODE_STDIN
 	default:
-		if CanonicalProvider(provider) == "cursor" {
+		if CanonicalProvider(providerName) == string(provider.Cursor) {
 			return agentdv1.InvocationMode_INVOCATION_MODE_ARGV
 		}
 		return agentdv1.InvocationMode_INVOCATION_MODE_STDIN

@@ -8,7 +8,11 @@
 // Use ParseFilter for optional filters with an explicit flag-set bit.
 // Use Lookup for lenient normalization of known ids only.
 //
-// Hot path: other.
+// Invariants:
+//   - Invoke uses FromProto after the proto enum is validated; Parse is for CLI and strict entrypoints.
+//
+// Entry: Parse, ParseFilter, Lookup, FromProto, ID.Proto, ID.Agenthooks.
+// See DESIGN.md §1.5 (other), CONVENTIONS.md § Provider identity.
 package provider
 
 import (

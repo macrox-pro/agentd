@@ -160,6 +160,19 @@ When `trajectory.enabled`, `HookService.Invoke` also enqueues session ledger rec
 
 Sync pipeline returns before async workers finish. Async failure does not change sync decision.
 
+### Package tags
+
+| Package | Hot path | Role |
+|---------|----------|------|
+| `internal/hookedge` | `invoke_sync` | Provider codecs + wire I/O |
+| `internal/server` | `invoke_sync` | Thin gRPC mapping to Engine / Snapshot |
+| `internal/dispatch` | `invoke_sync`, `async_side` | Route match, Engine, queue, session lock |
+| `internal/dispatch/targets` | `invoke_sync`, `async_side` | Sync/Async target adapters via factory |
+| `internal/guard` | `invoke_sync` | secrets/shell/mcp/paths checks |
+| `internal/config` | `config_reload` | Merge/compile; hot path reads Snapshot only |
+| `internal/trajectory` | `async_side` | Session ledger append, persist, Hub, replay/fork |
+| `internal/provider` | `other` | Canonical ids; Invoke uses `FromProto`, CLI uses `Parse` |
+
 ---
 
 ## 2. Hook Dispatch Engine

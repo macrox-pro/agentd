@@ -89,7 +89,8 @@ func TestMapCodexRolloutLineTable(t *testing.T) {
 			path := filepath.Join(dir, "t.jsonl")
 			var body strings.Builder
 			for _, line := range tt.lines {
-				body.WriteString(line + "\n")
+				body.WriteString(line)
+				body.WriteByte('\n')
 			}
 			require.NoError(t, os.WriteFile(path, []byte(body.String()), 0o600), "write %s", tt.name)
 

@@ -10,13 +10,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
 func TestAppendImportedPreservesHookSeq(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
-	key := trajectory.SessionKey{Provider: "claude-code", SessionID: "s1"}
+	key := trajectory.SessionKey{Provider: provider.ClaudeCode, SessionID: "s1"}
 	path := trajectory.SessionFilePath(root, key)
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
 	hookLine := `{"seq":1,"type":"hook/invoked","source":"hook","session_id":"s1","provider":"claude-code","data":{"tool_use_id":"toolu_01"}}`
@@ -45,7 +46,7 @@ func TestAppendImportedPreservesHookSeq(t *testing.T) {
 func TestShowExportIncludesTranscriptEvents(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
-	key := trajectory.SessionKey{Provider: "claude-code", SessionID: "s2"}
+	key := trajectory.SessionKey{Provider: provider.ClaudeCode, SessionID: "s2"}
 	imported := []trajectory.Event{{
 		Type:   trajectory.TypeTranscriptThinking,
 		Source: trajectory.SourceTranscript,

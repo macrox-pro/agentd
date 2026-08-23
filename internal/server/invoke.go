@@ -14,10 +14,8 @@ type SnapshotSource interface {
 	SnapshotFor(cwd, projectRoot string) *config.Snapshot
 }
 
-// Invoker runs the dispatch sync/async pipeline for one hook invocation.
-type Invoker interface {
-	Invoke(ctx context.Context, in dispatch.InvokeInput) (dispatch.InvokeResult, error)
-}
+// Invoker is the dispatch sync/async pipeline port used by HookService.
+type Invoker = dispatch.Invoker
 
 var (
 	_ SnapshotSource = (*config.Store)(nil)
@@ -25,13 +23,17 @@ var (
 )
 
 func (h *hookService) Invoke(ctx context.Context, req *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
-	snap := h.snap.SnapshotFor(req.GetCwd(), req.GetProjectRoot())
 	resp := &agentdv1.InvokeResponse{
-		Config: &agentdv1.ConfigGeneration{
-			Generation:  snap.Generation,
-			Fingerprint: snap.Fingerprint,
-		},
 		Decision: dispatch.NeutralDecision(),
+		Config:   &agentdv1.ConfigGeneration{},
+	}
+	if h.snap == nil {
+		return resp, nil
+	}
+	snap := h.snap.SnapshotFor(req.GetCwd(), req.GetProjectRoot())
+	resp.Config = &agentdv1.ConfigGeneration{
+		Generation:  snap.Generation,
+		Fingerprint: snap.Fingerprint,
 	}
 	if h.engine == nil {
 		return resp, nil

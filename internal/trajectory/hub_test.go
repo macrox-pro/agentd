@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
@@ -173,7 +174,7 @@ func TestSubscribeDoesNotBlockEnqueue(t *testing.T) {
 	_, unregister := hub.Register(trajectory.SubscribeFilter{})
 	t.Cleanup(unregister)
 
-	key := trajectory.SessionKey{Provider: "cursor", SessionID: "block-test"}
+	key := trajectory.SessionKey{Provider: provider.Cursor, SessionID: "block-test"}
 	done := make(chan struct{})
 	go func() {
 		for range 200 {
@@ -192,7 +193,7 @@ func TestSubscribeDoesNotBlockEnqueue(t *testing.T) {
 func TestSchemaVersionOnAppend(t *testing.T) {
 	t.Parallel()
 	store := trajectory.NewStore()
-	key := trajectory.SessionKey{Provider: "claude-code", SessionID: "schema"}
+	key := trajectory.SessionKey{Provider: provider.ClaudeCode, SessionID: "schema"}
 	appended := store.Append(key, []trajectory.Event{{
 		Type:   trajectory.TypeHookInvoked,
 		Source: trajectory.SourceHook,

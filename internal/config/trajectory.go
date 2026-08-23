@@ -92,7 +92,10 @@ func parseTrajectory(in *fileTrajectory, base TrajectoryConfig) (TrajectoryConfi
 			if prov == nil {
 				continue
 			}
-			key := canonicalImportProvider(name)
+			key := name
+			if id, ok := provider.Lookup(name); ok {
+				key = string(id)
+			}
 			cur := merged[key]
 			if prov.Enabled != nil {
 				cur.Enabled = *prov.Enabled
@@ -105,13 +108,6 @@ func parseTrajectory(in *fileTrajectory, base TrajectoryConfig) (TrajectoryConfi
 		out.Import = merged
 	}
 	return out, nil
-}
-
-func canonicalImportProvider(name string) string {
-	if id, ok := provider.Lookup(name); ok {
-		return string(id)
-	}
-	return name
 }
 
 func mergeTrajectoryPtr(base, user *fileTrajectory) *fileTrajectory {

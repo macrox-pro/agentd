@@ -3,10 +3,10 @@ package config
 import "fmt"
 
 const (
-	guardNameSecrets = "secrets"
-	guardNameShell   = "shell"
-	guardNameMCP     = "mcp"
-	guardNamePaths   = "paths"
+	GuardSecrets = "secrets"
+	GuardShell   = "shell"
+	GuardMCP     = "mcp"
+	GuardPaths   = "paths"
 )
 
 type GuardAction string
@@ -53,7 +53,7 @@ type Guards struct {
 
 func knownGuardName(name string) bool {
 	switch name {
-	case guardNameSecrets, guardNameShell, guardNameMCP, guardNamePaths:
+	case GuardSecrets, GuardShell, GuardMCP, GuardPaths:
 		return true
 	default:
 		return false
@@ -64,16 +64,16 @@ func knownGuardName(name string) bool {
 func enabledGuardNames(g Guards) []string {
 	var out []string
 	if g.Secrets.Enabled {
-		out = append(out, guardNameSecrets)
+		out = append(out, GuardSecrets)
 	}
 	if g.Shell.Enabled {
-		out = append(out, guardNameShell)
+		out = append(out, GuardShell)
 	}
 	if g.MCP.Enabled {
-		out = append(out, guardNameMCP)
+		out = append(out, GuardMCP)
 	}
 	if g.Paths.Enabled {
-		out = append(out, guardNamePaths)
+		out = append(out, GuardPaths)
 	}
 	return out
 }

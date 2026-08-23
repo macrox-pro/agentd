@@ -53,7 +53,7 @@ func TestImportSessionFacade(t *testing.T) {
 		assert.Greater(t, out.Imported, 0)
 
 		ledger := trajectory.SessionFilePath(sessionsRoot, trajectory.SessionKey{
-			Provider:  "claude-code",
+			Provider:  provider.ClaudeCode,
 			SessionID: sid,
 		})
 		_, err = os.Stat(ledger)

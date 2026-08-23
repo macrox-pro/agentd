@@ -11,13 +11,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
 func TestStoreContiguousSeq(t *testing.T) {
 	t.Parallel()
 	store := trajectory.NewStore()
-	key := trajectory.SessionKey{Provider: "claude-code", SessionID: "s1"}
+	key := trajectory.SessionKey{Provider: provider.ClaudeCode, SessionID: "s1"}
 	ev := []trajectory.Event{{Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, TS: time.Now().UTC()}}
 	for i := range 3 {
 		got := store.Append(key, ev)
@@ -34,7 +35,7 @@ func TestStoreContiguousSeq(t *testing.T) {
 func TestStoreAppendImmutable(t *testing.T) {
 	t.Parallel()
 	store := trajectory.NewStore()
-	key := trajectory.SessionKey{Provider: "cursor", SessionID: "s2"}
+	key := trajectory.SessionKey{Provider: provider.Cursor, SessionID: "s2"}
 	appended := store.Append(key, []trajectory.Event{{
 		Type:   trajectory.TypeHookInvoked,
 		Source: trajectory.SourceHook,
@@ -64,7 +65,7 @@ func TestTruncateMaxEventBytes(t *testing.T) {
 func TestSessionOpenOnce(t *testing.T) {
 	t.Parallel()
 	store := trajectory.NewStore()
-	key := trajectory.SessionKey{Provider: "gemini", SessionID: "s3"}
+	key := trajectory.SessionKey{Provider: provider.Gemini, SessionID: "s3"}
 	open := trajectory.Event{Type: trajectory.TypeSessionOpen, Source: trajectory.SourceSystem, TS: time.Now().UTC()}
 	store.Append(key, []trajectory.Event{open, {Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, TS: time.Now().UTC()}})
 	store.Append(key, []trajectory.Event{open, {Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, TS: time.Now().UTC()}})
@@ -83,7 +84,7 @@ func TestQueueOverflowDrop(t *testing.T) {
 	store := trajectory.NewStore()
 	q := trajectory.NewQueue(1, store, nil, nil, nil)
 	defer q.Close(0)
-	key := trajectory.SessionKey{Provider: "codex", SessionID: "s4"}
+	key := trajectory.SessionKey{Provider: provider.Codex, SessionID: "s4"}
 	ev := []trajectory.Event{{Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, TS: time.Now().UTC()}}
 	var dropped atomic.Bool
 	var wg sync.WaitGroup

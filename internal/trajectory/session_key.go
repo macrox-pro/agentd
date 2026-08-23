@@ -12,7 +12,7 @@ import (
 
 // SessionKey identifies one ledger stream.
 type SessionKey struct {
-	Provider    string
+	Provider    provider.ID
 	SessionID   string
 	ProjectRoot string
 }
@@ -21,23 +21,27 @@ func (k SessionKey) String() string {
 	return fmt.Sprintf("%s:%s:%s", k.Provider, k.SessionID, k.ProjectRoot)
 }
 
-// CanonicalProvider normalizes CLI/provider ids for ledger keys.
+// CanonicalProvider normalizes CLI/provider ids for ledger keys and path filters.
 func CanonicalProvider(name string) string {
+	return string(canonicalID(name))
+}
+
+func canonicalID(name string) provider.ID {
 	if id, ok := provider.Lookup(name); ok {
-		return string(id)
+		return id
 	}
-	return strings.TrimSpace(name)
+	return provider.ID(strings.TrimSpace(name))
 }
 
 // ResolveSessionKey builds a stable ledger key; empty session_id gets a weak synthetic id.
-func ResolveSessionKey(provider, sessionID, projectRoot, cwd string) SessionKey {
-	prov := CanonicalProvider(provider)
+func ResolveSessionKey(providerName, sessionID, projectRoot, cwd string) SessionKey {
+	id := canonicalID(providerName)
 	sid := strings.TrimSpace(sessionID)
 	if sid == "" {
-		sid = weakSessionID(prov, projectRoot, cwd)
+		sid = weakSessionID(string(id), projectRoot, cwd)
 	}
 	return SessionKey{
-		Provider:    prov,
+		Provider:    id,
 		SessionID:   sid,
 		ProjectRoot: strings.TrimSpace(projectRoot),
 	}
@@ -48,8 +52,8 @@ func ResolveSessionKeyID(id provider.ID, sessionID, projectRoot, cwd string) Ses
 	return ResolveSessionKey(string(id), sessionID, projectRoot, cwd)
 }
 
-func weakSessionID(provider, projectRoot, cwd string) string {
-	sum := sha256.Sum256([]byte(provider + "\x00" + projectRoot + "\x00" + cwd))
+func weakSessionID(providerName, projectRoot, cwd string) string {
+	sum := sha256.Sum256([]byte(providerName + "\x00" + projectRoot + "\x00" + cwd))
 	return "weak-" + hex.EncodeToString(sum[:8])
 }
 

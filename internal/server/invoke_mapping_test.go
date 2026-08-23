@@ -71,6 +71,11 @@ func TestHookServiceInvokeMapping(t *testing.T) {
 		wantReason string
 	}{
 		{
+			name:     "snap_nil_neutral",
+			wantKind: agentdv1.DecisionKind_DECISION_KIND_NO_DECISION,
+			wantGen:  0,
+		},
+		{
 			name:     "engine_nil_neutral",
 			snap:     fakeSnapshotSource{snap: baseSnap},
 			wantKind: agentdv1.DecisionKind_DECISION_KIND_NO_DECISION,

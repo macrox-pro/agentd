@@ -26,8 +26,8 @@ func ForkSession(root string, src SessionKey, newSessionID string, atSeq uint64)
 	if root == "" {
 		root = DefaultSessionsDir()
 	}
-	src.Provider = CanonicalProvider(src.Provider)
-	srcPath, err := FindSessionPath(root, src.Provider, src.SessionID)
+	src.Provider = canonicalID(string(src.Provider))
+	srcPath, err := FindSessionPath(root, string(src.Provider), src.SessionID)
 	if err != nil {
 		return ForkResult{}, err
 	}
@@ -39,7 +39,7 @@ func ForkSession(root string, src SessionKey, newSessionID string, atSeq uint64)
 		return ForkResult{}, ErrSourceSessionEmpty
 	}
 
-	dst := ResolveSessionKey(src.Provider, newSessionID, src.ProjectRoot, "")
+	dst := ResolveSessionKey(string(src.Provider), newSessionID, src.ProjectRoot, "")
 	dstPath := SessionFilePath(root, dst)
 	if _, err := os.Stat(dstPath); err == nil {
 		return ForkResult{}, fmt.Errorf("%w: %q", ErrSessionAlreadyExists, newSessionID)
@@ -67,7 +67,7 @@ func ForkSession(root string, src SessionKey, newSessionID string, atSeq uint64)
 		c.Seq = nextSeq
 		nextSeq++
 		c.SessionID = dst.SessionID
-		c.Provider = dst.Provider
+		c.Provider = string(dst.Provider)
 		copied = append(copied, c)
 	}
 	if len(copied) == 0 {
@@ -75,12 +75,12 @@ func ForkSession(root string, src SessionKey, newSessionID string, atSeq uint64)
 	}
 
 	forkData := mustJSON(SessionForkData{
-		ParentProvider: src.Provider,
+		ParentProvider: string(src.Provider),
 		ParentSession:  src.SessionID,
 		BoundarySeq:    boundary,
 	})
 	seedData := mustJSON(SessionEndSeedData{
-		ParentProvider: src.Provider,
+		ParentProvider: string(src.Provider),
 		ParentSession:  src.SessionID,
 		BoundarySeq:    boundary,
 	})
@@ -90,7 +90,7 @@ func ForkSession(root string, src SessionKey, newSessionID string, atSeq uint64)
 			Type:      TypeSessionFork,
 			Source:    SourceSystem,
 			TS:        now,
-			Provider:  dst.Provider,
+			Provider:  string(dst.Provider),
 			SessionID: dst.SessionID,
 			Data:      forkData,
 			Ignorable: true,
@@ -100,7 +100,7 @@ func ForkSession(root string, src SessionKey, newSessionID string, atSeq uint64)
 			Type:      TypeSessionEndSeed,
 			Source:    SourceSystem,
 			TS:        now,
-			Provider:  dst.Provider,
+			Provider:  string(dst.Provider),
 			SessionID: dst.SessionID,
 			Data:      seedData,
 			Ignorable: true,
@@ -111,7 +111,7 @@ func ForkSession(root string, src SessionKey, newSessionID string, atSeq uint64)
 		return ForkResult{}, fmt.Errorf("write forked session: %w", err)
 	}
 	return ForkResult{
-		Provider:      dst.Provider,
+		Provider:      string(dst.Provider),
 		ParentSession: src.SessionID,
 		NewSessionID:  dst.SessionID,
 		BoundarySeq:   boundary,

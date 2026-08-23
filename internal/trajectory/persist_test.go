@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/macrox-pro/agentd/internal/provider"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 )
 
@@ -30,9 +31,9 @@ func TestPersisterConcurrentSchedule(t *testing.T) {
 	for range 50 {
 		for _, prov := range providers {
 			wg.Add(1)
-			go func(provider string) {
+			go func(providerName string) {
 				defer wg.Done()
-				key := trajectory.SessionKey{Provider: provider, SessionID: "s-" + provider}
+				key := trajectory.SessionKey{Provider: provider.ID(providerName), SessionID: "s-" + providerName}
 				persist.Schedule(key, ev)
 			}(prov)
 		}
@@ -50,11 +51,11 @@ func TestPersisterConcurrentSchedule(t *testing.T) {
 func TestAppendEventsNoLeakedGoroutine(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
-	key := trajectory.SessionKey{Provider: "cursor", SessionID: "append-sync"}
+	key := trajectory.SessionKey{Provider: provider.Cursor, SessionID: "append-sync"}
 	ev := []trajectory.Event{{
 		Type:      trajectory.TypeHookInvoked,
 		Source:    trajectory.SourceHook,
-		Provider:  key.Provider,
+		Provider:  string(key.Provider),
 		SessionID: key.SessionID,
 		TS:        time.Now().UTC(),
 		Seq:       1,
@@ -76,7 +77,7 @@ func TestPersisterRequeuesFailedFlush(t *testing.T) {
 	require.NoError(t, os.WriteFile(root, []byte("x"), 0o600))
 
 	p := trajectory.NewPersister(root, nil)
-	key := trajectory.SessionKey{Provider: "cursor", SessionID: "s1"}
+	key := trajectory.SessionKey{Provider: provider.Cursor, SessionID: "s1"}
 	p.Schedule(key, []trajectory.Event{{
 		Type:   trajectory.TypeHookInvoked,
 		Source: trajectory.SourceHook,

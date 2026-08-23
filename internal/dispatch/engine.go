@@ -11,6 +11,7 @@ import (
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/dispatch/targets"
+	"github.com/macrox-pro/agentd/internal/provider"
 )
 
 // Engine routes hook invocations through sync and async pipelines.
@@ -52,6 +53,13 @@ type InvokeInput struct {
 	ProjectRoot    string
 }
 
+// Invoker runs the sync/async dispatch pipeline for one hook invocation.
+type Invoker interface {
+	Invoke(ctx context.Context, in InvokeInput) (InvokeResult, error)
+}
+
+var _ Invoker = (*Engine)(nil)
+
 // InvokeResult is the sync decision plus async enqueue count.
 type InvokeResult struct {
 	Decision             *agentdv1.Decision
@@ -68,7 +76,8 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 	if err != nil {
 		return InvokeResult{}, err
 	}
-	providerName, _ := providerFromProto(in.Provider)
+	id, _ := provider.FromProto(in.Provider)
+	providerName := string(id)
 	route := MatchRoute(in.Snap.Routes, typed)
 	if route == nil {
 		meta := MetaFromTyped(providerName, typed, false)

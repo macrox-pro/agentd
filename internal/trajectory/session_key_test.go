@@ -1,6 +1,8 @@
 package trajectory_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,13 +42,13 @@ func TestCanonicalProvider(t *testing.T) {
 func TestResolveSessionKeyUsesCanonicalProvider(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name      string
-		provider  string
-		sessionID string
-		project   string
-		cwd       string
-		wantProv  string
-		wantSID   string
+		name       string
+		provider   string
+		sessionID  string
+		project    string
+		cwd        string
+		wantProv   provider.ID
+		wantSID    string
 		weakStable bool
 	}{
 		{
@@ -54,7 +56,7 @@ func TestResolveSessionKeyUsesCanonicalProvider(t *testing.T) {
 			provider:  "Claude-Code",
 			sessionID: "s1",
 			project:   "/proj",
-			wantProv:  "claude-code",
+			wantProv:  provider.ClaudeCode,
 			wantSID:   "s1",
 		},
 		{
@@ -62,7 +64,7 @@ func TestResolveSessionKeyUsesCanonicalProvider(t *testing.T) {
 			provider:  "kimicode",
 			sessionID: "s2",
 			project:   "/proj",
-			wantProv:  "kimi-code",
+			wantProv:  provider.KimiCode,
 			wantSID:   "s2",
 		},
 		{
@@ -71,8 +73,17 @@ func TestResolveSessionKeyUsesCanonicalProvider(t *testing.T) {
 			sessionID:  "",
 			project:    "/proj",
 			cwd:        "/cwd",
-			wantProv:   "kimi-code",
+			wantProv:   provider.KimiCode,
 			weakStable: true,
+		},
+		{
+			name:      "weak id hash unchanged",
+			provider:  "kimi-code",
+			sessionID: "",
+			project:   "/proj",
+			cwd:       "/cwd",
+			wantProv:  provider.KimiCode,
+			wantSID:   expectedWeakSessionID("kimi-code", "/proj", "/cwd"),
 		},
 	}
 	for _, tt := range tests {
@@ -92,9 +103,14 @@ func TestResolveSessionKeyUsesCanonicalProvider(t *testing.T) {
 	}
 }
 
+func expectedWeakSessionID(providerName, projectRoot, cwd string) string {
+	sum := sha256.Sum256([]byte(providerName + "\x00" + projectRoot + "\x00" + cwd))
+	return "weak-" + hex.EncodeToString(sum[:8])
+}
+
 func TestResolveSessionKeyID(t *testing.T) {
 	t.Parallel()
 	key := trajectory.ResolveSessionKeyID(provider.Cursor, "s1", "/proj", "")
-	assert.Equal(t, "cursor", key.Provider)
+	assert.Equal(t, provider.Cursor, key.Provider)
 	assert.Equal(t, "s1", key.SessionID)
 }

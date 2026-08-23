@@ -21,5 +21,5 @@ func DefaultSessionsDir() string {
 
 // SessionFilePath returns the JSONL path for one session key.
 func SessionFilePath(root string, key SessionKey) string {
-	return filepath.Join(root, key.Provider, SessionFileName(key.SessionID))
+	return filepath.Join(root, string(key.Provider), SessionFileName(key.SessionID))
 }

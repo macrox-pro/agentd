@@ -3,7 +3,7 @@
 // Owns: event catalog, in-memory store, async JSONL persist, live Hub fan-out,
 // export/list/search, import append, policy replay, log fork.
 // Must not: hook wire decode (hookedge), config compile (config), or own route
-// matching. ReplayPolicy accepts an injected *dispatch.Engine for offline policy
+// matching. ReplayPolicy accepts an injected dispatch.Invoker for offline policy
 // dry-run only (does not compile routes or match on the live hot path).
 //
 // Invariants:

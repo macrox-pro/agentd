@@ -36,7 +36,7 @@ func AppendImported(root string, key SessionKey, events []Event) error {
 		if events[i].TS.IsZero() {
 			events[i].TS = now
 		}
-		events[i].Provider = key.Provider
+		events[i].Provider = string(key.Provider)
 		events[i].SessionID = key.SessionID
 		if events[i].ProjectRoot == "" {
 			events[i].ProjectRoot = key.ProjectRoot

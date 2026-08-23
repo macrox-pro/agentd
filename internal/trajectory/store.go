@@ -34,7 +34,7 @@ func (s *Store) Append(key SessionKey, events []Event) []Event {
 	out := make([]Event, 0, len(events))
 	for _, e := range events {
 		e.SessionID = key.SessionID
-		e.Provider = key.Provider
+		e.Provider = string(key.Provider)
 		e.ProjectRoot = key.ProjectRoot
 		if e.Type == TypeSessionOpen {
 			if log.opened {
