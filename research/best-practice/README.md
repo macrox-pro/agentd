@@ -55,8 +55,6 @@ Structured verbatim excerpts from Go best-practice sources listed in [smallnest/
 ## Meta
 
 - Source registry: [SOURCES.md](./SOURCES.md)
-- Agent continuation: [AGENT_HANDOFF.md](./AGENT_HANDOFF.md)
-- File checklist: [MANIFEST.md](./MANIFEST.md)
 - Topic file pattern: [TEMPLATE.md](./TEMPLATE.md)
 
 ## Invariants
