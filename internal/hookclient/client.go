@@ -3,7 +3,7 @@
 // Owns: dial transport, HookService/ConfigService/SessionService RPC wrappers.
 // Must not: hook wire decode/encode (hookedge).
 //
-// Entry: New, Client.Invoke, Client.Subscribe.
+// Entry: Dial, DialReady, Client.Invoke, Client.Subscribe, Client.Health.
 // See DESIGN.md §1.5 (invoke_sync, async_side).
 package hookclient
 
@@ -31,6 +31,8 @@ type Client struct {
 }
 
 // Dial connects to the daemon socket.
+// Note: gRPC dial is lazy — prefer DialReady on the hook path when the process
+// must fail closed/open immediately if the daemon is unreachable.
 func Dial(ctx context.Context, socket string) (*Client, error) {
 	if socket == "" {
 		socket = transport.DefaultSocketPath()
@@ -52,6 +54,20 @@ func Dial(ctx context.Context, socket string) (*Client, error) {
 		config:  agentdv1.NewConfigServiceClient(conn),
 		session: agentdv1.NewSessionServiceClient(conn),
 	}, nil
+}
+
+// DialReady dials and confirms Health. Use on the hook hot path so an unreachable
+// daemon is detected before the first Invoke (grpc.NewClient connects lazily).
+func DialReady(ctx context.Context, socket string) (*Client, error) {
+	cli, err := Dial(ctx, socket)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := cli.Health(ctx); err != nil {
+		_ = cli.Close()
+		return nil, fmt.Errorf("daemon health: %w", err)
+	}
+	return cli, nil
 }
 
 // Close closes the underlying connection.

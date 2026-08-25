@@ -111,6 +111,7 @@ agentd daemon status
 version: 1
 policy:
   fail: fail_closed
+  # offline defaults to fail_open — agents keep working if the daemon is down
 guards:
   secrets:
     enabled: true

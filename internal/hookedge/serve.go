@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
+	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/decision"
 	"github.com/macrox-pro/agentd/internal/hookclient"
 	"github.com/macrox-pro/agentd/internal/provider"
@@ -43,12 +44,19 @@ func Serve(ctx context.Context, opts Options) int {
 		return 1
 	}
 
-	cli, err := hookclient.Dial(ctx, opts.Socket)
+	cli, err := hookclient.DialReady(ctx, opts.Socket)
 	if err != nil {
-		fmt.Fprintln(stderr, "daemon not running")
-		return 1
+		if resolveOffline(opts, "", stderr) == config.FailClosed {
+			return 1
+		}
+		return serveOffline(ctx, opts, stdin, stdout, stderr)
 	}
 	defer cli.Close()
+
+	var (
+		offlineMode config.FailMode
+		haveOffline bool
+	)
 
 	r := agenthooks.New(agenthooks.WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil))))
 	r.Use(func(hctx context.Context, typed any, _ agenthooks.Next) (agenthooks.Decision, error) {
@@ -72,10 +80,25 @@ func Serve(ctx context.Context, opts Options) int {
 		}
 		resp, err := cli.Invoke(invokeCtx, req)
 		if err != nil {
-			return nil, fmt.Errorf("daemon invoke: %w", err)
+			if !haveOffline {
+				offlineMode = resolveOffline(opts, ResolveCWD(base.Raw), stderr)
+				haveOffline = true
+			}
+			if offlineMode == config.FailClosed {
+				return nil, fmt.Errorf("daemon invoke: %w", err)
+			}
+			return agenthooks.NoDecision(), nil
 		}
 		return decision.FromProto(resp.GetDecision()), nil
 	})
 
+	return r.Run(ctx, []string{"serve", "--provider=opencode"}, stdin, stdout, stderr)
+}
+
+func serveOffline(ctx context.Context, opts Options, stdin io.Reader, stdout, stderr io.Writer) int {
+	r := agenthooks.New(agenthooks.WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil))))
+	r.Use(func(context.Context, any, agenthooks.Next) (agenthooks.Decision, error) {
+		return agenthooks.NoDecision(), nil
+	})
 	return r.Run(ctx, []string{"serve", "--provider=opencode"}, stdin, stdout, stderr)
 }

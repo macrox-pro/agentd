@@ -6,7 +6,12 @@ Failures seen in the field and how agentd behaves.
 
 ## Daemon not running
 
-`hook run|notify|serve` prints `daemon not running` on stderr and exits **1**.
+`hook run|notify|serve` prints `daemon not running` on stderr, then applies `policy.offline` from local config (defaults ⊕ user ⊕ project ⊕ runtime).
+
+| `policy.offline` | Behavior |
+|------------------|----------|
+| `fail_open` (default) | Exit **0**; sync hooks encode a neutral decision so the agent continues |
+| `fail_closed` | Exit **1** (blocks when provider hooks are fail-closed) |
 
 ```bash
 agentd daemon start
@@ -39,7 +44,7 @@ Codex/Kimi no-op is **empty stdout**, exit 0 — not `{}`. Do not treat empty as
 
 ## Offline policy field
 
-`policy.offline` is parsed and stored; the hook edge does **not** consult it today. Unreachable daemon → exit 1 as above.
+`policy.offline` controls soft vs hard failure when the daemon is unreachable (see [Daemon not running](#daemon-not-running)). Invalid local YAML is treated as `fail_closed`.
 
 ## Not in v1
 

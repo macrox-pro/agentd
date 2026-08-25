@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
+	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/hookclient"
 	"github.com/macrox-pro/agentd/internal/provider"
 )
@@ -40,6 +41,7 @@ func Notify(ctx context.Context, opts Options) int {
 		return 1
 	}
 	payload := []byte(opts.PayloadArg)
+	cwd := ResolveCWD(payload)
 
 	invokeCtx := ctx
 	var cancel context.CancelFunc
@@ -48,10 +50,9 @@ func Notify(ctx context.Context, opts Options) int {
 		defer cancel()
 	}
 
-	cli, err := hookclient.Dial(invokeCtx, opts.Socket)
+	cli, err := hookclient.DialReady(invokeCtx, opts.Socket)
 	if err != nil {
-		fmt.Fprintln(stderr, "daemon not running")
-		return 1
+		return notifyOffline(opts, cwd, stderr)
 	}
 	defer cli.Close()
 
@@ -64,8 +65,15 @@ func Notify(ctx context.Context, opts Options) int {
 		req.Deadline = timestamppb.New(time.Now().Add(opts.Timeout))
 	}
 
+	// Invoke can still fail if the daemon dies after DialReady Health.
 	if _, err := cli.Invoke(invokeCtx, req); err != nil {
-		fmt.Fprintln(stderr, "daemon not running")
+		return notifyOffline(opts, cwd, stderr)
+	}
+	return 0
+}
+
+func notifyOffline(opts Options, cwd string, stderr io.Writer) int {
+	if resolveOffline(opts, cwd, stderr) == config.FailClosed {
 		return 1
 	}
 	return 0

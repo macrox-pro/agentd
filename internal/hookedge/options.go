@@ -8,6 +8,7 @@ import (
 // Options configures hookedge Run, Notify, and Serve.
 type Options struct {
 	Socket      string
+	ConfigPath  string
 	Provider    string
 	ArgvPayload bool
 	Timeout     time.Duration

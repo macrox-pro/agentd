@@ -4,7 +4,7 @@
 
 How to install agentd hooks into each supported coding agent, which CLI entrypoint it uses, and **provider-specific quirks** (capabilities, wire, install paths).
 
-**Prerequisite:** `agentd daemon start` ([Getting started](./getting-started.md)).
+**Prerequisite:** Prefer `agentd daemon start` ([Getting started](./getting-started.md)). When the daemon is down, installed hooks apply `policy.offline` (default `fail_open`) so agents are not blocked.
 
 ## Agent guides
 

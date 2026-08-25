@@ -22,7 +22,7 @@ func defaultPolicy() Policy {
 		Fail:        FailClosed,
 		Unsupported: UnsupportedDegrade,
 		AskFallback: AskFallbackDeny,
-		Offline:     FailClosed,
+		Offline:     FailOpen,
 	}
 }
 

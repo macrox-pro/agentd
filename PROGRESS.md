@@ -4,6 +4,44 @@
 
 ## Current phase
 
+Phase: **policy.offline hook edge done** | Last: DialReady + Serve offline cache | Next: **none**
+
+### policy.offline hook edge (2026-08-25)
+
+**Problem:** Installed hooks block the agent when agentd is down because hook CLI always exits 1; policy.offline is parsed but unused.
+
+**Hot path:** invoke_sync (disk I/O only on DialReady/Invoke failure; live Invoke stays Store.Current-only in daemon).
+
+**Invariants:**
+- Never write debug to stdout on the hook path.
+- No Runner.Decide / guards / route compile on hookedge.
+- Default Offline is fail_open (defaults.go).
+- Offline mode = defaults ⊕ user ⊕ project(cwd) ⊕ runtime via OfflineFor.
+- Hook entrypoints use `hookclient.DialReady` (lazy gRPC + Health).
+- fail_open -> exit 0 + encode Neutral (Run/Serve) or exit 0 (Notify); stderr still prints daemon not running.
+- fail_closed OR OfflineFor error -> stderr daemon not running, exit 1.
+- Serve caches offline mode after the first mid-stream Invoke failure (stderr once).
+
+**Corner cases (`tt.name`):**
+- config OfflineFor: `default fail_open` | `user fail_closed` | `project overrides` | `runtime overrides` | `missing user file` | `invalid yaml`
+- run: `daemon down default fail_open` | `daemon down fail_closed` | `daemon down project fail_closed` | `daemon down invalid config`
+- notify: `daemon down default fail_open` | `daemon down fail_closed`
+- serve: `daemon down default fail_open` | `daemon down fail_closed` | `invoke fail caches offline once`
+- hookclient Dial: `dial ready missing socket` | `dial ready healthy`
+
+**Out of scope:** offline state-dir cache; auto-start daemon; change install FailClosed; proto/gen; change policy.fail default; new e2e script; OfflineFor(ctx) (LoadWith ignores ctx).
+
+**Done:**
+- `internal/config`: `OfflineFor`, default `Offline: FailOpen`, `offline_test.go`
+- `internal/hookclient`: `DialReady` (+ tests)
+- `internal/hookedge`: `resolveOffline`, `runOffline` / `notifyOffline` / `serveOffline`; Serve mid-Invoke offline cache
+- `cmd/hook.go` ConfigPath + Long texts
+- AGENTS.md / DESIGN §1.5 + §6; docs EN/RU + README
+
+**Files:** `internal/config/{defaults,offline,offline_test,config,compile_test}.go`, `internal/hookclient/{client,client_test}.go`, `internal/hookedge/{hookedge,encode,options,offline,run,notify,serve,*_test}.go`, `cmd/hook.go`, `cmd/hook_run.go`, `AGENTS.md`, `DESIGN.md`, `docs/en|ru/{configuration,troubleshooting,cli,getting-started,providers}.md`, `README.md`, `PROGRESS.md`
+
+---
+
 Phase: **CLI version** | Last: `agentd version` + daemon status running-process version | Next: **none**
 
 ### CLI version (2026-08-23)

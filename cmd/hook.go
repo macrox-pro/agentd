@@ -22,7 +22,9 @@ var hookCmd = &cobra.Command{
 
 Install "agentd hook run" (or notify/serve where needed) in your agent's
 hook settings. These commands forward each event to the running agentd
-service and print the response the agent expects.`,
+service and print the response the agent expects.
+
+When the daemon is unreachable, policy.offline applies (default fail_open).`,
 	Example: `  agentd hook run --provider=claude-code
   agentd hook serve --provider=opencode`,
 }
@@ -38,6 +40,7 @@ type hookCLIOpts struct {
 func runHookRun(cmd *cobra.Command, o hookCLIOpts) error {
 	code := hookedge.Run(cmd.Context(), hookedge.Options{
 		Socket:      resolveSocket(),
+		ConfigPath:  resolveConfigPath(),
 		Provider:    o.provider,
 		ArgvPayload: o.argvPayload,
 		Timeout:     o.timeout,
@@ -58,6 +61,7 @@ func runHookNotify(cmd *cobra.Command, o hookCLIOpts) error {
 	}
 	code := hookedge.Notify(cmd.Context(), hookedge.Options{
 		Socket:     resolveSocket(),
+		ConfigPath: resolveConfigPath(),
 		Provider:   o.provider,
 		Timeout:    o.timeout,
 		PayloadArg: o.payloadArg,
@@ -76,12 +80,13 @@ func runHookServe(cmd *cobra.Command, o hookCLIOpts) error {
 		provider = o.defaultProvider
 	}
 	code := hookedge.Serve(cmd.Context(), hookedge.Options{
-		Socket:   resolveSocket(),
-		Provider: provider,
-		Timeout:  o.timeout,
-		Stdin:    cmd.InOrStdin(),
-		Stdout:   cmd.OutOrStdout(),
-		Stderr:   cmd.ErrOrStderr(),
+		Socket:     resolveSocket(),
+		ConfigPath: resolveConfigPath(),
+		Provider:   provider,
+		Timeout:    o.timeout,
+		Stdin:      cmd.InOrStdin(),
+		Stdout:     cmd.OutOrStdout(),
+		Stderr:     cmd.ErrOrStderr(),
 	})
 	if code != 0 {
 		os.Exit(code)

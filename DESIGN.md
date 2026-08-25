@@ -122,6 +122,8 @@ Flow: `hook run|serve` → hookedge decode → `HookService.Invoke` → `dispatc
 
 `fail_closed` denies on guard/dispatch errors. Sync budget: `dispatch.SyncBudget` (`timeout.go`) — must fit provider hook timeout.
 
+On Dial/Invoke failure only, hookedge may read disk via `config.OfflineFor` to apply `policy.offline` (live Invoke path stays Store.Current-only in the daemon). Hook entrypoints use `hookclient.DialReady` (Dial + Health) because gRPC dial is lazy.
+
 ### config_reload
 
 fsnotify on user/project/runtime YAML → debounced reload in `config.Store` → merge → `Compile` → atomic pointer swap. Hot path: `Store.Current()` only. `SIGHUP` / runtime overlay write triggers reload; daemon does not compile config itself.
@@ -322,7 +324,7 @@ agentd
 |-------|------|
 | Persistent flags | `--config`, `--socket`, `-v` — stderr only; **never hook stdout** |
 | Hook path | Thin: decode → gRPC `Invoke` → encode; **no guards in CLI** |
-| Offline | Daemon down → `policy.offline`; never debug on stdout |
+| Offline | Daemon down → edge reads local merge for `policy.offline` (default `fail_open`); stderr still prints `daemon not running`; never debug on stdout |
 | `version` vs `daemon status` | `version` = this CLI binary; Status `version` = running daemon process |
 | `hook notify` | Codex argv JSON; always async semantics |
 | `hook serve` | OpenCode NDJSON stdio; long-lived |

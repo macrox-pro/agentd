@@ -33,9 +33,9 @@ Project files typically carry `guards` / `dispatch`. `approvals` and `blocks` us
 | `fail` | `fail_open` \| `fail_closed` | `fail_closed` |
 | `unsupported` | `degrade` \| `strict` | `degrade` |
 | `ask_fallback` | `deny` \| `no_decision` | `deny` |
-| `offline` | `fail_open` \| `fail_closed` | `fail_closed` |
+| `offline` | `fail_open` \| `fail_closed` | `fail_open` |
 
-> **Note:** Hook CLI today exits `1` with stderr `daemon not running` when the daemon is unreachable; it does not branch on `policy.offline`.
+When the daemon is unreachable, the hook edge loads local config (defaults ⊕ user ⊕ project(cwd) ⊕ runtime) and applies `policy.offline`. Default `fail_open` encodes a neutral decision (or exit 0 for notify) so agents keep working; `fail_closed` exits **1**. Stderr still prints `daemon not running` in both modes.
 
 ### async
 

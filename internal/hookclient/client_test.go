@@ -127,6 +127,28 @@ func TestHookclientDial(t *testing.T) {
 			},
 		},
 		{
+			name: "dial ready missing socket",
+			run: func(t *testing.T) {
+				t.Parallel()
+				cli, err := hookclient.DialReady(context.Background(), filepath.Join(t.TempDir(), "no-such.sock"))
+				require.Error(t, err, "DialReady(missing)")
+				assert.Nil(t, cli, "DialReady(missing)")
+			},
+		},
+		{
+			name: "dial ready healthy",
+			run: func(t *testing.T) {
+				socket := startStubServer(t, func(gs *grpc.Server) {
+					svc := healthOnly{}
+					agentdv1.RegisterDaemonServiceServer(gs, svc)
+					agentdv1.RegisterHookServiceServer(gs, svc)
+				})
+				cli, err := hookclient.DialReady(context.Background(), socket)
+				require.NoError(t, err, "DialReady(%q)", socket)
+				t.Cleanup(func() { _ = cli.Close() })
+			},
+		},
+		{
 			name: "canceled ctx health",
 			run: func(t *testing.T) {
 				socket := startStubServer(t, func(gs *grpc.Server) {

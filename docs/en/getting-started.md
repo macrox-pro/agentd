@@ -33,6 +33,8 @@ Default path: `~/.agentd.yaml` (or `--config`).
 version: 1
 policy:
   fail: fail_closed
+  # offline defaults to fail_open — agents keep working if the daemon is down
+  # offline: fail_closed  # lockdown when daemon unreachable
 guards:
   secrets:
     enabled: true

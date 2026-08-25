@@ -9,6 +9,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
+	"github.com/macrox-pro/agentd/internal/config"
+	"github.com/macrox-pro/agentd/internal/decision"
 	"github.com/macrox-pro/agentd/internal/hookclient"
 	"github.com/macrox-pro/agentd/internal/provider"
 )
@@ -41,6 +43,7 @@ func Run(ctx context.Context, opts Options) int {
 		fmt.Fprintln(stderr, err.Error())
 		return 1
 	}
+	cwd := ResolveCWD(payload)
 
 	invokeCtx := ctx
 	var cancel context.CancelFunc
@@ -49,10 +52,9 @@ func Run(ctx context.Context, opts Options) int {
 		defer cancel()
 	}
 
-	cli, err := hookclient.Dial(invokeCtx, opts.Socket)
+	cli, err := hookclient.DialReady(invokeCtx, opts.Socket)
 	if err != nil {
-		fmt.Fprintln(stderr, "daemon not running")
-		return 1
+		return runOffline(ctx, opts, payload, cwd, stdout, stderr)
 	}
 	defer cli.Close()
 
@@ -60,7 +62,7 @@ func Run(ctx context.Context, opts Options) int {
 		Provider:       protoProv,
 		RawPayload:     payload,
 		InvocationMode: mode,
-		Cwd:            ResolveCWD(payload),
+		Cwd:            cwd,
 	}
 	if opts.Timeout > 0 {
 		req.Deadline = timestamppb.New(time.Now().Add(opts.Timeout))
@@ -68,13 +70,19 @@ func Run(ctx context.Context, opts Options) int {
 
 	resp, err := cli.Invoke(invokeCtx, req)
 	if err != nil {
-		fmt.Fprintln(stderr, "daemon not running")
-		return 1
+		return runOffline(ctx, opts, payload, cwd, stdout, stderr)
 	}
-	decision := resp.GetDecision()
-	if decision == nil {
-		decision = &agentdv1.Decision{Kind: agentdv1.DecisionKind_DECISION_KIND_NO_DECISION}
+	d := resp.GetDecision()
+	if d == nil {
+		d = decision.Neutral()
 	}
 
-	return encodeDecision(ctx, opts.Provider, opts.ArgvPayload, payload, decision, stdout, stderr)
+	return encodeDecision(ctx, opts.Provider, opts.ArgvPayload, payload, d, stdout, stderr)
+}
+
+func runOffline(ctx context.Context, opts Options, payload []byte, cwd string, stdout, stderr io.Writer) int {
+	if resolveOffline(opts, cwd, stderr) == config.FailClosed {
+		return 1
+	}
+	return encodeDecision(ctx, opts.Provider, opts.ArgvPayload, payload, decision.Neutral(), stdout, stderr)
 }

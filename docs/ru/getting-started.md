@@ -33,6 +33,8 @@ agentd daemon status
 version: 1
 policy:
   fail: fail_closed
+  # offline по умолчанию fail_open — агенты работают, если демон не запущен
+  # offline: fail_closed  # жёсткий режим при недоступном демоне
 guards:
   secrets:
     enabled: true

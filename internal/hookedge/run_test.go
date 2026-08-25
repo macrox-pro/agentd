@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -121,21 +122,12 @@ func TestRunErrors(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		missingSocket bool
 		provider      string
 		stdin         io.Reader
 		wantCode      int
 		wantOut       string
 		wantErrSubstr string
 	}{
-		{
-			name:          "daemon down",
-			missingSocket: true,
-			provider:      "claude-code",
-			stdin:         bytes.NewReader([]byte(`{}`)),
-			wantCode:      1,
-			wantErrSubstr: "daemon not running",
-		},
 		{
 			name:          "empty stdin",
 			provider:      "claude-code",
@@ -148,24 +140,93 @@ func TestRunErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			socket := ""
-			if tt.missingSocket {
-				socket = filepath.Join(t.TempDir(), "missing.sock")
-			}
-
 			var stdout, stderr bytes.Buffer
 			code := hookedge.Run(context.Background(), hookedge.Options{
-				Socket:   socket,
-				Provider: tt.provider,
-				Stdin:    tt.stdin,
-				Stdout:   &stdout,
-				Stderr:   &stderr,
+				Provider:   tt.provider,
+				ConfigPath: filepath.Join(t.TempDir(), "missing.yaml"),
+				Stdin:      tt.stdin,
+				Stdout:     &stdout,
+				Stderr:     &stderr,
 			})
 			assert.Equal(t, tt.wantCode, code, "Run(%q)", tt.name)
 			assert.Equal(t, tt.wantOut, stdout.String(), "Run(%q)", tt.name)
 			if tt.wantErrSubstr != "" {
 				assert.Contains(t, stderr.String(), tt.wantErrSubstr, "Run(%q)", tt.name)
 			}
+		})
+	}
+}
+
+func TestRunOffline(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		setup    func(t *testing.T) (configPath, socket string, stdin io.Reader)
+		wantCode int
+	}{
+		{
+			name: "daemon down default fail_open",
+			setup: func(t *testing.T) (string, string, io.Reader) {
+				t.Helper()
+				dir := t.TempDir()
+				return filepath.Join(dir, "missing.yaml"), filepath.Join(dir, "missing.sock"), bytes.NewReader([]byte(`{}`))
+			},
+			wantCode: 0,
+		},
+		{
+			name: "daemon down fail_closed",
+			setup: func(t *testing.T) (string, string, io.Reader) {
+				t.Helper()
+				dir := t.TempDir()
+				cfg := filepath.Join(dir, "user.yaml")
+				require.NoError(t, os.WriteFile(cfg, []byte("version: 1\npolicy:\n  offline: fail_closed\n"), 0o600))
+				return cfg, filepath.Join(dir, "missing.sock"), bytes.NewReader([]byte(`{}`))
+			},
+			wantCode: 1,
+		},
+		{
+			name: "daemon down project fail_closed",
+			setup: func(t *testing.T) (string, string, io.Reader) {
+				t.Helper()
+				dir := t.TempDir()
+				proj := filepath.Join(dir, "proj")
+				require.NoError(t, os.MkdirAll(proj, 0o700))
+				require.NoError(t, os.WriteFile(filepath.Join(proj, ".agentd.yaml"), []byte("version: 1\npolicy:\n  offline: fail_closed\n"), 0o600))
+				payload, err := json.Marshal(map[string]any{"cwd": proj})
+				require.NoError(t, err)
+				return filepath.Join(dir, "missing.yaml"), filepath.Join(dir, "missing.sock"), bytes.NewReader(payload)
+			},
+			wantCode: 1,
+		},
+		{
+			name: "daemon down invalid config",
+			setup: func(t *testing.T) (string, string, io.Reader) {
+				t.Helper()
+				dir := t.TempDir()
+				cfg := filepath.Join(dir, "bad.yaml")
+				require.NoError(t, os.WriteFile(cfg, []byte(":\n  - invalid\n"), 0o600))
+				return cfg, filepath.Join(dir, "missing.sock"), bytes.NewReader([]byte(`{}`))
+			},
+			wantCode: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cfg, socket, stdin := tt.setup(t)
+			var stdout, stderr bytes.Buffer
+			code := hookedge.Run(context.Background(), hookedge.Options{
+				Socket:     socket,
+				ConfigPath: cfg,
+				Provider:   "claude-code",
+				Stdin:      stdin,
+				Stdout:     &stdout,
+				Stderr:     &stderr,
+			})
+			assert.Equal(t, tt.wantCode, code, "Run(%q): %s", tt.name, stderr.String())
+			assert.Contains(t, stderr.String(), "daemon not running", "Run(%q)", tt.name)
 		})
 	}
 }

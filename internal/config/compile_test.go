@@ -38,6 +38,7 @@ func TestCompile(t *testing.T) {
 			pol, async, guards, routes, err := config.Compile(nil)
 			require.NoError(t, err, "Compile(nil)")
 			assert.Equal(t, config.FailClosed, pol.Fail, "Compile policy")
+			assert.Equal(t, config.FailOpen, pol.Offline, "Compile offline")
 			assert.Equal(t, 1024, async.QueueCapacity, "Compile async")
 			assert.True(t, guards.Secrets.Enabled, "Compile secrets")
 			byKind := map[string]config.CompiledRoute{}

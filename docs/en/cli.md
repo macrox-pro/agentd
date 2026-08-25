@@ -33,7 +33,7 @@ Daemon process version: field `version` on `agentd daemon status`.
 
 ## hook
 
-Thin edge: decode → gRPC Invoke → encode. No policy in the CLI.
+Thin edge: decode → gRPC Invoke → encode. Full Decide/guards stay in the daemon. When the daemon is unreachable, the edge applies `policy.offline` from local config.
 
 | Command | Flags | Notes |
 |---------|-------|-------|
@@ -41,7 +41,7 @@ Thin edge: decode → gRPC Invoke → encode. No policy in the CLI.
 | `hook notify` | `--provider`, `--timeout` | Codex notify (argv JSON) |
 | `hook serve` | `--provider`, `--timeout` | OpenCode NDJSON; provider must be `opencode` |
 
-If dial/Invoke fails: stderr `daemon not running`, exit **1**. Do not write debug to stdout on the hook path.
+If dial/Invoke fails: stderr `daemon not running`, then `policy.offline` (`fail_open` default → exit 0 / neutral wire; `fail_closed` → exit **1**). Do not write debug to stdout on the hook path.
 
 ### agenthooks (hidden)
 

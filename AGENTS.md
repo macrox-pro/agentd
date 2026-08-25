@@ -112,7 +112,7 @@ A plan with fewer than ~5 coarse todos for a multi-file phase is usually under-s
 | `internal/` | Domain logic, sentinel errors (`var Err…`) | import `cmd/`, Cobra/flag names in errors, CLI argument rules |
 | `api/agentd/v1/` | Proto contracts | hand-written Go |
 | `gen/` | Generated — never edit | manual edits |
-| `internal/hookedge` | Provider codecs + wire I/O ([§1.5 invoke_sync](./DESIGN.md#15-hot-paths)) | policy, `Runner.Decide` |
+| `internal/hookedge` | Provider codecs + wire I/O ([§1.5 invoke_sync](./DESIGN.md#15-hot-paths)); `policy.offline` when daemon unreachable | full Decide / guards / route compile |
 | `internal/config` | Config merge/compile ([§1.5 config_reload](./DESIGN.md#15-hot-paths)) | dispatch, wire decode |
 | `internal/dispatch` | Routing; Engine; queue; session lock ([§1.5 invoke_sync, async_side](./DESIGN.md#15-hot-paths)) | wire decode, YAML compile, Kind→impl switch |
 | `internal/dispatch/targets` | Sync/Async target adapters; factories map CompiledTarget → invokers | route match, YAML compile, session lock |

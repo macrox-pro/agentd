@@ -6,7 +6,12 @@
 
 ## Демон не запущен
 
-`hook run|notify|serve` пишет в stderr `daemon not running` и завершается с кодом **1**.
+`hook run|notify|serve` пишет в stderr `daemon not running`, затем применяет `policy.offline` из локального конфига (defaults ⊕ user ⊕ project ⊕ runtime).
+
+| `policy.offline` | Поведение |
+|------------------|-----------|
+| `fail_open` (по умолчанию) | Код **0**; sync-хуки кодируют нейтральное решение — агент продолжает |
+| `fail_closed` | Код **1** (блокирует при fail-closed у провайдера) |
 
 ```bash
 agentd daemon start
@@ -39,7 +44,7 @@ agentd daemon status --json
 
 ## Поле policy.offline
 
-Ключ парсится и хранится, но клиент хука **сейчас его не читает**. Недоступный демон → код 1, как выше.
+`policy.offline` задаёт мягкий или жёсткий отказ при недоступном демоне (см. [Демон не запущен](#демон-не-запущен)). Невалидный локальный YAML трактуется как `fail_closed`.
 
 ## Не входит в v1
 

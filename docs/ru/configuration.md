@@ -33,9 +33,9 @@
 | `fail` | `fail_open` \| `fail_closed` | `fail_closed` | При сбое: пропустить или закрыть |
 | `unsupported` | `degrade` \| `strict` | `degrade` | Неподдерживаемое: смягчить или строго |
 | `ask_fallback` | `deny` \| `no_decision` | `deny` | Если «спросить» недоступно |
-| `offline` | `fail_open` \| `fail_closed` | `fail_closed` | Задумано для офлайна; см. примечание |
+| `offline` | `fail_open` \| `fail_closed` | `fail_open` | Демон недоступен: пропустить или закрыть |
 
-> **Важно:** клиент хука (`hook …`) при недоступном демоне пишет в stderr `daemon not running` и выходит с кодом `1`. Ветвления по `policy.offline` в текущем коде **нет**.
+Когда демон недоступен, край хука читает локальный конфиг (defaults ⊕ user ⊕ project(cwd) ⊕ runtime) и применяет `policy.offline`. По умолчанию `fail_open` — нейтральное решение (или код 0 для notify), агент продолжает работу; `fail_closed` — выход с кодом **1**. В обоих режимах в stderr пишется `daemon not running`.
 
 ### async (асинхронная очередь)
 

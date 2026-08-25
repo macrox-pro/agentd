@@ -15,7 +15,8 @@ import (
 // encodeDecision encodes provider wire for a daemon Decision.
 // agenthooks does not export Encode; Runner.Run is the supported wire path.
 // Handlers return the daemon decision so the edge cannot invent policy —
-// Decide remains in the daemon.
+// Decide remains in the daemon. Documented exception: unreachable daemon with
+// policy.offline=fail_open encodes Neutral (see resolveOffline).
 func encodeDecision(ctx context.Context, provider string, argvPayload bool, payload []byte, d *agentdv1.Decision, stdout, stderr io.Writer) int {
 	r := agenthooks.New(agenthooks.WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil))))
 	dec := decision.FromProto(d)

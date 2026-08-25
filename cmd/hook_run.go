@@ -28,7 +28,8 @@ Point Claude Code, Cursor, Codex, Gemini CLI, or Kimi Code hook settings at
 this command with --provider set for that agent. The payload is read from
 stdin unless --argv-payload is set.
 
-Requires a running agentd service ("agentd daemon start").`,
+Requires a running agentd service for policy decisions ("agentd daemon start").
+When the daemon is down, policy.offline applies (default fail_open).`,
 	Example: `  agentd hook run --provider=claude-code
   agentd hook run --provider=cursor --argv-payload`,
 	SilenceUsage:  true,
