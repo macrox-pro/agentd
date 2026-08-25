@@ -35,10 +35,11 @@ Structured verbatim excerpts from primary sources — used when designing provid
 | Tree | Focus |
 |------|--------|
 | [research/best-practice](./research/best-practice/) | Go best practices (Go ≥ 1.26.7) |
-| [research/cursor](./research/cursor/) | Cursor docs — agent loop, hooks, MCP, settings, enterprise |
+| [research/claude-code](./research/claude-code/) | Claude Code docs — agent loop, hooks, MCP, settings, skills, plugins, cloud, enterprise |
 | [research/codex](./research/codex/) | Codex / ChatGPT Learn docs — sandbox, hooks, MCP, cloud, enterprise |
+| [research/cursor](./research/cursor/) | Cursor docs — agent loop, hooks, MCP, settings, enterprise |
 
-Stub dirs for other agents (`claude-code`, `gemini`, `opencode`, `kimi-code`) live under [`research/`](./research/) and will fill in the same shape.
+Stub dirs for other agents (`gemini`, `opencode`, `kimi-code`) live under [`research/`](./research/) and will fill in the same shape.
 
 ## Why agentd?
 

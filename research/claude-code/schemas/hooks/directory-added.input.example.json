@@ -1,0 +1,8 @@
+{
+  "session_id": "abc123",
+  "transcript_path": "/Users/.../.claude/projects/.../transcript.jsonl",
+  "cwd": "/Users/my-project",
+  "hook_event_name": "DirectoryAdded",
+  "directory": "/Users/my-other-repo",
+  "source": "slash_command"
+}
