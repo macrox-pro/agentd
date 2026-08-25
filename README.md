@@ -28,6 +28,18 @@ agentd sits between your AI coding agents (Claude Code, Cursor, Codex, Gemini CL
 
 Contributor design and conventions: [DESIGN.md](./DESIGN.md), [AGENTS.md](./AGENTS.md), [CONVENTIONS.md](./CONVENTIONS.md). How to contribute: [CONTRIBUTING.md](./CONTRIBUTING.md).
 
+## Research
+
+Structured verbatim excerpts from primary sources — used when designing provider support, hooks, and conventions. Each tree has its own index and `SOURCES.md`.
+
+| Tree | Focus |
+|------|--------|
+| [research/best-practice](./research/best-practice/) | Go best practices (Go ≥ 1.26.7) |
+| [research/cursor](./research/cursor/) | Cursor docs — agent loop, hooks, MCP, settings, enterprise |
+| [research/codex](./research/codex/) | Codex / ChatGPT Learn docs — sandbox, hooks, MCP, cloud, enterprise |
+
+Stub dirs for other agents (`claude-code`, `gemini`, `opencode`, `kimi-code`) live under [`research/`](./research/) and will fill in the same shape.
+
 ## Why agentd?
 
 Coding-agent hooks are powerful but painful to operationalize:
