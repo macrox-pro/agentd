@@ -13,7 +13,7 @@ others who are seeking help. Harassment of any kind will not be tolerated.
 ## Questions
 
 1. Read the [user guide](./docs/en/) (or [русское руководство](./docs/ru/)) and [Troubleshooting](./docs/en/troubleshooting.md).
-2. Check [DESIGN.md](./DESIGN.md) for behavior contracts and the roadmap (§13 / §14).
+2. Check [DESIGN.md](./DESIGN.md) for behavior contracts (§14 Trajectory) and [PROGRESS.md](./PROGRESS.md) for milestone history.
 3. If it is still unclear, open a [GitHub Issue](https://github.com/macrox-pro/agentd/issues) with what you already tried (`agentd daemon status --json`, provider, OS).
 
 **Contact:** [garin1221@yandex.ru](mailto:garin1221@yandex.ru)
@@ -47,8 +47,8 @@ make generate      # if you changed api/**/*.proto — then go build ./...
 make e2e           # if you add/change scripts/e2e-m*.sh or milestone behavior
 ```
 
-6. **Docs:** User-visible CLI, config, Status, install, or provider behavior → update [docs/en/](./docs/en/) and mirror [docs/ru/](./docs/ru/) ([maintaining](./docs/en/maintaining.md)). New CLI commands → [DESIGN.md §6](./DESIGN.md#6-cli-reference) as well.
-7. **Roadmap / milestones:** Prefer work that matches [PROGRESS.md](./PROGRESS.md) / [DESIGN.md §13](./DESIGN.md#13-milestones). Updating PROGRESS (phase / next todo) is for maintainers and milestone owners — not required on every drive-by PR.
+6. **Docs:** User-visible CLI, config, Status, install, or provider behavior → update [docs/en/](./docs/en/) and mirror [docs/ru/](./docs/ru/) ([maintaining](./docs/en/maintaining.md)). New CLI commands → [docs/en/cli.md](./docs/en/cli.md) (+ RU); DESIGN §6 only if architecture notes change.
+7. **Roadmap / milestones:** Prefer work that matches [PROGRESS.md](./PROGRESS.md). Updating PROGRESS (phase / next todo) is for maintainers and milestone owners — not required on every drive-by PR.
 
 ### Quick steps to contribute
 
@@ -76,7 +76,8 @@ Requires **Go 1.26+** (see [AGENTS.md](./AGENTS.md)).
 | Need | Where |
 |------|--------|
 | Build / test / generate | [AGENTS.md § Commands](./AGENTS.md#commands) |
-| Package layout & hot-path rules | [DESIGN.md](./DESIGN.md) |
+| Package ownership | [AGENTS.md § Architecture](./AGENTS.md#architecture) |
+| Hot-path rules | [DESIGN.md §1.5](./DESIGN.md#15-hot-paths) |
 | File naming, tests, protobuf | [CONVENTIONS.md](./CONVENTIONS.md) |
 | Current milestone checklist | [PROGRESS.md](./PROGRESS.md) |
 | Provider quirks | [docs/en/providers.md](./docs/en/providers.md) |

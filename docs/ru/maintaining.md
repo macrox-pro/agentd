@@ -8,8 +8,8 @@
 
 | Изменение | Что править |
 |-----------|-------------|
-| Новая или изменённая команда/флаг CLI (`cmd/`) | [cli.md](./cli.md), [DESIGN.md §6](../../DESIGN.md#6-cli-reference), связанные инструкции при смене сценария |
-| Ключ или перечисление YAML (`internal/config/file.go`, compile) | [configuration.md](./configuration.md); при необходимости [guards.md](./guards.md) / [dispatch.md](./dispatch.md) / [approvals.md](./approvals.md); DESIGN §7 при дрейфе примеров |
+| Новая или изменённая команда/флаг CLI (`cmd/`) | [cli.md](./cli.md) (канон), [DESIGN.md §6](../../DESIGN.md#6-cli-reference) при смене архитектурных заметок, связанные инструкции при смене сценария |
+| Ключ или перечисление YAML (`internal/config/file.go`, compile) | [configuration.md](./configuration.md) (канон); при необходимости [guards.md](./guards.md) / [dispatch.md](./dispatch.md) / [approvals.md](./approvals.md); DESIGN §7 при смене контракта слоёв / runtime overlay |
 | Поведение охранника / Ask / Deny | [guards.md](./guards.md), [approvals.md](./approvals.md), [troubleshooting.md](./troubleshooting.md) |
 | Режим маршрута, цель, таймаут, переполнение async | [dispatch.md](./dispatch.md), [operations.md](./operations.md) |
 | Поля статуса / операции демона | [operations.md](./operations.md), [cli.md](./cli.md) |
@@ -46,5 +46,5 @@
 
 - [ ] Изменение, видимое пользователю → обновлён `docs/en/`
 - [ ] Зеркало в `docs/ru/` (или новая страница в обоих языках)
-- [ ] DESIGN §6 / §7 при смене CLI или примеров схемы
+- [ ] DESIGN §6 / §7 при смене архитектурных заметок CLI или слоёв схемы
 - [ ] `make docs-check` проходит

@@ -27,7 +27,7 @@ Kind defaults live under `dispatch_defaults:` (overridable). Named `dispatch:` r
 | `log` | — | yes |
 | `file` | — | yes |
 
-v1 does **not** support sync `exec` JSON decisions (DESIGN §11 / §12).
+v1 does **not** support sync `exec` JSON decisions (DESIGN §11).
 
 ## Route fields
 

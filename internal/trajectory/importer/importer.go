@@ -10,5 +10,5 @@
 //   - Imported events use source=transcript and append-only seq assignment (caller).
 //
 // Entry: Import, ImportSession, ProviderImporterStatus, ImportClaude, ImportCursor, ImportCodex.
-// See DESIGN.md §14.3, §14.6.
+// See DESIGN.md §14.2, §14.3.
 package importer

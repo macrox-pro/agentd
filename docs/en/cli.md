@@ -2,7 +2,7 @@
 
 > **Language:** [English](./cli.md) · [Русский](../ru/cli.md)
 
-Commands and flags as implemented under `cmd/`. Narrative rationale: [DESIGN.md §6](../../DESIGN.md#6-cli-reference).
+Commands and flags as implemented under `cmd/`. Architecture notes: [DESIGN.md §6](../../DESIGN.md#6-cli-reference).
 
 ## Persistent flags
 

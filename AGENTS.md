@@ -136,7 +136,7 @@ A plan with fewer than ~5 coarse todos for a multi-file phase is usually under-s
 - **Guard extensibility:** built-in guards live in `internal/guard`; wiring into the agenthooks Runner stays in `targets` builtin (or a single registrar). Do not call `guard` from `Engine` directly.
 - **Interfaces:** prefer narrow interfaces at package boundaries (`SyncInvoker`, `AsyncInvoker`, optional server-side ports). No kitchen-sink `interfaces.go`; define next to the consumer or implementor concern file.
 - **Behavior-preserving refactors (R-phases):** default acceptance is table/golden parity on Decide outcomes for the same Snapshot + payload; document any intentional policy change in DESIGN.md first.
-- New CLI command → update [DESIGN.md §6](./DESIGN.md#6-cli-reference) **and** [docs/en/cli.md](./docs/en/cli.md) + [docs/ru/cli.md](./docs/ru/cli.md).
+- New CLI command → update [docs/en/cli.md](./docs/en/cli.md) + [docs/ru/cli.md](./docs/ru/cli.md); add to [DESIGN.md §6](./DESIGN.md#6-cli-reference) only if architecturally significant.
 - User-visible behavior / config / Status / install change → update matching pages under [docs/en/](./docs/en/) then mirror [docs/ru/](./docs/ru/) (see [docs/en/maintaining.md](./docs/en/maintaining.md)). Run `make docs-check`.
 
 ## Protobuf
@@ -161,4 +161,4 @@ A plan with fewer than ~5 coarse todos for a multi-file phase is usually under-s
 
 On stop / context limit: update [PROGRESS.md](./PROGRESS.md) (next todo + files touched).
 
-PR: intent note + comprehension checklist ([template](./.github/pull_request_template.md)); `make lint` + `make intent-check` + `make test` on touched packages; `make e2e` when shipping a milestone e2e script (and wire it into Makefile `e2e`); `make generate` if `api/` changed; DESIGN.md CLI section **and** `docs/en`+`docs/ru` if commands or user-facing behavior changed (`make docs-check`).
+PR: intent note + comprehension checklist ([template](./.github/pull_request_template.md)); `make lint` + `make intent-check` + `make test` on touched packages; `make e2e` when shipping a milestone e2e script (and wire it into Makefile `e2e`); `make generate` if `api/` changed; `docs/en`+`docs/ru` if commands or user-visible behavior changed (`make docs-check`); DESIGN §6 only if CLI architecture notes change.

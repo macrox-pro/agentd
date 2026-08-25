@@ -62,7 +62,7 @@ Recording happens on the daemon async path — sync hook latency is unchanged.
 | `source` | `hook`, `decision`, `transcript`, `system` |
 | `ignorable` | Forward-compat: old readers may skip unknown **types** |
 
-Event catalog matches [DESIGN §14.3](../../DESIGN.md#143-event-model-draft-catalog).
+Event catalog matches [DESIGN §14.2](../../DESIGN.md#142-event-catalog).
 
 ## Search
 
@@ -106,7 +106,7 @@ Copies a prefix into a new session id and appends `session/fork` + `session/end-
 | opencode | `hook serve` | required | none | unknown |
 | kimi-code | `hook run` | required | none | unknown |
 
-Honest claim: every **supported agent’s hooks** are traceable on one stream; transcript/thinking depth varies by provider ([DESIGN §14.6](../../DESIGN.md#146-provider-support-matrix-all-supported-agents)).
+Honest claim: every **supported agent’s hooks** are traceable on one stream; transcript/thinking depth varies by provider ([DESIGN §14.3](../../DESIGN.md#143-provider-support-matrix)).
 
 ## Status
 

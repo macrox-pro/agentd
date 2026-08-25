@@ -13,7 +13,7 @@ import (
 const defaultSearchLimit = 100
 
 // SearchOptions filters ledger JSONL scans. Search walks every matching session
-// file line-by-line — O(total bytes) with no index (DESIGN §12 Q6).
+// file line-by-line — O(total bytes) with no index (by design; see docs/en/trajectory.md).
 type SearchOptions struct {
 	Root      string
 	Provider  string

@@ -62,7 +62,7 @@ trajectory:
 | `source` | `hook`, `decision`, `transcript`, `system` |
 | `ignorable` | Forward-compat для неизвестных **type** |
 
-Каталог событий: [DESIGN §14.3](../../DESIGN.md#143-event-model-draft-catalog).
+Каталог событий: [DESIGN §14.2](../../DESIGN.md#142-event-catalog).
 
 ## Поиск
 
@@ -106,7 +106,7 @@ agentd session fork --provider claude-code --session s1 --new-session s1-fork --
 | opencode | `hook serve` | обязательно | none | unknown |
 | kimi-code | `hook run` | обязательно | none | unknown |
 
-Формулировка: все **поддерживаемые агенты** дают один поток hook-событий; глубина transcript/thinking различается ([DESIGN §14.6](../../DESIGN.md#146-provider-support-matrix-all-supported-agents)).
+Формулировка: все **поддерживаемые агенты** дают один поток hook-событий; глубина transcript/thinking различается ([DESIGN §14.3](../../DESIGN.md#143-provider-support-matrix)).
 
 ## Status
 

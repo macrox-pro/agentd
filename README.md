@@ -18,7 +18,7 @@ agentd sits between your AI coding agents (Claude Code, Cursor, Codex, Gemini CL
 ![Go Version](https://img.shields.io/badge/go-1.26+-00ADD8?logo=go)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-> **Status:** v0.0.2 (M12 Subscribe). Roadmap history: [DESIGN.md §13](./DESIGN.md#13-milestones).
+> **Status:** v0.0.2 (M12 Subscribe). Roadmap history: [PROGRESS.md](./PROGRESS.md#milestones-archive).
 
 ## Documentation
 
@@ -130,7 +130,7 @@ agentd install --provider=claude-code --scope=project
 agentd daemon status --json
 ```
 
-For OpenCode, use `agentd hook serve --provider=opencode` in generated plugin config (see [DESIGN.md](./DESIGN.md) — OpenCode integration).
+For OpenCode, use `agentd hook serve --provider=opencode` in generated plugin config (see [DESIGN.md §1](./DESIGN.md#1-architecture)).
 
 Full walkthrough: [docs/en/getting-started.md](./docs/en/getting-started.md).
 
@@ -153,7 +153,7 @@ dispatch:
         level: info
 ```
 
-Full schema, merge rules, and reload behavior: [DESIGN.md § Configuration schema](./DESIGN.md#7-configuration-schema) · [docs/en/configuration.md](./docs/en/configuration.md)
+Full schema: [docs/en/configuration.md](./docs/en/configuration.md) · layer/runtime overlay: [DESIGN.md §7](./DESIGN.md#7-configuration-schema)
 
 ## CLI overview
 
@@ -181,9 +181,9 @@ Full schema, merge rules, and reload behavior: [DESIGN.md § Configuration schem
 | cursor | **partial** (`--path`) |
 | gemini, opencode, kimi-code | none |
 
-Details: [docs/en/trajectory.md](./docs/en/trajectory.md) · [DESIGN §14.6](./DESIGN.md#146-provider-support-matrix-all-supported-agents)
+Details: [docs/en/trajectory.md](./docs/en/trajectory.md) · [DESIGN §14.3](./DESIGN.md#143-provider-support-matrix)
 
-Rationale for each command: [DESIGN.md § CLI Reference](./DESIGN.md#6-cli-reference) · [docs/en/cli.md](./docs/en/cli.md)
+Rationale for each command: [docs/en/cli.md](./docs/en/cli.md) · [DESIGN §6](./DESIGN.md#6-cli-reference) (architecture notes)
 
 ## Development
 

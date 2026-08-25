@@ -2,7 +2,7 @@
 
 > **Language:** [English](./configuration.md) · [Русский](../ru/configuration.md)
 
-Four-layer merge, YAML surface, and how reloads work. Full examples: [DESIGN.md §7](../../DESIGN.md#7-configuration-schema).
+Four-layer merge, YAML surface, and how reloads work. Layer/runtime overlay contract: [DESIGN.md §7](../../DESIGN.md#7-configuration-schema).
 
 ## Layers (merge order)
 

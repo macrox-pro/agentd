@@ -7,7 +7,7 @@ Trajectory hub (M9–M12): live ledger, import, replay/fork, and live Subscribe.
 ### Highlights
 
 - **Live trajectory ledger** — opt-in append-only session log for all six providers; `session list`, `show`, `export`
-- **Search & import** — `session search`; Claude transcript import; Codex rollout JSONL import (**supported**); Cursor import with explicit per-provider status matrix (§14.6)
+- **Search & import** — `session search`; Claude transcript import; Codex rollout JSONL import (**supported**); Cursor import with explicit per-provider status matrix (§14.3)
 - **Replay & fork** — `session replay --policy` (dry-run policy re-check from stored raw); log fork for audit lineage
 - **Live Subscribe** — gRPC `SessionService.Subscribe` and `agentd session subscribe` firehose from the daemon
 - **`schema_version: 1`** frozen on all ledger events (JSONL + stream)

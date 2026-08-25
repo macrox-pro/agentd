@@ -2,7 +2,7 @@
 
 > **Language:** [English](../en/configuration.md) · [Русский](./configuration.md)
 
-Четыре слоя, которые **сливаются** (merge) в один эффективный конфиг; поверхность YAML; как работает перезагрузка. Полные примеры: [DESIGN.md §7](../../DESIGN.md#7-configuration-schema).
+Четыре слоя, которые **сливаются** (merge) в один эффективный конфиг; поверхность YAML; как работает перезагрузка. Контракт слоёв и runtime overlay: [DESIGN.md §7](../../DESIGN.md#7-configuration-schema).
 
 ## Слои (порядок слияния)
 

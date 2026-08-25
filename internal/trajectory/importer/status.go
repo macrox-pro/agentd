@@ -2,7 +2,7 @@ package importer
 
 import "github.com/macrox-pro/agentd/internal/provider"
 
-// ImporterStatus is L2 import support for a provider (DESIGN §14.6).
+// ImporterStatus is L2 import support for a provider (DESIGN §14.3).
 type ImporterStatus string
 
 const (

@@ -8,8 +8,8 @@ How to keep `docs/en/` and `docs/ru/` accurate when code changes. EN is canonica
 
 | Change | Update |
 |--------|--------|
-| New/changed CLI command or flag (`cmd/`) | [cli.md](./cli.md), [DESIGN.md §6](../../DESIGN.md#6-cli-reference), related how-to if UX changes |
-| YAML key / enum (`internal/config/file.go`, compile) | [configuration.md](./configuration.md), plus [guards.md](./guards.md) / [dispatch.md](./dispatch.md) / [approvals.md](./approvals.md) as needed; DESIGN §7 if schema example drifts |
+| New/changed CLI command or flag (`cmd/`) | [cli.md](./cli.md) (canonical), [DESIGN.md §6](../../DESIGN.md#6-cli-reference) if architecture notes change, related how-to if UX changes |
+| YAML key / enum (`internal/config/file.go`, compile) | [configuration.md](./configuration.md) (canonical), plus [guards.md](./guards.md) / [dispatch.md](./dispatch.md) / [approvals.md](./approvals.md) as needed; DESIGN §7 if layer/runtime overlay contract changes |
 | Guard / Ask / Deny behavior | [guards.md](./guards.md), [approvals.md](./approvals.md), [troubleshooting.md](./troubleshooting.md) |
 | Dispatch mode, target, timeout, async overflow | [dispatch.md](./dispatch.md), [operations.md](./operations.md) |
 | Status / daemon ops fields | [operations.md](./operations.md), [cli.md](./cli.md) |
@@ -46,5 +46,5 @@ If code and DESIGN disagree, **document code** and fix DESIGN in the same change
 
 - [ ] User-visible behavior change → `docs/en/` updated
 - [ ] Matching `docs/ru/` page(s) updated (or new page added in both)
-- [ ] DESIGN §6 / §7 if CLI or schema examples changed
+- [ ] DESIGN §6 / §7 if CLI architecture notes or schema layer docs change
 - [ ] `make docs-check` passes

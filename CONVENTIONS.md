@@ -435,8 +435,8 @@ Platform I/O: `{concern}_unix.go` / `{concern}_windows.go` / `{concern}_other.go
 Every new subcommand:
 
 1. Cobra Short, Long, Example (English)
-2. Matching section in [DESIGN.md § CLI Reference](./DESIGN.md#6-cli-reference)
-3. [docs/en/cli.md](./docs/en/cli.md) and mirror [docs/ru/cli.md](./docs/ru/cli.md)
+2. [docs/en/cli.md](./docs/en/cli.md) and mirror [docs/ru/cli.md](./docs/ru/cli.md) (canonical)
+3. [DESIGN.md §6](./DESIGN.md#6-cli-reference) only if architecturally significant (offline policy, hook vs daemon, etc.)
 
 User-facing docs live under [docs/](./docs/). EN is canonical; RU is a full mirror. When behavior, YAML, Status, or install changes, follow [docs/en/maintaining.md](./docs/en/maintaining.md) and run `make docs-check`.
 
@@ -455,6 +455,6 @@ PR checklist:
 - [ ] `go test -race` on changed packages
 - [ ] `make generate` if proto changed
 - [ ] New `scripts/e2e-mN.sh` → append to Makefile `e2e` (+ run `make e2e`)
-- [ ] DESIGN.md CLI section if commands changed
+- [ ] DESIGN.md §6 if CLI architecture notes changed
 - [ ] `docs/en/` + `docs/ru/` if user-facing behavior/CLI/schema changed (`make docs-check`)
 - [ ] PROGRESS.md updated

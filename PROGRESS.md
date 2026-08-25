@@ -1,6 +1,6 @@
 # agentd — implementation progress
 
-> Session handoff for agents. Roadmap: [DESIGN.md §13](./DESIGN.md#13-milestones) · Trajectory: [DESIGN.md §14](./DESIGN.md#14-trajectory-hub-post-v1). Rules: [AGENTS.md](./AGENTS.md).
+> Session handoff for agents. Roadmap: [DESIGN.md §13](./DESIGN.md#13-milestones) · Trajectory: [DESIGN.md §14](./DESIGN.md#14-trajectory-hub). Rules: [AGENTS.md](./AGENTS.md).
 
 ## Current phase
 
@@ -311,11 +311,47 @@ Done phases: acceptance and files live in git history / PRs. Do not re-expand in
 | M8 / v0.0.1 | **done** | Overflow counters, conformance, docs freeze, release |
 | M9–M12 / v0.0.2 | **done** | Trajectory P0–P3 — ledger, import, replay/fork, Subscribe |
 
-Full phases + acceptance: [DESIGN.md §13](./DESIGN.md#13-milestones).
+Full phases + acceptance: below (§ Milestones archive).
+
+## Milestones archive
+
+Historical acceptance criteria (M0–M12 **done**). For architecture, see [DESIGN.md](./DESIGN.md).
+
+### M0–M7 acceptance
+
+| Milestone | Acceptance |
+|-----------|------------|
+| M1 | `daemon start\|status\|reload\|stop` + `hook run --provider=…` round-trip |
+| M2 | Dispatch (parallel/after_sync), async queue, secrets Ask/Deny on tool.pre, `dispatch routes`, `e2e-m2` |
+| M3 | Declarative `dispatch:` + async exec/http/log/file; fsnotify reload; `e2e-m3` |
+| M4 | `target: grpc`; `hook serve`/`notify` + agenthooks sentinel; `install`; Windows SID pipe; `e2e-m4` |
+| M5 | Four-layer merge; ConfigService Get/Patch; `config validate\|show\|patch`; fingerprint; `e2e-m5` |
+| M6 | `guards.shell`/`mcp`/`paths`; route `guards: [...]` subset; `e2e-m6` |
+| M7 | Approve once → allow within TTL; restart reloads approvals; expired gone; `e2e-m7` |
+
+### M8 — v1 gate (done)
+
+v1 exit: four-layer config + RecordDecision; all guards; sync+async dispatch (exec async-only); install + hook run/notify/serve; unix + Windows IPC; no `not implemented` on documented commands; README/DESIGN match; lint + race + `e2e-m8` green; release published.
+
+### M9 — Trajectory P0 (done)
+
+L0 live ledger for all six providers; contiguous `seq` on hook run/notify/serve fixtures; no disk I/O in Decide; `session export`; default off + §14.3 matrix in docs; `e2e-m9` green.
+
+### M10 — Trajectory P1 (done)
+
+`session search`; Claude import with `source=transcript`; non-Claude importer status explicit; append-only merge; `e2e-m10` green.
+
+### M11 — Trajectory P2 (done)
+
+Every provider importer row implemented or `none`/`partial`; policy replay all six wire dialects; fork with `parent_session`; `e2e-m11` green.
+
+### M12 / v0.0.2 — Trajectory P3 (done)
+
+`SessionService.Subscribe`; schema versioned + `ignorable`; honest product copy; M9–M11 met; `e2e-m9…m12` green.
 
 ## Session notes
 
-- M0–M12 / v0.0.2 shipped (see DESIGN §13)
+- M0–M12 / v0.0.2 shipped (see Milestones archive above)
 - **R1–R11 done** — R-series complete; no R12
 - **F1–F4 done** — CONVENTIONS follow-through; coverage **62.8%** (exception vs ≥70%; no pad)
 

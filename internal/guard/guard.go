@@ -7,5 +7,5 @@
 //   - Guards honor policy fail mode and provider caps from compiled config.
 //
 // Entry: AttachCheckers registry; secrets, shell, mcp, paths attach functions (called from targets/builtin).
-// See DESIGN.md §1.5 (invoke_sync), §5.
+// See DESIGN.md §1.5 (invoke_sync), §2.
 package guard
