@@ -14,7 +14,11 @@ go install github.com/macrox-pro/agentd@latest
 
 ## Готовые сборки (GitHub Releases)
 
-Бинарники для linux / darwin / windows (amd64 / arm64) публикуются через goreleaser на [странице релизов](https://github.com/macrox-pro/agentd/releases).
+Бинарники для linux / darwin / windows (amd64 / arm64) публикуются через goreleaser на [странице релизов](https://github.com/macrox-pro/agentd/releases). Зафиксировать версию:
+
+```bash
+go install github.com/macrox-pro/agentd@v0.0.3
+```
 
 ## Сборка из исходников
 

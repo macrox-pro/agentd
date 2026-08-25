@@ -348,6 +348,7 @@ Done phases: acceptance and files live in git history / PRs. Do not re-expand in
 | M0–M7 | **done** | Daemon through approvals / RecordDecision / runtime persist |
 | M8 / v0.0.1 | **done** | Overflow counters, conformance, docs freeze, release |
 | M9–M12 / v0.0.2 | **done** | Trajectory P0–P3 — ledger, import, replay/fork, Subscribe |
+| M13 / v0.0.3 | **done** | `policy.offline` hook edge — OfflineFor, DialReady, serve offline cache |
 
 Full phases + acceptance: below (§ Milestones archive).
 
@@ -387,9 +388,13 @@ Every provider importer row implemented or `none`/`partial`; policy replay all s
 
 `SessionService.Subscribe`; schema versioned + `ignorable`; honest product copy; M9–M11 met; `e2e-m9…m12` green.
 
+### M13 / v0.0.3 — policy.offline hook edge (done)
+
+`OfflineFor` (defaults ⊕ user ⊕ project ⊕ runtime); `hookclient.DialReady`; hook run/notify/serve apply `policy.offline` on daemon down; serve caches offline after mid-stream Invoke failure; docs EN/RU + README.
+
 ## Session notes
 
-- M0–M12 / v0.0.2 shipped (see Milestones archive above)
+- M0–M13 / v0.0.3 shipped (see Milestones archive above)
 - **R1–R11 done** — R-series complete; no R12
 - **F1–F4 done** — CONVENTIONS follow-through; coverage **62.8%** (exception vs ≥70%; no pad)
 

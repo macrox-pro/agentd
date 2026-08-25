@@ -1,5 +1,25 @@
 # Changelog
 
+## [v0.0.3] — 2026-08-26
+
+Hook edge honors `policy.offline` when the daemon is down; research corpus for provider design.
+
+### Highlights
+
+- **`policy.offline` on hook edge** — when the daemon is unreachable, `hook run|notify|serve` loads local config (defaults ⊕ user ⊕ project(cwd) ⊕ runtime) via `OfflineFor` and applies `policy.offline`; default `fail_open` → exit 0 + neutral wire (agents keep working); `fail_closed` → exit **1**; stderr still prints `daemon not running`
+- **`hookclient.DialReady`** — lazy gRPC dial with Health check before Invoke
+- **OpenCode serve offline cache** — mid-stream Invoke failure caches offline mode for the rest of the NDJSON session (stderr once)
+- User docs EN/RU updated: configuration, troubleshooting, cli, getting-started, providers
+
+### Contributor / research
+
+- Structured research trees under `research/` — Claude Code, Codex, Cursor, Go best practices (verbatim excerpts + indexes)
+- DESIGN.md streamlining; documentation cross-reference cleanup
+
+### Explicitly not in v0.0.3
+
+Offline state-dir cache; auto-start daemon; change install FailClosed; new e2e script.
+
 ## [v0.0.2] — 2026-08-23
 
 Trajectory hub (M9–M12): live ledger, import, replay/fork, and live Subscribe.

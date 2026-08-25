@@ -401,8 +401,9 @@ Tests: [CONVENTIONS.md § Tests](./CONVENTIONS.md#tests) · `go test ./... -race
 | M0–M7 | **done** | Daemon through approvals / runtime persist |
 | M8 / v0.0.1 | **done** | Ops polish, conformance, release gate |
 | M9–M12 / v0.0.2 | **done** | Trajectory P0–P3 (ledger, import, replay/fork, Subscribe) |
+| M13 / v0.0.3 | **done** | `policy.offline` hook edge (OfflineFor, DialReady, serve offline cache) |
 
-**Shipped:** v0.0.2. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
+**Shipped:** v0.0.3. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
 
 ---
 
