@@ -12,6 +12,8 @@ go install github.com/macrox-pro/agentd@latest
 
 Installs into `$(go env GOPATH)/bin` (ensure that directory is on `PATH`).
 
+`agentd version` after `go install …@latest` / `@vX.Y.Z` reports the resolved module version (semver or pseudo-version) via BuildInfo — no manual ldflags needed.
+
 ## GitHub Releases
 
 Pre-built binaries (linux / darwin / windows, amd64 / arm64) ship via goreleaser on [GitHub Releases](https://github.com/macrox-pro/agentd/releases). Pin a version:
@@ -28,7 +30,7 @@ cd agentd
 make build
 ```
 
-`make build` writes `./agentd` and links the version into `internal/version.Version` via ldflags (`dev` locally). Release tags: goreleaser injects semver.
+`make build` writes `./agentd` with ldflags `Version=dev`; `version.String` may still show `dev+<shortrev>` from VCS BuildInfo. Release binaries: goreleaser injects semver via ldflags.
 
 | Command | Purpose |
 |---------|---------|

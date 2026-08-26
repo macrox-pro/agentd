@@ -14,7 +14,7 @@
 
 ## version
 
-Выводит версию CLI (`dev` без ldflags/тега релиза). Без обращения к демону.
+Выводит версию CLI. Сначала ldflags goreleaser; иначе модульная версия из BuildInfo (`go install`); локальный devel — `dev` или `dev+<shortrev>`. Без обращения к демону.
 
 Версия процесса демона — поле `version` в `agentd daemon status`.
 

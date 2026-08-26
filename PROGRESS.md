@@ -4,6 +4,32 @@
 
 ## Current phase
 
+Phase: **version BuildInfo done** | Last: String/Resolve from debug.BuildInfo | Next: **none**
+
+### version BuildInfo (2026-08-26)
+
+**Problem:** `go install …@latest` left `agentd version` as `dev` because only goreleaser/Makefile set ldflags.
+
+**Hot path:** other
+
+**Invariants:**
+- Non-dev ldflags `Version` always wins over BuildInfo
+- `version.String` is the only caller-facing build string (`agentd version`, daemon Start)
+- `daemon status` `version` still comes from Status RPC, not CLI String
+- `package version_test` only; pure logic via `Resolve` table
+
+**Corner cases (`tt.name`):**
+- Resolve: `ldflags semver wins` | `nil info defaults` | `empty linked treated as dev` | `go install module version` | `go install pseudo version` | `devel with short revision` | `devel dirty revision` | `devel without vcs`
+- CLI: `ldflags semver` | `ldflags v-prefixed`
+
+**Out of scope:** root `--version`; `--json` on version; changing goreleaser; Makefile still stamps `dev`
+
+**Done:** `internal/version` Resolve/String; cmd version + daemon start; docs EN/RU cli + installation; PROGRESS
+
+**Files:** `internal/version/{version,version_test}.go`, `cmd/{version,version_test,daemon_start}.go`, `docs/en|ru/{cli,installation}.md`, `PROGRESS.md`
+
+---
+
 Phase: **policy.offline hook edge done** | Last: DialReady + Serve offline cache | Next: **none**
 
 ### policy.offline hook edge (2026-08-25)
@@ -51,16 +77,16 @@ Phase: **CLI version** | Last: `agentd version` + daemon status running-process 
 **Hot path:** other
 
 **Invariants:**
-- `internal/version.Version` is the only build string for this binary
+- Effective build string is `version.String` (ldflags `Version` or BuildInfo) — see **version BuildInfo** above
 - `agentd version` does not dial the daemon
-- `daemon status` `version` comes from the Status RPC, not `version.Version`
+- `daemon status` `version` comes from the Status RPC, not CLI String
 - JSON key stays `version` (proto field)
 
 **Corner cases (`tt.name`):**
-- version: `default dev`, `release semver`
+- version CLI: `ldflags semver`, `ldflags v-prefixed` (BuildInfo cases live in `internal/version`)
 - daemon status: `running human daemon version`, `running json daemon version`, `running uses daemon version not cli`
 
-**Out of scope:** `--json` on `version`; root `--version`; proto changes; git commit
+**Out of scope:** `--json` on `version`; root `--version`; proto changes
 
 **Done:** `cmd/version.go`; CLI tables in `cmd/version_test.go` + `cmd/daemon_status_test.go`; DESIGN §6; docs EN/RU cli + operations + installation; CONTRIBUTING
 

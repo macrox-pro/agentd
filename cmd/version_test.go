@@ -16,14 +16,14 @@ func TestVersionCLI(t *testing.T) {
 		want    string
 	}{
 		{
-			name:    "default dev",
-			version: "dev",
-			want:    "dev\n",
-		},
-		{
-			name:    "release semver",
+			name:    "ldflags semver",
 			version: "0.0.2",
 			want:    "0.0.2\n",
+		},
+		{
+			name:    "ldflags v-prefixed",
+			version: "v0.0.3",
+			want:    "v0.0.3\n",
 		},
 	}
 

@@ -14,7 +14,7 @@ Commands and flags as implemented under `cmd/`. Architecture notes: [DESIGN.md Â
 
 ## version
 
-Print the CLI version (`dev` unless linked with ldflags or a release tag). Does not contact the daemon.
+Print the CLI version. Prefer goreleaser ldflags; otherwise `go install` module version from BuildInfo; local devel may be `dev` or `dev+<shortrev>`. Does not contact the daemon.
 
 Daemon process version: field `version` on `agentd daemon status`.
 

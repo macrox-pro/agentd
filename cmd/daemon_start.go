@@ -43,7 +43,7 @@ reports an error instead of replacing it.`,
 			Socket:     resolveSocket(),
 			ConfigPath: resolveConfigPath(),
 			Foreground: daemonForeground,
-			Version:    version.Version,
+			Version:    version.String(),
 			LogLevel:   daemonLogLevel,
 			LogFile:    daemonLogFile,
 		})

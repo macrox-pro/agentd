@@ -12,6 +12,8 @@ go install github.com/macrox-pro/agentd@latest
 
 Ставит бинарник в `$(go env GOPATH)/bin` (этот каталог должен быть в `PATH`).
 
+После `go install …@latest` / `@vX.Y.Z` команда `agentd version` показывает разрешённую модульную версию (semver или pseudo-version) из BuildInfo — без ручных ldflags.
+
 ## Готовые сборки (GitHub Releases)
 
 Бинарники для linux / darwin / windows (amd64 / arm64) публикуются через goreleaser на [странице релизов](https://github.com/macrox-pro/agentd/releases). Зафиксировать версию:
@@ -28,7 +30,7 @@ cd agentd
 make build
 ```
 
-`make build` собирает `./agentd` и линкует версию в `internal/version.Version` через ldflags (`dev` локально). Релизный тег: goreleaser подставляет semver.
+`make build` собирает `./agentd` с ldflags `Version=dev`; `version.String` может показать `dev+<shortrev>` из VCS BuildInfo. Релизные бинарники: goreleaser подставляет semver через ldflags.
 
 | Команда | Назначение |
 |---------|------------|

@@ -17,13 +17,14 @@ var versionCmd = &cobra.Command{
 	Short: "Print the agentd build version",
 	Long: `Print the build version of this agentd binary.
 
-Local builds without ldflags print "dev". Release tags inject a semver at
-link time. This does not contact the daemon. The running service version is
-on "agentd daemon status".`,
+goreleaser injects a semver via ldflags. go install @tag/@latest uses the
+module version from BuildInfo. Local devel builds may show "dev" or
+"dev+<shortrev>". This does not contact the daemon. The running service
+version is on "agentd daemon status".`,
 	Example: `  agentd version`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_ = args
-		_, err := fmt.Fprintln(cmd.OutOrStdout(), version.Version)
+		_, err := fmt.Fprintln(cmd.OutOrStdout(), version.String())
 		return err
 	},
 }
