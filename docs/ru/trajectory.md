@@ -25,7 +25,7 @@ trajectory:
       path: ""
 ```
 
-Хранение: `$XDG_STATE_HOME/agentd/sessions/<provider>/<session_id>.jsonl`.
+Хранение: `sessions/<provider>/<session_id>.jsonl` в [state directory](./configuration.md#state-directory).
 
 Запись идёт по async-пути демона — синхронная задержка хука не меняется.
 

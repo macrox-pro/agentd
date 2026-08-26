@@ -150,7 +150,7 @@ Full walkthrough: [docs/en/getting-started.md](./docs/en/getting-started.md).
 
 ## Configuration
 
-Configuration merges four layers: defaults → `~/.agentd.yaml` → `.agentd.yaml` (project) → runtime overlay (daemon-written).
+Configuration merges four layers: defaults → `~/.agentd.yaml` → `.agentd.yaml` (project) → runtime overlay (daemon-written). State (log, runtime overlay, sessions) lives under the [state directory](./docs/en/configuration.md#state-directory), not `~/.agentd/`.
 
 Minimal dispatch example (sync guard + async audit):
 

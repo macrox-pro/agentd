@@ -18,7 +18,7 @@ agentd daemon start
 agentd daemon status --json
 ```
 
-Check `--socket` matches the edge process. Stale sockets are cleaned only under the start lock.
+Check `--socket` matches the edge process. Stale sockets are cleaned only under the start lock. Daemon operational logs: `agentd.log` in the [state directory](./configuration.md#state-directory).
 
 ## Timeouts
 

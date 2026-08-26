@@ -4,6 +4,33 @@
 
 ## Current phase
 
+Phase: **state-directory docs done** | Last: canonical State directory + cross-links | Next: **none**
+
+### state-directory docs (2026-08-26)
+
+**Problem:** `$XDG_STATE_HOME` is used without a consistent unset fallback; docs never explain why state is XDG (not `~/.agentd/`). Logging sinks in operations.md are wrong.
+
+**Hot path:** other
+
+**Invariants:**
+- Path facts match `internal/config/paths.go` + `paths_unix.go` / `paths_windows.go` and `internal/transport/path_unix.go` for IPC
+- EN first, then RU mirror; identifiers stay English in RU
+- Do not rewrite version / BuildInfo docs (`cli.md` ## version, operations Status `version`, installation.md, `version.String()`)
+
+**Corner cases:** N/A (docs-only)
+
+**Out of scope:** changing default paths; research/; CHANGELOG; socket deep dive; version docs
+
+**Done:**
+- `docs/en|ru/configuration.md` State directory (why XDG + table + fold runtime/logging)
+- Cross-links: trajectory, cli, operations Logging, approvals, getting-started, troubleshooting, maintaining, README
+- `cmd/daemon_start.go` Long fallbacks; `trajectory/paths.go` comment; DESIGN §3/§14 pointers
+- `make docs-check`; `go build ./...`; tests cmd/config/trajectory
+
+**Files:** `docs/en|ru/{configuration,trajectory,cli,operations,approvals,getting-started,troubleshooting,maintaining,README}.md`, `README.md`, `cmd/daemon_start.go`, `internal/trajectory/paths.go`, `DESIGN.md`, `PROGRESS.md`
+
+---
+
 Phase: **version BuildInfo done** | Last: String/Resolve from debug.BuildInfo | Next: **none**
 
 ### version BuildInfo (2026-08-26)

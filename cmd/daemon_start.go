@@ -28,9 +28,10 @@ By default the service runs in the background and start waits until the
 service answers health checks. Use --foreground to keep it attached to the
 terminal (useful while developing or under a process manager).
 
-Operational logs append to $XDG_STATE_HOME/agentd/agentd.log by default (see
-logging.file in config). Use --log-level and --log-file to override YAML for
-this process only.
+Operational logs append to $XDG_STATE_HOME/agentd/agentd.log by default
+(when unset: ~/.local/state/agentd/agentd.log; Windows:
+%LOCALAPPDATA%\agentd\agentd.log). See logging.file in config. Use
+--log-level and --log-file to override YAML for this process only.
 
 Only one instance should run per user. If a service is already running, start
 reports an error instead of replacing it.`,

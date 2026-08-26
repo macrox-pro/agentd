@@ -4,6 +4,19 @@
 
 Four-layer merge, YAML surface, and how reloads work. Layer/runtime overlay contract: [DESIGN.md §7](../../DESIGN.md#7-configuration-schema).
 
+## State directory
+
+User config is the file `~/.agentd.yaml` — not a `~/.agentd/` tree. Mutable daemon data (runtime overlay, operational log, session ledger) is **state**: daemon-written, regenerable, and not meant to travel with config backups or git. [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/latest/) puts that class under `$XDG_STATE_HOME` (unset → `~/.local/state`). Windows uses `%LOCALAPPDATA%\agentd\`. IPC (socket / lock) is **runtime**, not state — `$XDG_RUNTIME_DIR` is session-scoped and cleaned on logout.
+
+| Kind | Default location |
+|------|------------------|
+| User config | `~/.agentd.yaml` (file) |
+| State directory | `$XDG_STATE_HOME/agentd/` else `~/.local/state/agentd/` (Windows: `%LOCALAPPDATA%\agentd\`) |
+| → runtime overlay | `runtime.yaml` (daemon only) |
+| → operational log | `agentd.log` |
+| → trajectory ledger | `sessions/<provider>/<session_id>.jsonl` (when enabled) |
+| IPC socket (not state) | `$XDG_RUNTIME_DIR/agentd/agentd.sock` (Darwin fallback `~/Library/Caches/agentd/`; Linux `~/.local/run/agentd/`; else temp) — [DESIGN.md §5](../../DESIGN.md#5-transport) |
+
 ## Layers (merge order)
 
 | Order | Layer | Location |
@@ -13,10 +26,7 @@ Four-layer merge, YAML surface, and how reloads work. Layer/runtime overlay cont
 | 3 | project | `.agentd.yaml` walking up from CWD / project root |
 | 4 | runtime | daemon-managed overlay (approvals, temporary blocks) |
 
-**Runtime path**
-
-- Unix: `$XDG_STATE_HOME/agentd/runtime.yaml`, else `~/.local/state/agentd/runtime.yaml`
-- Windows: `%LOCALAPPDATA%\agentd\runtime.yaml`
+**Runtime path:** `runtime.yaml` in the [state directory](#state-directory).
 
 Runtime writes are debounced (**500ms**), mode `0600`, atomic rename. Hot path uses `store.Current()` only — no disk I/O per Invoke.
 
@@ -55,7 +65,7 @@ Daemon operational logging (not the async dispatch `target: log`).
 | Key | Default |
 |-----|---------|
 | `level` | `info` (`debug` \| `info` \| `warn` \| `error`) |
-| `file` | `""` → `$XDG_STATE_HOME/agentd/agentd.log` (Windows: `%LOCALAPPDATA%\agentd\agentd.log`) |
+| `file` | `""` → `agentd.log` in the [state directory](#state-directory) |
 
 `agentd daemon start --foreground` mirrors logs to stderr as well as the file. CLI `--log-level` and `--log-file` override YAML for that process only.
 

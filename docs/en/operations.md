@@ -43,6 +43,6 @@ Stop drains sync then async (up to timeout), then removes socket/PID.
 
 ## Logging
 
-Hook path: never debug on stdout. Daemon / async `log` targets use structured logs (stderr / configured sinks).
+Hook path: never debug on stdout. The daemon appends operational logs to `agentd.log` in the [state directory](./configuration.md#state-directory); `agentd daemon start --foreground` also mirrors to stderr. Async dispatch `target: log` uses the same slog logger.
 
 See also: [Dispatch](./dispatch.md) async overflow, [Configuration](./configuration.md) reload.

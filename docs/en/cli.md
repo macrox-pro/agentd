@@ -26,7 +26,7 @@ Daemon process version: field `version` on `agentd daemon status`.
 
 | Command | Flags | Notes |
 |---------|-------|-------|
-| `daemon start` | `--foreground`, `--log-level`, `--log-file` | Detach by default; waits until Health succeeds; logs to state-dir file |
+| `daemon start` | `--foreground`, `--log-level`, `--log-file` | Detach by default; waits until Health succeeds; logs to [state directory](./configuration.md#state-directory) `agentd.log` |
 | `daemon stop` | `--timeout` (`10s`) | gRPC Shutdown, then SIGTERM fallback |
 | `daemon status` | `--json` | Status of the running daemon, including process version (`version`; [Operations](./operations.md)) |
 | `daemon reload` | — | Force config re-merge |
@@ -79,7 +79,7 @@ Offline compile of defaults ⊕ user ⊕ optional project (no daemon required).
 
 ## session
 
-Trajectory ledger inspect/export ([Trajectory](./trajectory.md)). Offline — reads `$XDG_STATE_HOME/agentd/sessions/`. **Exception:** `session subscribe` requires a running daemon.
+Trajectory ledger inspect/export ([Trajectory](./trajectory.md)). Offline — reads `sessions/` under the [state directory](./configuration.md#state-directory). **Exception:** `session subscribe` requires a running daemon.
 
 | Command | Flags |
 |---------|-------|

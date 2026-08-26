@@ -245,7 +245,7 @@ More examples: [docs/en/dispatch.md](./docs/en/dispatch.md).
 | defaults | in code | developers |
 | user | `~/.agentd.yaml` | user / CLI |
 | project | `.agentd.yaml` (nearest ancestor of CWD) | user / CLI |
-| runtime | `$XDG_STATE_HOME/agentd/runtime.yaml` | **daemon only** |
+| runtime | `$XDG_STATE_HOME/agentd/runtime.yaml` | **daemon only** (why + unset fallback + Windows: [docs/en/configuration.md](./docs/en/configuration.md#state-directory)) |
 
 Merge: `defaults ⊕ user ⊕ project(cwd) ⊕ runtime`. Project path resolved once per `Invoke` via pre-built map (no FS walk on hot path).
 
@@ -424,7 +424,7 @@ Same as ConfigStore / async_side (§1.5):
 - Append in-memory → async JSONL persist
 - Overflow: drop + counter; must not stall the agent
 
-**Storage:** `$XDG_STATE_HOME/agentd/sessions/<provider>/<session_id>.jsonl`
+**Storage:** `$XDG_STATE_HOME/agentd/sessions/<provider>/<session_id>.jsonl` (why + unset fallback + Windows: [docs/en/configuration.md](./docs/en/configuration.md#state-directory))
 
 ### 14.2 Event catalog
 

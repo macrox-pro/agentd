@@ -15,7 +15,7 @@
 | [Зачем нужен agentd](./why.md) | Задачи продукта, боли, границы v1 |
 | [Быстрый старт](./getting-started.md) | Демон, минимальный конфиг, установка хуков, проверка |
 | [Установка](./installation.md) | `go install`, релизы, сборка из исходников |
-| [Конфигурация](./configuration.md) | Слои конфига, ключи YAML, validate/show/patch, перезагрузка |
+| [Конфигурация](./configuration.md) | Слои, пути на диске (state directory), ключи YAML, validate/show/patch, перезагрузка |
 | [Справочник CLI](./cli.md) | Команды и флаги |
 | [Охранники (guards)](./guards.md) | `secrets`, `shell`, `mcp`, `paths` |
 | [Маршрутизация (dispatch)](./dispatch.md) | Режимы, цели, таймауты, асинхронная очередь |

@@ -43,6 +43,6 @@ agentd daemon stop --timeout 10s
 
 ## Логирование
 
-На пути хука не писать отладку в stdout. Демон и асинхронные цели `log` пишут структурированные логи (stderr / настроенные приёмники).
+На пути хука не писать отладку в stdout. Демон дописывает операционные логи в `agentd.log` в [state directory](./configuration.md#state-directory); `agentd daemon start --foreground` также дублирует в stderr. Асинхронная цель dispatch `target: log` использует тот же slog-логгер.
 
 См. также: [Маршрутизация](./dispatch.md) (переполнение очереди), [Конфигурация](./configuration.md) (перезагрузка).

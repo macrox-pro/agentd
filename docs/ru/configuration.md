@@ -4,6 +4,19 @@
 
 Четыре слоя, которые **сливаются** (merge) в один эффективный конфиг; поверхность YAML; как работает перезагрузка. Контракт слоёв и runtime overlay: [DESIGN.md §7](../../DESIGN.md#7-configuration-schema).
 
+## State directory (каталог состояния)
+
+Пользовательский конфиг — файл `~/.agentd.yaml`, не дерево `~/.agentd/`. Изменяемые данные демона (runtime overlay, операционный лог, ledger сессий) — это **state**: пишет демон, данные восстановимы и не должны ехать вместе с бэкапами конфига или в git. [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/latest/) относит этот класс к `$XDG_STATE_HOME` (если не задан → `~/.local/state`). На Windows — `%LOCALAPPDATA%\agentd\`. IPC (сокет / блокировка) — **runtime**, не state: `$XDG_RUNTIME_DIR` живёт в сессии ОС и очищается при logout.
+
+| Что | Путь по умолчанию |
+|-----|-------------------|
+| Пользовательский конфиг | `~/.agentd.yaml` (файл) |
+| State directory | `$XDG_STATE_HOME/agentd/` иначе `~/.local/state/agentd/` (Windows: `%LOCALAPPDATA%\agentd\`) |
+| → runtime overlay | `runtime.yaml` (только демон) |
+| → операционный лог | `agentd.log` |
+| → ledger trajectory | `sessions/<provider>/<session_id>.jsonl` (если включён) |
+| IPC-сокет (не state) | `$XDG_RUNTIME_DIR/agentd/agentd.sock` (fallback Darwin: `~/Library/Caches/agentd/`; Linux: `~/.local/run/agentd/`; иначе temp) — [DESIGN.md §5](../../DESIGN.md#5-transport) |
+
 ## Слои (порядок слияния)
 
 | Порядок | Слой | Где лежит |
@@ -13,10 +26,7 @@
 | 3 | проектный (`project`) | `.agentd.yaml`, поиск вверх от текущей директории / корня проекта |
 | 4 | runtime | наложение, которым управляет демон (одобрения, временные блокировки) |
 
-**Путь runtime-файла**
-
-- Unix: `$XDG_STATE_HOME/agentd/runtime.yaml`, иначе `~/.local/state/agentd/runtime.yaml`
-- Windows: `%LOCALAPPDATA%\agentd\runtime.yaml`
+**Путь runtime-файла:** `runtime.yaml` в [state directory](#state-directory).
 
 Запись на диск откладывается на **500 ms** (debounce), права файла `0600`, запись атомарная (временный файл + rename). На горячем пути обработки запроса используется только снимок в памяти (`store.Current()`), без чтения диска на каждый `Invoke`.
 
@@ -55,7 +65,7 @@
 | Ключ | По умолчанию |
 |------|--------------|
 | `level` | `info` (`debug` \| `info` \| `warn` \| `error`) |
-| `file` | `""` → `$XDG_STATE_HOME/agentd/agentd.log` (Windows: `%LOCALAPPDATA%\agentd\agentd.log`) |
+| `file` | `""` → `agentd.log` в [state directory](#state-directory) |
 
 `agentd daemon start --foreground` дублирует логи в stderr и в файл. Флаги CLI `--log-level` и `--log-file` переопределяют YAML только для этого процесса.
 

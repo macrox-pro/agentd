@@ -23,7 +23,7 @@ agentd daemon start
 agentd daemon status
 ```
 
-`--foreground` keeps the process attached (dev / process managers).
+`--foreground` keeps the process attached (dev / process managers). Operational logs go to `agentd.log` in the [state directory](./configuration.md#state-directory) (`--foreground` also mirrors stderr).
 
 ## 3. Minimal user config
 

@@ -26,7 +26,7 @@
 
 | Команда | Флаги | Заметки |
 |---------|-------|---------|
-| `daemon start` | `--foreground`, `--log-level`, `--log-file` | По умолчанию уходит в фон; ждёт Health; логи в файл state-dir |
+| `daemon start` | `--foreground`, `--log-level`, `--log-file` | По умолчанию уходит в фон; ждёт Health; логи в `agentd.log` в [state directory](./configuration.md#state-directory) |
 | `daemon stop` | `--timeout` (`10s`) | Корректное завершение по gRPC, иначе SIGTERM |
 | `daemon status` | `--json` | Статус работающего демона, включая версию процесса (`version`; [Эксплуатация](./operations.md)) |
 | `daemon reload` | — | Принудительно пересобрать конфиг с диска |
@@ -79,7 +79,7 @@
 
 ## session (журнал trajectory)
 
-Просмотр и экспорт JSONL ([Trajectory](./trajectory.md)). Offline — читает `$XDG_STATE_HOME/agentd/sessions/`. **Исключение:** `session subscribe` требует запущенный daemon.
+Просмотр и экспорт JSONL ([Trajectory](./trajectory.md)). Offline — читает `sessions/` в [state directory](./configuration.md#state-directory). **Исключение:** `session subscribe` требует запущенный daemon.
 
 | Команда | Флаги |
 |---------|-------|

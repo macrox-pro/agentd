@@ -25,7 +25,7 @@ trajectory:
       path: ""                  # default $CODEX_HOME/sessions or ~/.codex/sessions
 ```
 
-Storage: `$XDG_STATE_HOME/agentd/sessions/<provider>/<session_id>.jsonl` (Windows: under `%LOCALAPPDATA%\agentd\sessions\`).
+Storage: `sessions/<provider>/<session_id>.jsonl` under the [state directory](./configuration.md#state-directory).
 
 Recording happens on the daemon async path — sync hook latency is unchanged.
 

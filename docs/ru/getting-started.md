@@ -23,7 +23,7 @@ agentd daemon start
 agentd daemon status
 ```
 
-`--foreground` — не отсоединяться от терминала (удобно при отладке или под process manager).
+`--foreground` — не отсоединяться от терминала (удобно при отладке или под process manager). Операционные логи — в `agentd.log` в [state directory](./configuration.md#state-directory) (`--foreground` также дублирует в stderr).
 
 ## 3. Минимальный пользовательский конфиг
 

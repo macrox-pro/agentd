@@ -44,6 +44,6 @@ Evaluated before guards; match → Deny.
 
 ## Persist
 
-Runtime file flush is debounced **500ms**, atomic write. Restart reloads approvals/blocks from runtime.yaml. Expired entries are dropped on compile.
+Runtime file flush is debounced **500ms**, atomic write. Restart reloads approvals/blocks from `runtime.yaml` in the [state directory](./configuration.md#state-directory). Expired entries are dropped on compile.
 
 See also: [Configuration](./configuration.md), [Guards](./guards.md), [CLI](./cli.md).
