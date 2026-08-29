@@ -29,8 +29,8 @@ func defaultLogging() LoggingConfig {
 }
 
 type fileLogging struct {
-	Level string `yaml:"level"`
-	File  string `yaml:"file"`
+	Level string `yaml:"level,omitempty"`
+	File  string `yaml:"file,omitempty"`
 }
 
 func parseLogging(in *fileLogging, base LoggingConfig) (LoggingConfig, error) {

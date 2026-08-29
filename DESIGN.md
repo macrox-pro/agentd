@@ -249,6 +249,8 @@ More examples: [docs/en/dispatch.md](./docs/en/dispatch.md).
 
 Merge: `defaults ⊕ user ⊕ project(cwd) ⊕ runtime`. Project path resolved once per `Invoke` via pre-built map (no FS walk on hot path).
 
+**User bootstrap:** `daemon start` calls `PrepareUserConfig` once before load. Missing `~/.agentd.yaml` (or `--config`) gets a minimal file; invalid user YAML/compile blocks start with stderr notice. `Load` / `config show` / `config validate` never create the user file. Details: [docs/en/configuration.md](./docs/en/configuration.md#user-config-bootstrap).
+
 ### Hot path — zero config I/O
 
 ```go

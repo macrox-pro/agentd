@@ -43,6 +43,17 @@ func Start(ctx context.Context, opts StartOptions) error {
 	if err := ensureNotRunning(ctx, opts.Socket); err != nil {
 		return err
 	}
+	userPath := opts.ConfigPath
+	if userPath == "" {
+		userPath = config.DefaultUserPath()
+	}
+	if userPath == "" {
+		return fmt.Errorf("user config path: home directory unavailable")
+	}
+	if err := config.PrepareUserConfig(userPath, os.Stderr); err != nil {
+		return err
+	}
+	opts.ConfigPath = userPath
 	if !opts.Foreground {
 		return detach(opts)
 	}

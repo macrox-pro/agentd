@@ -60,17 +60,21 @@ func writeRuntimeAtomic(s *Store, path string, raw []byte) error {
 	if s != nil {
 		s.IgnoreSelfWrite(path)
 	}
+	return writeYAMLAtomic(path, raw)
+}
+
+func writeYAMLAtomic(path string, raw []byte) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, runtimeDirPerm); err != nil {
-		return fmt.Errorf("mkdir runtime dir: %w", err)
+		return fmt.Errorf("mkdir config dir: %w", err)
 	}
 	tmp := path + runtimeTmpSuffix
 	if err := os.WriteFile(tmp, raw, runtimeFilePerm); err != nil {
-		return fmt.Errorf("write runtime tmp: %w", err)
+		return fmt.Errorf("write config tmp: %w", err)
 	}
 	if err := os.Rename(tmp, path); err != nil {
 		_ = os.Remove(tmp)
-		return fmt.Errorf("rename runtime: %w", err)
+		return fmt.Errorf("rename config: %w", err)
 	}
 	return nil
 }

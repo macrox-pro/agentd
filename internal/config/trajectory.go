@@ -47,17 +47,17 @@ func defaultImportProviders() map[string]ImportProviderConfig {
 }
 
 type fileTrajectory struct {
-	Enabled           *bool                         `yaml:"enabled"`
-	IncludeRaw        *bool                         `yaml:"include_raw"`
-	RedactSecretRules *bool                         `yaml:"redact_secret_rules"`
-	MaxEventBytes     *int                          `yaml:"max_event_bytes"`
-	QueueCapacity     *int                          `yaml:"queue_capacity"`
-	Import            map[string]*fileImportProvider `yaml:"import"`
+	Enabled           *bool                          `yaml:"enabled,omitempty"`
+	IncludeRaw        *bool                          `yaml:"include_raw,omitempty"`
+	RedactSecretRules *bool                          `yaml:"redact_secret_rules,omitempty"`
+	MaxEventBytes     *int                           `yaml:"max_event_bytes,omitempty"`
+	QueueCapacity     *int                           `yaml:"queue_capacity,omitempty"`
+	Import            map[string]*fileImportProvider `yaml:"import,omitempty"`
 }
 
 type fileImportProvider struct {
-	Enabled *bool  `yaml:"enabled"`
-	Path    string `yaml:"path"`
+	Enabled *bool  `yaml:"enabled,omitempty"`
+	Path    string `yaml:"path,omitempty"`
 }
 
 func parseTrajectory(in *fileTrajectory, base TrajectoryConfig) (TrajectoryConfig, error) {

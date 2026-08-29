@@ -232,3 +232,40 @@ func waitReady(t *testing.T, socket string, errCh <-chan error, timeout time.Dur
 		}
 	}
 }
+
+func TestStartBootstrapsMissingConfig(t *testing.T) {
+	socket, cfg := testSocket(t)
+	_, err := os.Stat(cfg)
+	require.True(t, os.IsNotExist(err), "Stat(%q)", cfg)
+
+	errCh := launchForegroundDaemon(t, socket, cfg)
+	_, err = os.Stat(cfg)
+	require.NoError(t, err, "Stat(%q)", cfg)
+	require.NoError(t, stopForegroundDaemon(t, socket, errCh), "Start(%q)", socket)
+}
+
+func TestStartInvalidUserConfig(t *testing.T) {
+	dir, err := os.MkdirTemp("", "agentd-daemon-invalid-")
+	require.NoError(t, err, "MkdirTemp")
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	socket := filepath.Join(dir, "s.sock")
+	cfg := filepath.Join(dir, "bad.yaml")
+	require.NoError(t, os.WriteFile(cfg, []byte("version: 1\npolicy:\n  fail: nope\n"), 0o600), "WriteFile(%q)", cfg)
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- daemon.Start(t.Context(), daemon.StartOptions{
+			Socket:     socket,
+			ConfigPath: cfg,
+			Foreground: true,
+			Version:    "test",
+		})
+	}()
+
+	select {
+	case err := <-errCh:
+		require.Error(t, err, "Start(invalid config)")
+	case <-time.After(3 * time.Second):
+		t.Fatal("Start(invalid config): expected error")
+	}
+}

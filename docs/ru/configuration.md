@@ -17,6 +17,25 @@
 | → ledger trajectory | `sessions/<provider>/<session_id>.jsonl` (если включён) |
 | IPC-сокет (не state) | `$XDG_RUNTIME_DIR/agentd/agentd.sock` (fallback Darwin: `~/Library/Caches/agentd/`; Linux: `~/.local/run/agentd/`; иначе temp) — [DESIGN.md §5](../../DESIGN.md#5-transport) |
 
+## Bootstrap пользовательского конфига
+
+Только при **`agentd daemon start`**: если файла пользовательского конфига нет, демон записывает минимальный bootstrap (те же ключи, что в [быстром старте](./getting-started.md)) и продолжает запуск. Команды только для чтения (`config show`, `config validate`, хуки) **не** создают файл.
+
+| Ситуация | Поведение |
+|----------|-----------|
+| Файла нет | Bootstrap пишется без сообщений; старт продолжается |
+| Файл валиден | Без изменений; старт продолжается |
+| Невалидный YAML или ошибка compile | Stderr: `agentd: invalid user config <path>: …`; старт не выполняется; файл не меняется |
+| Путь недоступен / ошибка I/O | Старт не выполняется; без сообщения «invalid user config» |
+
+Проверка и правка офлайн, затем перезапуск:
+
+```bash
+agentd config validate --config ~/.agentd.yaml
+```
+
+`config show` нормализует YAML (пустые поля опускаются; ключей `null` нет).
+
 ## Слои (порядок слияния)
 
 | Порядок | Слой | Где лежит |

@@ -111,14 +111,14 @@ Details: [docs/en/installation.md](./docs/en/installation.md).
 
 ## Quick start
 
-**1. Start the daemon** (one instance per user):
+**1. Start the daemon** (one instance per user). If `~/.agentd.yaml` is missing, start creates a [minimal bootstrap](./docs/en/configuration.md#user-config-bootstrap) automatically:
 
 ```bash
 agentd daemon start
 agentd daemon status
 ```
 
-**2. Add a minimal config** (`~/.agentd.yaml`):
+**2. Customize user config** (optional — edit `~/.agentd.yaml` after start, or create it yourself first):
 
 ```yaml
 version: 1

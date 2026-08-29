@@ -25,9 +25,11 @@ agentd daemon status
 
 `--foreground` — не отсоединяться от терминала (удобно при отладке или под process manager). Операционные логи — в `agentd.log` в [state directory](./configuration.md#state-directory) (`--foreground` также дублирует в stderr).
 
-## 3. Минимальный пользовательский конфиг
+Если `~/.agentd.yaml` (или `--config`) отсутствует, **`daemon start` создаёт минимальный пользовательский конфиг** автоматически ([подробнее](./configuration.md#bootstrap-пользовательского-конфига)). Редактировать можно после запуска демона.
 
-Путь по умолчанию: `~/.agentd.yaml` (или `--config`).
+## 3. Пользовательский конфиг (необязателен при первом старте)
+
+Путь по умолчанию: `~/.agentd.yaml` (или `--config`). Не создавайте файл вручную, если уже выполнили `daemon start` — bootstrap совпадает с:
 
 ```yaml
 version: 1

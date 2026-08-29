@@ -45,6 +45,14 @@ func TestConfigValidate(t *testing.T) {
 			args:    []string{"config", "validate"},
 			wantErr: true,
 		},
+		{
+			name: "missing file not created",
+			setup: func(t *testing.T) string {
+				return filepath.Join(t.TempDir(), "absent.yaml")
+			},
+			args:     []string{"config", "validate"},
+			contains: "ok",
+		},
 	}
 
 	for _, tt := range tests {
@@ -57,6 +65,10 @@ func TestConfigValidate(t *testing.T) {
 			}
 			require.NoError(t, got.err)
 			assert.Contains(t, got.out, tt.contains)
+			if tt.name == "missing file not created" {
+				_, err := os.Stat(cfg)
+				assert.True(t, os.IsNotExist(err), "Stat(%q)", cfg)
+			}
 		})
 	}
 }

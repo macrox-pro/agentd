@@ -17,6 +17,25 @@ User config is the file `~/.agentd.yaml` — not a `~/.agentd/` tree. Mutable da
 | → trajectory ledger | `sessions/<provider>/<session_id>.jsonl` (when enabled) |
 | IPC socket (not state) | `$XDG_RUNTIME_DIR/agentd/agentd.sock` (Darwin fallback `~/Library/Caches/agentd/`; Linux `~/.local/run/agentd/`; else temp) — [DESIGN.md §5](../../DESIGN.md#5-transport) |
 
+## User config bootstrap
+
+On **`agentd daemon start` only**, if the user config file is missing, the daemon writes a minimal bootstrap file (same keys as the [getting-started](./getting-started.md) example) and continues. Read-only commands (`config show`, `config validate`, hooks) **never** create the file.
+
+| Situation | Behavior |
+|-----------|----------|
+| File missing | Bootstrap written silently; start continues |
+| File valid | No change; start continues |
+| Invalid YAML or compile error | Stderr: `agentd: invalid user config <path>: …`; start fails; file unchanged |
+| Unreadable path / I/O error | Start fails; no invalid-config message |
+
+Fix invalid config offline, then restart:
+
+```bash
+agentd config validate --config ~/.agentd.yaml
+```
+
+`config show` normalizes YAML output (empty fields omitted; no `null` keys).
+
 ## Layers (merge order)
 
 | Order | Layer | Location |

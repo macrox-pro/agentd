@@ -20,6 +20,22 @@ agentd daemon status --json
 
 `--socket` у клиента хука и у демона должен совпадать. Устаревший сокет удаляется только при старте под блокировкой. Операционные логи демона: `agentd.log` в [state directory](./configuration.md#state-directory).
 
+## Старт демона не выполняется (невалидный пользовательский конфиг)
+
+`agentd daemon start` проверяет пользовательский конфиг до загрузки. При невалидном YAML или ошибке compile:
+
+```text
+agentd: invalid user config /path/to/.agentd.yaml: …
+```
+
+Старт прерывается; файл **не** переименовывается и не карантинируется. Диагностика офлайн:
+
+```bash
+agentd config validate --config ~/.agentd.yaml
+```
+
+Исправьте файл и снова выполните `agentd daemon start`. `config validate` и `config show` не создают отсутствующий пользовательский файл.
+
 ## Таймауты
 
 Бюджет sync ≈ 90 % таймаута провайдера, при желании ограничен `route.sync_timeout` ([Маршрутизация](./dispatch.md)). CLI `--timeout 0` не задаёт deadline; демон берёт значения по виду события (30 s / 5 s).

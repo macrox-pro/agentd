@@ -25,9 +25,11 @@ agentd daemon status
 
 `--foreground` keeps the process attached (dev / process managers). Operational logs go to `agentd.log` in the [state directory](./configuration.md#state-directory) (`--foreground` also mirrors stderr).
 
-## 3. Minimal user config
+If `~/.agentd.yaml` (or `--config`) is missing, **`daemon start` creates a minimal user config** automatically ([details](./configuration.md#user-config-bootstrap)). You can edit it after the daemon is up.
 
-Default path: `~/.agentd.yaml` (or `--config`).
+## 3. User config (optional at first start)
+
+Default path: `~/.agentd.yaml` (or `--config`). Skip creating it manually if you already ran `daemon start` — bootstrap matches:
 
 ```yaml
 version: 1

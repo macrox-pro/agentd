@@ -310,18 +310,38 @@ func (s *Store) LayerYAML(layer Layer, cwd, projectRoot string) ([]byte, error) 
 
 	switch layer {
 	case LayerUser:
-		return append([]byte(nil), s.userRaw...), nil
+		if s.userFC == nil {
+			return nil, nil
+		}
+		return yaml.Marshal(s.userFC)
 	case LayerRuntime:
-		return append([]byte(nil), s.runtimeRaw...), nil
+		if s.runtimeFC == nil {
+			return nil, nil
+		}
+		return yaml.Marshal(s.runtimeFC)
 	case LayerProject:
 		path, ok := FindProjectConfig(cwd, projectRoot)
 		if !ok {
 			return nil, nil
 		}
 		if ps, hit := s.projects[path]; hit {
-			return append([]byte(nil), ps.raw...), nil
+			if ps.fc == nil {
+				return nil, nil
+			}
+			return yaml.Marshal(ps.fc)
 		}
-		return readOptionalYAML(path)
+		raw, err := readOptionalYAML(path)
+		if err != nil {
+			return nil, err
+		}
+		if len(raw) == 0 {
+			return nil, nil
+		}
+		var fc fileConfig
+		if err := yaml.Unmarshal(raw, &fc); err != nil {
+			return nil, fmt.Errorf("parse project config %q: %w", path, err)
+		}
+		return yaml.Marshal(&fc)
 	case LayerMerged:
 		path, ok := FindProjectConfig(cwd, projectRoot)
 		var project *fileConfig

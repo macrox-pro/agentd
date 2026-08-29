@@ -20,6 +20,22 @@ agentd daemon status --json
 
 Check `--socket` matches the edge process. Stale sockets are cleaned only under the start lock. Daemon operational logs: `agentd.log` in the [state directory](./configuration.md#state-directory).
 
+## Daemon start fails (invalid user config)
+
+`agentd daemon start` validates the user config before loading. Invalid YAML or compile errors print:
+
+```text
+agentd: invalid user config /path/to/.agentd.yaml: …
+```
+
+Start aborts; the file is **not** renamed or quarantined. Diagnose offline:
+
+```bash
+agentd config validate --config ~/.agentd.yaml
+```
+
+Fix the file, then `agentd daemon start` again. `config validate` and `config show` do not create a missing user file.
+
 ## Timeouts
 
 Sync budget ≈ 90% of provider timeout, optionally capped by route `sync_timeout` ([Dispatch](./dispatch.md)). CLI `--timeout 0` leaves deadline unset; daemon then uses kind defaults (30s / 5s).

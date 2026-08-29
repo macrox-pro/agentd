@@ -4,6 +4,37 @@
 
 ## Current phase
 
+Phase: **user config bootstrap done** | Last: `PrepareUserConfig` on daemon start | Next: **none**
+
+### user config bootstrap (2026-08-29)
+
+**Problem:** No user config on first `daemon start`; `config show` could emit null keys; invalid user YAML failed opaquely.
+
+**Hot path:** config_reload — prepare once at start, not per Invoke
+
+**Invariants:**
+- `PrepareUserConfig` only from `internal/daemon/start.go`
+- `Load` / `config show` / `config validate` never create user file
+- Invalid user config → stderr notify + error; no `*.broken.yaml`
+- After prepare: `opts.ConfigPath = userPath`
+
+**Corner cases (`tt.name`):** C1 missing bootstrap; C2 empty file; C3 valid unchanged; C4/C4b invalid compile/parse; C6 unreadable; C7 write fail; C10 idempotent; C12 Load/show/validate no create; C15–C17 omitempty; C18 notify; C20 ConfigPath assignment
+
+**Out of scope:** project bootstrap; quarantine; prepare outside daemon start; C11 concurrent start
+
+**Done:**
+- `yaml:",omitempty"` on on-disk structs; `writeYAMLAtomic` in persist
+- `internal/config/bootstrap.go` — `PrepareUserConfig`
+- `internal/daemon/start.go` wiring + tests
+- `Store.LayerYAML` marshal normalized layers
+- docs EN/RU + DESIGN §3 + README quick start
+
+**Verify:** `go test ./internal/config/... ./internal/daemon/... ./cmd/... -race -count=1`; `make lint intent-check docs-check e2e`
+
+**Files:** `internal/config/{file,logging,trajectory,persist,bootstrap,bootstrap_test,store,config}.go`, `internal/daemon/{start,start_test}.go`, `cmd/{config_show,config_validate}_test.go`, `docs/en|ru/{configuration,getting-started,troubleshooting}.md`, `DESIGN.md`, `README.md`, `PROGRESS.md`
+
+---
+
 Phase: **state-directory docs done** | Last: canonical State directory + cross-links | Next: **none**
 
 ### state-directory docs (2026-08-26)

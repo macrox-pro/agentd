@@ -50,6 +50,12 @@ func TestConfigShow(t *testing.T) {
 			args:     []string{"config", "show", "--merged"},
 			contains: "version",
 		},
+		{
+			name:     "merged omitempty no null",
+			cfg:      "version: 1\nasync: null\n",
+			args:     []string{"config", "show", "--merged"},
+			contains: "version",
+		},
 	}
 
 	for _, tt := range tests {
@@ -63,7 +69,21 @@ func TestConfigShow(t *testing.T) {
 			}
 			require.NoError(t, got.err)
 			assert.Contains(t, got.out, tt.contains)
-			assert.NotEmpty(t, got.out)
+			if tt.name == "merged omitempty no null" {
+				assert.NotContains(t, got.out, "null")
+			}
+			if tt.contains != "" {
+				assert.NotEmpty(t, got.out)
+			}
 		})
 	}
+}
+
+func TestConfigShowMissingFileNoCreate(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "absent.yaml")
+	got := executeRoot(t, execOpts{args: []string{"config", "show", "--merged"}, configPath: cfg})
+	require.NoError(t, got.err)
+	assert.Contains(t, got.out, "version")
+	_, err := os.Stat(cfg)
+	assert.True(t, os.IsNotExist(err), "Stat(%q)", cfg)
 }
