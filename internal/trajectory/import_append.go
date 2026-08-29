@@ -10,8 +10,8 @@ import (
 
 const defaultImportMaxEventBytes = 262144
 
-// AppendImported assigns contiguous seq after existing ledger events and persists.
-func AppendImported(root string, key SessionKey, events []Event) error {
+// AssignImportedSeq mutates events in place with contiguous seq after existing ledger events.
+func AssignImportedSeq(root string, key SessionKey, events []Event) error {
 	if len(events) == 0 {
 		return nil
 	}
@@ -41,6 +41,17 @@ func AppendImported(root string, key SessionKey, events []Event) error {
 		if events[i].ProjectRoot == "" {
 			events[i].ProjectRoot = key.ProjectRoot
 		}
+	}
+	return nil
+}
+
+// AppendImported assigns contiguous seq after existing ledger events and persists.
+func AppendImported(root string, key SessionKey, events []Event) error {
+	if len(events) == 0 {
+		return nil
+	}
+	if err := AssignImportedSeq(root, key, events); err != nil {
+		return err
 	}
 	return AppendEvents(root, key, events)
 }

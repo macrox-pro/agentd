@@ -4,13 +4,15 @@
 
 ## Current
 
-**v0.0.4** (2026-08-29) · shipped · next: **none**
+**session import --out** (in progress) · next: verify + merge
 
-Login autostart (`daemon enable`/`disable`) + curated config toggles (`config enable`/`disable`/`get`). Tag `v0.0.4` — push to trigger goreleaser.
+Added `--out` to `session import`: emit parsed transcript JSONL to stdout (`-`) or file without ledger/checkpoint writes. Shared `trajectory.AssignImportedSeq`, `WriteEvents*`, `ImportSessionOptions.EmitOnly`.
+
+Files: `internal/trajectory/import_append.go`, `write_events.go`, `internal/trajectory/importer/import_session.go`, `cmd/session_import.go`, docs en/ru, DESIGN §6, CHANGELOG.
 
 ```bash
-make lint && make intent-check && make docs-check && make test
-./scripts/release-notes.sh v0.0.4
+make lint && make intent-check && make docs-check
+go test ./cmd/... ./internal/trajectory/... -race -count=1
 ```
 
 ## Recent (done)

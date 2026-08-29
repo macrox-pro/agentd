@@ -124,11 +124,36 @@ Trajectory ledger inspect/export ([Trajectory](./trajectory.md)). Offline — re
 | `session show SESSION_ID` | `--provider` (required), `--json` |
 | `session export` | `--provider`, `--session`, `--out` |
 | `session search` | `--provider`, `--session`, `--kind` (repeatable), `--source`, `--query`, `--limit`, `--json` |
-| `session import` | `--provider` (required), `--session`, `--path`, `--dry-run`, `--json` |
+| `session import` | `--provider` (required), `--session`, `--path`, `--out`, `--dry-run`, `--json` |
 | `session replay` | `--policy` (required), `--provider`, `--session`, `--seq`, `--json` |
 | `session fork` | `--provider`, `--session`, `--new-session`, `--at-seq`, `--json` |
 | `session subscribe` | `--provider`, `--session`, `--source`, `--json` (live firehose; daemon required) |
 
 `session search` scans JSONL line-by-line (O(total bytes); no index). `session import`: Claude Code and Codex `supported`; Cursor `partial` (prefer `--path`); others explicit `none`. `session replay --policy` needs `include_raw` at record time. `session fork` is audit lineage only (source immutable). `session subscribe` is live-only from dial time — use show/export for history.
+
+### session import `--out`
+
+**Default:** appends parsed transcript events to the session ledger under the [state directory](./configuration.md#state-directory); prints summary to **stdout**.
+
+| | `session export` | `session import` |
+|--|------------------|------------------|
+| **Default output** | stdout (ledger JSONL) | disk ledger (no event stream) |
+| **`--out` omitted** | data → stdout | data → `sessions/<provider>/<id>.jsonl` |
+| **`--out PATH`** | file instead of stdout | file instead of ledger (parse-only) |
+| **`--out -`** | N/A (stdout is already default) | stdout instead of ledger (parse-only) |
+| **Summary when streaming data** | N/A (data only) | stderr when `--out` set |
+
+- **`--out -`:** writes parsed events as **JSONL to stdout**; does **not** update ledger or import checkpoint; summary on **stderr** (use `--json` for JSON summary on stderr).
+- **`--out PATH`:** same as `-` but writes JSONL to a file (truncate/create; `0o600` file, `0o700` parent dir).
+- **`--dry-run`:** summary only, no ledger write (unchanged). **`--out` is not `--dry-run`** — `dry_run` in JSON summary is true only when `--dry-run` is set. Combine `--dry-run --out -` to emit events and mark the summary as dry-run.
+- **Format:** one JSON object per line — same event schema as `session export` / ledger JSONL.
+- **Incremental import:** reads `<session_id>.import.json` for `startIndex` when present; does not update the sidecar on `--out`.
+- **Write failure:** non-zero exit; an output file may be truncated.
+
+Pipe example:
+
+```bash
+agentd session import --provider claude-code --path /path/to/session.jsonl --out - | jq -c 'select(.type=="transcript/message")'
+```
 
 See also: [Getting started](./getting-started.md), [Providers](./providers.md).

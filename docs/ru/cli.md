@@ -124,11 +124,36 @@ agentd config enable guard-shell
 | `session show SESSION_ID` | `--provider` (обязателен), `--json` |
 | `session export` | `--provider`, `--session`, `--out` |
 | `session search` | `--provider`, `--session`, `--kind` (повтор), `--source`, `--query`, `--limit`, `--json` |
-| `session import` | `--provider` (обязателен), `--session`, `--path`, `--dry-run`, `--json` |
+| `session import` | `--provider` (обязателен), `--session`, `--path`, `--out`, `--dry-run`, `--json` |
 | `session replay` | `--policy` (обязателен), `--provider`, `--session`, `--seq`, `--json` |
 | `session fork` | `--provider`, `--session`, `--new-session`, `--at-seq`, `--json` |
 | `session subscribe` | `--provider`, `--session`, `--source`, `--json` (live; нужен daemon) |
 
 `session search` сканирует JSONL построчно (O(объём); без индекса). `session import`: Claude Code и Codex — `supported`; Cursor — `partial` (лучше `--path`); остальные — явный `none`. `session replay --policy` требует `include_raw` при записи. `session fork` — только аудит (исходник неизменяем). `session subscribe` — live с момента подключения; история через show/export.
+
+### session import `--out`
+
+**По умолчанию:** дописывает распарсенные transcript-события в ledger в [state directory](./configuration.md#state-directory); summary на **stdout**.
+
+| | `session export` | `session import` |
+|--|------------------|------------------|
+| **Вывод по умолчанию** | stdout (ledger JSONL) | ledger на диске (без потока событий) |
+| **Без `--out`** | данные → stdout | данные → `sessions/<provider>/<id>.jsonl` |
+| **`--out PATH`** | файл вместо stdout | файл вместо ledger (только parse) |
+| **`--out -`** | N/A (stdout уже по умолчанию) | stdout вместо ledger (только parse) |
+| **Summary при потоке данных** | N/A (только данные) | stderr при `--out` |
+
+- **`--out -`:** JSONL на **stdout**; ledger и import checkpoint **не** обновляются; summary на **stderr** (`--json` — JSON summary на stderr).
+- **`--out PATH`:** как `-`, но в файл (truncate/create; файл `0o600`, каталог `0o700`).
+- **`--dry-run`:** только summary, без записи в ledger (как раньше). **`--out` ≠ `--dry-run`** — `dry_run` в JSON summary true только при флаге `--dry-run`. Комбинация `--dry-run --out -` отдаёт события и помечает summary как dry-run.
+- **Формат:** один JSON-объект на строку — та же схема, что у `session export` / ledger JSONL.
+- **Инкрементальный импорт:** читает `<session_id>.import.json` для `startIndex`; при `--out` sidecar не обновляется.
+- **Ошибка записи:** ненулевой exit; выходной файл может быть усечён.
+
+Пример pipe:
+
+```bash
+agentd session import --provider claude-code --path /path/to/session.jsonl --out - | jq -c 'select(.type=="transcript/message")'
+```
 
 См. также: [Быстрый старт](./getting-started.md), [Провайдеры](./providers.md).

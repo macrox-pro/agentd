@@ -49,7 +49,7 @@ trajectory:
 | `agentd session show ID --provider ID [--json]` | События одной сессии |
 | `agentd session export …` | Экспорт JSONL |
 | `agentd session search …` | Поиск (O(n) скан JSONL) |
-| `agentd session import --provider ID …` | Импорт transcript (`source=transcript`) |
+| `agentd session import --provider ID …` | Импорт transcript (`source=transcript`) или `--out` — parse-only JSONL |
 | `agentd session replay --policy --provider ID --session ID` | Dry-run policy по сохранённому Raw |
 | `agentd session fork --provider ID --session SRC --new-session DST` | Копия префикса ledger (аудит) |
 | `agentd session subscribe [--json]` | **Live** поток от демона (нужен запущенный daemon + trajectory.enabled) |
@@ -90,6 +90,23 @@ agentd session import --provider codex --path /path/to/rollout-…-SESSION_ID.js
 ```
 
 Transcript-события дописываются после hook-событий (монотонный `seq`). Повторный импорт пропускает строки из sidecar `<session_id>.import.json`. Cursor — **partial** (лучше `--path`; thinking/tool-output не выдумываются). Codex — **supported** через `~/.codex/sessions/**/rollout-*-{session_id}.jsonl` (thinking только из plaintext `agent_reasoning`).
+
+### Импорт в stdout или файл (`--out`)
+
+Preview/transcode без изменения ledger:
+
+```bash
+agentd session import --provider claude-code --path /path/to/session.jsonl --out -
+agentd session import --provider codex --session SESSION_ID --out /tmp/events.jsonl
+agentd session import --provider claude-code --session s1 --out - 2>/dev/null | wc -l
+```
+
+- Не дописывает в `sessions/…jsonl` и не обновляет `<session>.import.json`.
+- Учитывает инкрементальный импорт (читает checkpoint для `startIndex`, если sidecar есть).
+- `seq` совпадает с обычным import (включая продолжение после hook-событий).
+- При `--out` summary на stderr; `--json` — машиночитаемый summary там же.
+
+Для записи в ledger и Subscribe — обычный import (без `--out`). Подробнее: [CLI §session import --out](./cli.md#session-import-out).
 
 ## Policy replay
 

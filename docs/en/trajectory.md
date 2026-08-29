@@ -49,7 +49,7 @@ Recording happens on the daemon async path — sync hook latency is unchanged.
 | `agentd session show ID --provider ID [--json]` | Print events |
 | `agentd session export [--provider ID] [--session ID] [--out PATH]` | Export JSONL |
 | `agentd session search [--provider ID] [--query TEXT] …` | Filter ledger (O(n) JSONL scan) |
-| `agentd session import --provider ID …` | Append transcript events (`source=transcript`) |
+| `agentd session import --provider ID …` | Append transcript events (`source=transcript`) or `--out` parse-only JSONL emit |
 | `agentd session replay --policy --provider ID --session ID` | Dry-run stored Raw through Dispatch Engine |
 | `agentd session fork --provider ID --session SRC --new-session DST` | Copy ledger prefix (audit lineage) |
 | `agentd session subscribe [--json]` | **Live** stream from daemon (requires running daemon + trajectory.enabled) |
@@ -90,6 +90,23 @@ agentd session import --provider codex --path /path/to/rollout-…-SESSION_ID.js
 ```
 
 Transcript events append after existing hook events (monotonic `seq`). Re-import skips lines recorded in `<session_id>.import.json` sidecar. Correlation uses `session_id` and `tool_use_id` / `call_id` when present — never merges unrelated runs. Cursor is **partial** (prefer `--path`; never invent thinking or tool outputs). Codex is **supported** via `~/.codex/sessions/**/rollout-*-{session_id}.jsonl` (thinking only from plaintext `agent_reasoning`).
+
+### Import to stdout or file (`--out`)
+
+Preview or transcode pipelines without mutating the ledger:
+
+```bash
+agentd session import --provider claude-code --path /path/to/session.jsonl --out -
+agentd session import --provider codex --session SESSION_ID --out /tmp/events.jsonl
+agentd session import --provider claude-code --session s1 --out - 2>/dev/null | wc -l
+```
+
+- Does not append to `sessions/…jsonl` or update `<session>.import.json`.
+- Still respects incremental import (reads checkpoint for `startIndex` if sidecar exists).
+- Event `seq` values match what a normal import would assign (including continuation after existing hook events).
+- With `--out`, human summary moves to stderr; use `--json` for machine-readable summary there.
+
+For persisted ledger + Subscribe history, use default import (no `--out`). Details: [CLI §session import --out](./cli.md#session-import-out).
 
 ## Policy replay
 

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **`session import --out`** — emit parsed transcript events as JSONL to stdout (`-`) or a file without writing the session ledger or import checkpoint; summary on stderr when `--out` is set
+
 ## [v0.0.4] — 2026-08-29
 
 Login autostart and curated config toggles for trajectory and guards.

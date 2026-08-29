@@ -335,6 +335,23 @@ agentd
 | Config toggles | `config enable\|disable\|get` write curated booleans to user/project YAML only; `config patch` is runtime overlay; distinct from `daemon enable` (autostart) |
 | New command | Update **docs/en/cli.md + docs/ru/cli.md**; add row here only if architecturally significant |
 
+### CLI `--out` pattern (session commands)
+
+Architecture-only — user examples in [docs/en/cli.md](./docs/en/cli.md). One contract for commands that stream structured data without their default persist side effect (e.g. future `session show --out`).
+
+| Rule | Why |
+|------|-----|
+| **Flag name `--out`** | Same as `session export --out`; one flag across session family |
+| **Values: `-` or file PATH** | POSIX / Docker (`-` = stdout); pipe-friendly |
+| **Two command classes** | **Read/export** (`session export`): default = **stdout**. **Mutate/import** (`session import`): default = **on-disk ledger** |
+| **`--out` on mutate class** | **Emit-only**: parse and write JSONL; no ledger append, import checkpoint, or Hub publish |
+| **`--out` on read class** | Redirect stdout default to file; `-` not needed |
+| **Stream contract** | **stdout or file = machine data only** (JSONL). **stderr = summary** (`provider=…` or `--json`) — pipe-safe |
+| **`--dry-run` orthogonal** | Summary-only without event bodies; does not imply `--out` |
+| **Format** | JSONL identical to ledger / `session export` |
+| **Security** | File `--out`: `0o600`, parent dir `0o700` |
+| **Future reuse** | New session emit commands SHOULD use `--out` + `trajectory.WriteEvents*` + stderr summary |
+
 ---
 
 ## 7. Configuration schema
@@ -428,6 +445,7 @@ Same as ConfigStore / async_side (§1.5):
 - No trajectory disk I/O inside sync `Decide` / encode
 - Append in-memory → async JSONL persist
 - Overflow: drop + counter; must not stall the agent
+- Offline `session import --out` parses transcripts and encodes events via the §6 `--out` pattern; it does not enqueue ledger persist or update import sidecars
 
 **Storage:** `$XDG_STATE_HOME/agentd/sessions/<provider>/<session_id>.jsonl` (why + unset fallback + Windows: [docs/en/configuration.md](./docs/en/configuration.md#state-directory))
 

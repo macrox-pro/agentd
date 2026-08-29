@@ -8,6 +8,8 @@
 //   - Never invent thinking or tool output absent from transcript files.
 //   - Codex thinking only from plaintext event_msg.agent_reasoning (not encrypted_content).
 //   - Imported events use source=transcript and append-only seq assignment (caller).
+//   - ImportSession EmitOnly reads import checkpoints for startIndex but does not write
+//     ledger, sidecar, or Hub publish (session import --out).
 //
 // Entry: Import, ImportSession, ProviderImporterStatus, ImportClaude, ImportCursor, ImportCodex.
 // See DESIGN.md §14.2, §14.3.
