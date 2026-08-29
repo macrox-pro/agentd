@@ -15,7 +15,7 @@ func detach(opts StartOptions) error {
 	if err != nil {
 		return fmt.Errorf("executable: %w", err)
 	}
-	cmd := exec.Command(exe, foregroundArgs(opts)...)
+	cmd := exec.Command(exe, serviceStartArgs(opts)...)
 	cmd.Stdin = nil
 	cmd.Stdout = nil
 	cmd.Stderr = nil
@@ -36,21 +36,4 @@ func detach(opts StartOptions) error {
 		return fmt.Errorf("daemon failed to become ready: %w", err)
 	}
 	return nil
-}
-
-func foregroundArgs(opts StartOptions) []string {
-	args := []string{"daemon", "start", "--foreground"}
-	if opts.ConfigPath != "" {
-		args = append(args, "--config", opts.ConfigPath)
-	}
-	if opts.Socket != "" {
-		args = append(args, "--socket", opts.Socket)
-	}
-	if opts.LogLevel != "" {
-		args = append(args, "--log-level", opts.LogLevel)
-	}
-	if opts.LogFile != "" {
-		args = append(args, "--log-file", opts.LogFile)
-	}
-	return args
 }

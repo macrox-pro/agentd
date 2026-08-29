@@ -25,7 +25,14 @@ func TestWriteStatus(t *testing.T) {
 	}{
 		{
 			name: "human not running",
-			rep:  daemon.StatusReport{Running: false, Socket: "/tmp/agentd.sock"},
+			rep: daemon.StatusReport{
+				Running: false,
+				Socket:  "/tmp/agentd.sock",
+				Autostart: daemon.AutostartReport{
+					Enabled: false,
+					Backend: daemon.BackendLaunchd,
+				},
+			},
 			want: "agentd: not running\n",
 		},
 		{
@@ -34,13 +41,21 @@ func TestWriteStatus(t *testing.T) {
 				Running:    true,
 				Version:    "dev",
 				Generation: 3,
+				Autostart:  daemon.AutostartReport{Enabled: false},
 			},
 			want: "agentd: running (version dev, generation 3)\n",
 		},
 		{
 			name:   "json not running",
 			asJSON: true,
-			rep:    daemon.StatusReport{Running: false, Socket: "/tmp/agentd.sock"},
+			rep: daemon.StatusReport{
+				Running: false,
+				Socket:  "/tmp/agentd.sock",
+				Autostart: daemon.AutostartReport{
+					Enabled: false,
+					Backend: daemon.BackendLaunchd,
+				},
+			},
 			check: func(t *testing.T, raw []byte) {
 				t.Helper()
 				var got map[string]any
@@ -48,6 +63,74 @@ func TestWriteStatus(t *testing.T) {
 				assert.Equal(t, false, got["running"])
 				assert.Equal(t, "/tmp/agentd.sock", got["socket"])
 				assert.NotContains(t, got, "version")
+				auto, ok := got["autostart"].(map[string]any)
+				require.True(t, ok, "autostart")
+				assert.Equal(t, false, auto["enabled"])
+			},
+		},
+		{
+			name:   "json_autostart_disabled",
+			asJSON: true,
+			rep: daemon.StatusReport{
+				Running: false,
+				Socket:  "/tmp/agentd.sock",
+				Autostart: daemon.AutostartReport{
+					Enabled: false,
+					Backend: daemon.BackendSchtasks,
+				},
+			},
+			check: func(t *testing.T, raw []byte) {
+				t.Helper()
+				var got map[string]any
+				require.NoError(t, json.Unmarshal(raw, &got), "json")
+				auto := got["autostart"].(map[string]any)
+				assert.Equal(t, false, auto["enabled"])
+				assert.Equal(t, "schtasks", auto["backend"])
+			},
+		},
+		{
+			name:   "json_autostart_enabled",
+			asJSON: true,
+			rep: daemon.StatusReport{
+				Running: true,
+				Socket:  "/tmp/agentd.sock",
+				Version: "dev",
+				Autostart: daemon.AutostartReport{
+					Enabled:       true,
+					Backend:       daemon.BackendLaunchd,
+					ManifestPath:  "/tmp/plist",
+					RegisteredExe: "/usr/bin/agentd",
+					Stale:         false,
+				},
+			},
+			check: func(t *testing.T, raw []byte) {
+				t.Helper()
+				var got map[string]any
+				require.NoError(t, json.Unmarshal(raw, &got), "json")
+				auto := got["autostart"].(map[string]any)
+				assert.Equal(t, true, auto["enabled"])
+				assert.Equal(t, "launchd", auto["backend"])
+				assert.Equal(t, "/tmp/plist", auto["manifest_path"])
+			},
+		},
+		{
+			name:   "json_when_daemon_not_running",
+			asJSON: true,
+			rep: daemon.StatusReport{
+				Running: false,
+				Socket:  "/tmp/agentd.sock",
+				Autostart: daemon.AutostartReport{
+					Enabled: true,
+					Backend: daemon.BackendSystemd,
+				},
+			},
+			check: func(t *testing.T, raw []byte) {
+				t.Helper()
+				var got map[string]any
+				require.NoError(t, json.Unmarshal(raw, &got), "json")
+				assert.Equal(t, false, got["running"])
+				auto := got["autostart"].(map[string]any)
+				assert.Equal(t, true, auto["enabled"])
 			},
 		},
 		{
@@ -64,6 +147,7 @@ func TestWriteStatus(t *testing.T) {
 				AsyncDroppedCount:      9,
 				TrajectoryDroppedCount: 2,
 				CompiledRouteCount:     7,
+				Autostart:              daemon.AutostartReport{Enabled: false},
 			},
 			check: func(t *testing.T, raw []byte) {
 				t.Helper()

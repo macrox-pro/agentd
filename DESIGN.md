@@ -311,7 +311,7 @@ CLI families mirror process roles:
 ```
 agentd
 ├── version          # binary build version (no daemon)
-├── daemon/          # lifecycle (start|stop|status|reload)
+├── daemon/          # lifecycle (start|stop|status|reload|enable|disable)
 ├── hook/            # agent entrypoint (run|notify|serve)
 ├── agenthooks/      # hidden install argv sentinel (same as hook *)
 ├── install/         # agenthooks install wrapper
@@ -331,6 +331,7 @@ agentd
 | `hook notify` | Codex argv JSON; always async semantics |
 | `hook serve` | OpenCode NDJSON stdio; long-lived |
 | `session subscribe` | Only command that dials daemon for trajectory; rest reads local JSONL |
+| Login autostart | `daemon enable` / `disable` register OS user-level autostart (systemd / launchd / schtasks); `disable` never stops running daemon; partial enable failure keeps autostart — [docs/en/operations.md](./docs/en/operations.md#autostart-at-login) |
 | New command | Update **docs/en/cli.md + docs/ru/cli.md**; add row here only if architecturally significant |
 
 ---
@@ -404,6 +405,7 @@ Tests: [CONVENTIONS.md § Tests](./CONVENTIONS.md#tests) · `go test ./... -race
 | M8 / v0.0.1 | **done** | Ops polish, conformance, release gate |
 | M9–M12 / v0.0.2 | **done** | Trajectory P0–P3 (ledger, import, replay/fork, Subscribe) |
 | M13 / v0.0.3 | **done** | `policy.offline` hook edge (OfflineFor, DialReady, serve offline cache) |
+| M14 | **done** | `daemon enable`/`disable` login autostart; `status --json` autostart; `e2e-m14` |
 
 **Shipped:** v0.0.3. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
 

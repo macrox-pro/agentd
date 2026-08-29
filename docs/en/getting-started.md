@@ -27,6 +27,14 @@ agentd daemon status
 
 If `~/.agentd.yaml` (or `--config`) is missing, **`daemon start` creates a minimal user config** automatically ([details](./configuration.md#user-config-bootstrap)). You can edit it after the daemon is up.
 
+Optional: register login autostart so agentd starts when you log in:
+
+```bash
+agentd daemon enable
+```
+
+See [Operations → Autostart at login](./operations.md#autostart-at-login).
+
 ## 3. User config (optional at first start)
 
 Default path: `~/.agentd.yaml` (or `--config`). Skip creating it manually if you already ran `daemon start` — bootstrap matches:

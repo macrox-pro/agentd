@@ -38,8 +38,9 @@ Structured verbatim excerpts from primary sources — used when designing provid
 | [research/claude-code](./research/claude-code/) | Claude Code docs — agent loop, hooks, MCP, settings, skills, plugins, cloud, enterprise |
 | [research/codex](./research/codex/) | Codex / ChatGPT Learn docs — sandbox, hooks, MCP, cloud, enterprise |
 | [research/cursor](./research/cursor/) | Cursor docs — agent loop, hooks, MCP, settings, enterprise |
+| [research/gemini](./research/gemini/) | Gemini CLI docs (snapshot 2026-08-29) — agent loop, hooks, MCP, settings, skills, extensions, Managed Agents API, Antigravity migration delta |
 
-Stub dirs for other agents (`gemini`, `opencode`, `kimi-code`) live under [`research/`](./research/) and will fill in the same shape.
+Stub dirs for other agents (`opencode`, `kimi-code`) live under [`research/`](./research/) and will fill in the same shape.
 
 ## Why agentd?
 
@@ -174,6 +175,8 @@ Full schema: [docs/en/configuration.md](./docs/en/configuration.md) · layer/run
 | Command | Purpose |
 |---------|---------|
 | `agentd daemon start` | Start the user-level daemon |
+| `agentd daemon enable` | Register login autostart (see [Operations](./docs/en/operations.md#autostart-at-login)) |
+| `agentd daemon disable` | Remove login autostart |
 | `agentd daemon stop` | Graceful shutdown |
 | `agentd daemon status` | Health, config generation, queue depth, async drops |
 | `agentd hook run` | **Agent entrypoint** — blocking hooks |

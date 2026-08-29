@@ -16,9 +16,12 @@
 ```bash
 agentd daemon start
 agentd daemon status --json
+agentd daemon enable   # по желанию: автозапуск при входе
 ```
 
 `--socket` у клиента хука и у демона должен совпадать. Устаревший сокет удаляется только при старте под блокировкой. Операционные логи демона: `agentd.log` в [state directory](./configuration.md#state-directory).
+
+Автозапуск при входе: `agentd daemon enable`. Если `enable` завершился с ошибкой, но в `daemon status --json` `"autostart":{"enabled":true}`, исправьте конфиг и выполните `daemon start` или перелогиньтесь — повторный `enable` не нужен. См. [Эксплуатация → Автозапуск](./operations.md#автозапуск-при-входе).
 
 ## Старт демона не выполняется (невалидный пользовательский конфиг)
 

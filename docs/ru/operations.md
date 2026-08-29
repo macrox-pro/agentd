@@ -30,7 +30,49 @@ agentd daemon status --json
 | `trajectory_dropped_count` | overflow очереди trajectory (если ledger включён) |
 | `compiled_route_count` | число скомпилированных маршрутов |
 
-Человекочитаемая строка: `agentd: running (version …, generation …)` — без глубины очереди и drops (для них нужен `--json`).
+В `--json` всегда есть объект `autostart` (даже при `running: false`):
+
+| Поле | Смысл |
+|------|--------|
+| `autostart.enabled` | Автозапуск при входе зарегистрирован в ОС |
+| `autostart.backend` | `systemd`, `launchd` или `schtasks` |
+| `autostart.manifest_path` | Путь к unit/plist, если применимо |
+| `autostart.registered_exe` | Путь к бинарнику для старта при входе |
+| `autostart.stale` | `true`, если `registered_exe` не совпадает с этим CLI (после обновления снова выполните `daemon enable`) |
+
+Человекочитаемая строка: `agentd: running (version …, generation …)` — без autostart (нужен `--json`).
+
+## Автозапуск при входе
+
+Выполните `agentd daemon enable` один раз, если agentd должен стартовать автоматически при входе в систему. `agentd daemon disable` снимает регистрацию. Отключение автозапуска **не** останавливает уже работающий демон.
+
+```bash
+agentd daemon enable
+agentd daemon disable
+```
+
+### Что делает `enable`
+
+`daemon enable` регистрирует agentd в ОС (systemd user unit, launchd LaunchAgent или планировщик Windows), затем пытается сразу запустить демон, если он ещё не работает.
+
+### Команда завершилась с ошибкой, но автозапуск мог уже быть включён
+
+Если `daemon enable` завершился с ошибкой, **автозапуск мог уже быть включён**, даже если демон сейчас не запущен. Обычно это значит: при входе в систему agentd будет стартовать сам, но немедленный запуск не удался — часто из‑за ошибки в `~/.agentd.yaml`.
+
+**Что делать:**
+
+1. Проверьте `agentd daemon status --json` (`autostart.enabled`).
+2. Исправьте проблему из текста ошибки (`agentd config validate --config ~/.agentd.yaml`).
+3. Выполните `agentd daemon start` или перелогиньтесь — повторный `enable` не нужен.
+4. Чтобы отключить только автозапуск: `agentd daemon disable`.
+
+### После обновления agentd
+
+После установки нового бинарника (например `go install …@latest`) снова выполните `agentd daemon enable`. Смотрите `autostart.stale` в `daemon status --json`.
+
+### `disable` и `stop`
+
+`daemon disable` снимает только автозапуск при входе. Работающий процесс **не** останавливается. Для остановки используйте `daemon stop`.
 
 ## Перезагрузка и остановка
 

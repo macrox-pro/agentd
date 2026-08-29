@@ -28,8 +28,10 @@ Daemon process version: field `version` on `agentd daemon status`.
 |---------|-------|-------|
 | `daemon start` | `--foreground`, `--log-level`, `--log-file` | Detach by default; waits until Health succeeds; logs to [state directory](./configuration.md#state-directory) `agentd.log` |
 | `daemon stop` | `--timeout` (`10s`) | gRPC Shutdown, then SIGTERM fallback |
-| `daemon status` | `--json` | Status of the running daemon, including process version (`version`; [Operations](./operations.md)) |
+| `daemon status` | `--json` | Daemon health + `autostart` block ([Operations](./operations.md#autostart-at-login)) |
 | `daemon reload` | — | Force config re-merge |
+| `daemon enable` | — | Registers login autostart and starts the daemon if down. May exit with an error while autostart is already enabled — [Operations → Autostart at login](./operations.md#autostart-at-login) |
+| `daemon disable` | — | Removes login autostart only; does **not** stop a running daemon |
 
 ## hook
 

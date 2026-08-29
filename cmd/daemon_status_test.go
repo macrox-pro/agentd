@@ -28,7 +28,7 @@ func TestDaemonStatusCLI(t *testing.T) {
 			name:     "not running json",
 			setup:    func(t *testing.T) string { socket, _ := testSocketDir(t); return socket },
 			args:     []string{"daemon", "status", "--json"},
-			contains: `"running":false`,
+			contains: `"autostart"`,
 		},
 		{
 			name:     "running human generation",

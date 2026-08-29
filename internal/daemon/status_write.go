@@ -13,6 +13,13 @@ func WriteStatus(w io.Writer, rep StatusReport, asJSON bool) error {
 		payload := map[string]any{
 			"running": rep.Running,
 			"socket":  rep.Socket,
+			"autostart": map[string]any{
+				"enabled":         rep.Autostart.Enabled,
+				"backend":         string(rep.Autostart.Backend),
+				"manifest_path":   rep.Autostart.ManifestPath,
+				"registered_exe":  rep.Autostart.RegisteredExe,
+				"stale":           rep.Autostart.Stale,
+			},
 		}
 		if rep.Running {
 			payload["version"] = rep.Version

@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "name": "security-check",
+            "type": "command",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/security.sh",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}

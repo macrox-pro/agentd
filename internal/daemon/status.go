@@ -10,16 +10,17 @@ import (
 
 // StatusReport is a snapshot of daemon liveness for CLI status.
 type StatusReport struct {
-	Running            bool
-	Socket             string
-	Version            string // process that answered Status, not this CLI binary
-	StartedAt          time.Time
-	Generation         uint64
-	Fingerprint        string
-	AsyncQueueDepth    uint32
+	Running                bool
+	Socket                 string
+	Version                string // process that answered Status, not this CLI binary
+	StartedAt              time.Time
+	Generation             uint64
+	Fingerprint            string
+	AsyncQueueDepth        uint32
 	AsyncDroppedCount      uint64
 	TrajectoryDroppedCount uint64
 	CompiledRouteCount     uint32
+	Autostart              AutostartReport
 }
 
 // Status probes the daemon and returns a StatusReport. When the daemon is
@@ -32,12 +33,16 @@ func Status(ctx context.Context, socket string) (StatusReport, error) {
 
 	cli, err := hookclient.Dial(ctx, socket)
 	if err != nil {
+		autostart, _ := AutostartStatus()
+		rep.Autostart = autostart
 		return rep, nil
 	}
 	defer cli.Close()
 
 	resp, err := cli.Status(ctx)
 	if err != nil {
+		autostart, _ := AutostartStatus()
+		rep.Autostart = autostart
 		return rep, nil
 	}
 
@@ -54,5 +59,6 @@ func Status(ctx context.Context, socket string) (StatusReport, error) {
 	rep.AsyncDroppedCount = resp.GetAsyncDroppedCount()
 	rep.TrajectoryDroppedCount = resp.GetTrajectoryDroppedCount()
 	rep.CompiledRouteCount = resp.GetCompiledRouteCount()
+	rep.Autostart, _ = AutostartStatus()
 	return rep, nil
 }

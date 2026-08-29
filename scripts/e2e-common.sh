@@ -28,6 +28,9 @@ e2e_track_socket() {
 
 e2e_cleanup() {
 	local s
+	if [[ -n "${E2E_AUTOSTART_ENABLED:-}" && -n "${BIN:-}" && -x "${BIN}" ]]; then
+		e2e_autostart_disable || true
+	fi
 	if [[ -n "${BIN:-}" && -x "${BIN}" ]]; then
 		for s in "${E2E_SOCKETS[@]:-}"; do
 			[[ -n "$s" ]] || continue
@@ -282,4 +285,36 @@ e2e_retry() {
 
 e2e_pass() {
 	echo "${E2E_NAME}: ok"
+}
+
+# e2e_isolated_home — redirect HOME and runtime dirs so autostart manifests stay in WORKDIR.
+e2e_isolated_home() {
+	export HOME="${WORKDIR}"
+	export XDG_CONFIG_HOME="${WORKDIR}/.config"
+	export XDG_RUNTIME_DIR="${WORKDIR}/run"
+	mkdir -p "${XDG_CONFIG_HOME}" "${XDG_RUNTIME_DIR}"
+	chmod 700 "${XDG_RUNTIME_DIR}" 2>/dev/null || true
+}
+
+# e2e_autostart_disable — remove login autostart registered during e2e.
+e2e_autostart_disable() {
+	[[ -n "${BIN:-}" && -x "${BIN}" ]] || return 0
+	HOME="${HOME:-${WORKDIR:-}}" XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-}" XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-}" \
+		"$BIN" daemon disable >/dev/null 2>&1 || true
+	unset E2E_AUTOSTART_ENABLED
+}
+
+# e2e_autostart_manifest_path — on-disk autostart manifest when the OS uses one; empty on Windows.
+e2e_autostart_manifest_path() {
+	case "$(uname -s)" in
+	Darwin)
+		printf '%s/Library/LaunchAgents/io.github.macrox-pro.agentd.plist' "${HOME:?HOME required}"
+		;;
+	Linux)
+		printf '%s/systemd/user/agentd.service' "${XDG_CONFIG_HOME:-${HOME:?HOME required}/.config}"
+		;;
+	*)
+		return 1
+		;;
+	esac
 }

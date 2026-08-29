@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Highlights
+
+- **`daemon enable` / `disable`** — user-level login autostart (systemd user unit, macOS LaunchAgent, Windows Task Scheduler); `daemon status --json` always includes `autostart`
+- **`e2e-m14.sh`** — isolated HOME: enable starts daemon + autostart on → disable keeps daemon running → manifest removed
+
 ## [v0.0.3] — 2026-08-26
 
 Hook edge honors `policy.offline` when the daemon is down; research corpus for provider design.

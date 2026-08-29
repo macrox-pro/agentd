@@ -30,7 +30,51 @@ JSON when running:
 | `trajectory_dropped_count` | trajectory queue overflow (monotonic; when ledger enabled) |
 | `compiled_route_count` | routes in snapshot |
 
-Human line: `agentd: running (version …, generation …)` — does not print depth/drops (use `--json`).
+`--json` always includes an `autostart` object (even when `running` is false):
+
+| Field | Meaning |
+|-------|---------|
+| `autostart.enabled` | Login autostart is registered with the OS |
+| `autostart.backend` | `systemd`, `launchd`, or `schtasks` |
+| `autostart.manifest_path` | Path to unit/plist when applicable |
+| `autostart.registered_exe` | Binary path stored for login start |
+| `autostart.stale` | `true` when `registered_exe` differs from this CLI binary (re-run `daemon enable` after upgrade) |
+
+Human line: `agentd: running (version …, generation …)` — does not print depth/drops or autostart (use `--json`).
+
+## Autostart at login
+
+Run `agentd daemon enable` once if you want agentd to start automatically when you log in. Run `agentd daemon disable` to remove that registration. Disabling autostart does **not** stop a daemon that is already running.
+
+```bash
+agentd daemon enable
+agentd daemon disable
+```
+
+### What `enable` does
+
+`daemon enable` registers agentd with your OS (systemd user unit, launchd LaunchAgent, or Windows Task Scheduler), then tries to start the daemon immediately if it is not already running.
+
+### Command exited with an error, but autostart may still be on
+
+If `daemon enable` prints an error, read the message carefully. **Autostart may already be turned on** even when the daemon did not start right now.
+
+This usually means your OS is set to start agentd on login, but something blocked the immediate start — often an invalid `~/.agentd.yaml`.
+
+**What to do:**
+
+1. Check autostart: `agentd daemon status --json` — look at `autostart.enabled`.
+2. Fix the problem shown in the error (often `agentd config validate --config ~/.agentd.yaml`).
+3. Either run `agentd daemon start`, or log out and back in (or reboot) — agentd should start on login without running `enable` again.
+4. To turn off autostart only: `agentd daemon disable`.
+
+### After upgrading agentd
+
+If you install a new binary (for example `go install …@latest`), run `agentd daemon enable` again so login autostart points at the new path. Check `autostart.stale` in `daemon status --json`.
+
+### `disable` vs `stop`
+
+`daemon disable` removes login autostart only. It does **not** stop the daemon. Use `daemon stop` when you want to shut down the running process.
 
 ## Reload / stop
 

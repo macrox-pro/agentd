@@ -4,22 +4,24 @@
 
 ## Current
 
-**config cleanup** (2026-08-29) · done · hot path: `config_reload` · next: **none**
+**Gemini docs research** (2026-08-29) · done · hot path: `other` · next: **M14 follow-ups / none**
 
-Removed dead `Store` fields; `ErrParseConfig` + `errors.Is` in bootstrap; `projectFCLocked` for `LayerYAML`; dropped legacy `Compile()` (use `CompileMerged`).
+Structured verbatim dump under `research/gemini/` (geminicli.com T1, ai.google.dev Managed Agents T2, agenthooks fixtures, Antigravity migration delta T4). Snapshot **2026-08-29**.
 
 ```bash
-go test ./internal/config/... ./internal/daemon/... ./cmd/... \
-  ./internal/server/... ./internal/dispatch/... ./internal/trajectory/... -race -count=1
-make lint && make intent-check
+# verify research tree
+find research/gemini -name '*.md' | wc -l
+head research/gemini/README.md
 ```
 
-**Files:** `internal/config/{errors,store,store_test,bootstrap,bootstrap_test,compile,compile_test,config,watch}.go`, `internal/dispatch/engine_test.go`, `internal/trajectory/replay_test.go`
+**Files:** `research/gemini/**` (57 topic files, SOURCES.md, README.md, TEMPLATE.md, schemas/)
 
 ## Recent (done)
 
 | When | Phase | One-liner |
 |------|-------|-----------|
+| 2026-08-29 | Gemini research | `research/gemini/` hooks/MCP/settings/skills/GEMINI.md + T2 managed agents + migration delta |
+| 2026-08-29 | M14 autostart | `daemon enable/disable`, status autostart JSON, `e2e-m14` |
 | 2026-08-29 | user config bootstrap | `PrepareUserConfig` on daemon start; omitempty YAML; `LayerYAML` normalize |
 | 2026-08-26 | state-directory docs | XDG state dir + cross-links EN/RU |
 | 2026-08-26 | version BuildInfo | `version.Resolve` / `String` from `debug.BuildInfo` |
@@ -44,7 +46,7 @@ Acceptance detail: git history / PRs — do not re-expand intent notes here.
 
 ## Milestones archive
 
-Historical acceptance (M0–M13 shipped). Architecture: [DESIGN.md](./DESIGN.md).
+Historical acceptance (M0–M14 shipped). Architecture: [DESIGN.md](./DESIGN.md).
 
 | Milestone | Acceptance |
 |-----------|------------|
@@ -61,6 +63,7 @@ Historical acceptance (M0–M13 shipped). Architecture: [DESIGN.md](./DESIGN.md)
 | M11 | All importer rows, replay/fork, `e2e-m11` |
 | M12 / v0.0.2 | `SessionService.Subscribe`, `e2e-m9…m12` |
 | M13 / v0.0.3 | `policy.offline` hook edge, docs EN/RU |
+| M14 | `daemon enable\|disable`, autostart status JSON, `e2e-m14` |
 
 ## Verify (repo green)
 

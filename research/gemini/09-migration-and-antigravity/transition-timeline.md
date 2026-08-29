@@ -1,0 +1,1218 @@
+---
+primary_sources:
+  - id: T4-BLOG
+    title: "Transitioning Gemini CLI to Antigravity CLI"
+    url: "https://developers.googleblog.com/en/an-important-update-transitioning-gemini-cli-to-antigravity-cli/"
+    section: "Full page (HTML → text)"
+also_cited_in: []
+studied_at: "2026-08-29"
+gemini_docs_snapshot: "2026-08-29"
+applicability: current
+---
+# Gemini CLI transition timeline
+
+> **Applicability:** Verbatim excerpts (snapshot 2026-08-29). HTML sources converted to plain text where noted.
+
+### Source: Transitioning Gemini CLI to Antigravity CLI — Full page
+
+> An important update: Transitioning Gemini CLI to Antigravity CLI
+>  
+>  
+>  - Google Developers Blog
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>  
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Community/Events
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Learn
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Blog
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  YouTube
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Search
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Community/Events
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Learn
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Blog
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  YouTube
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+> An important update: Transitioning Gemini CLI to Antigravity CLI
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+> MAY 19, 2026
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>  
+>
+>  
+> Dmitry Lyalin
+>
+>  
+>  
+> Group Product Manager
+>
+>  
+>  
+>  
+>
+>  
+>  
+>
+>  
+> Taylor Mullen
+>
+>  
+>  
+> Principal Engineer
+>
+>  
+>  
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+> Share
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+> Facebook
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+> Twitter
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+> LinkedIn
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+> Mail
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+> When we shipped Gemini CLI last year, our goal was to bring the magic of Gemini directly into your terminal. Along the way, we’ve learned a lot from our community of millions of users, with over 100,000 GitHub stars, 6,000 merged pull requests, and hundreds of contributors, including: you love a good terminal UI, you appreciate that we ship weekly releases, and your workflows have simply outgrown those early days of 2025.
+>
+> Gemini CLI proved the terminal could be an incredible interface for agentic tasks, but your needs shifted. You now require multiple agents communicating with each other to split up the work and solve complex problems. This means your terminal tools need to share a unified backend with the rest of your workflow.
+>
+> Listening to your feedback made one thing clear: we can serve you best by pouring our energy into a single product built for today&#x27;s multi-agent reality. To deliver the single platform you need to build the future, we&#x27;re unifying our efforts into 
+> Google Antigravity
+> , our premier agent-first development platform, which includes a powerful server-side harness and a brand-new terminal experience: 
+> Antigravity CLI
+> .
+>
+> While there won&#x27;t be 1:1 feature parity right out of the gate, we made sure Antigravity CLI keeps the most critical features of Gemini CLI: Agent Skills, Hooks, Subagents, and Extensions (now as Antigravity plugins). Whether you use Gemini CLI to get quick, grounded answers, scaffold and build out a new coding project, or help provision your cloud infrastructure, you can still do all of that right in Antigravity CLI. And to make your experience better, we focused on the things that matter most to you, like:
+>
+> Faster execution: Built in Go, Antigravity CLI is snappier and more responsive.
+>
+> Asynchronous workflows: Antigravity CLI orchestrates multiple agents for complex tasks in the background, letting you run large-scale refactors or research several topics without locking up your terminal session.
+>
+> Unified architecture: Antigravity CLI shares the same agent harness as 
+> Antigravity 2.0
+> , the new Antigravity desktop application, ensuring that all future improvements to core agents are automatically applied wherever you use them.
+>
+> Important timeline for Consumers
+>
+> Starting today, 
+> Antigravity CLI
+>  is available to everyone.
+>
+> On June 18, 2026, Gemini CLI and Gemini Code Assist IDE extensions will stop serving requests for Google AI Pro and Ultra, as well as those using it free of charge using 
+> Gemini Code Assist for individuals
+> .
+>
+> We are here to help make the transition to Antigravity CLI and Antigravity 2.0 as smooth as possible. You can get started now with our 
+> technical documentation
+> , and we will be releasing video walkthroughs in the coming weeks.
+>
+> For 
+> Gemini Code Assist for GitHub
+> , this change will also apply and on June 18, 2026, there will be no new installations on Github organizations and requests in the following weeks will stop being served.
+>
+> For enterprise customers
+>
+> If your organization uses Gemini CLI or our IDE extensions via a Gemini Code Assist Standard or Enterprise license, or if your organization uses Gemini Code Assist for GitHub through Google Cloud, your access remains unchanged. We’ll continue to support Gemini CLI and Gemini Code Assist with access to the latest Gemini models and other updates. Gemini CLI will remain accessible via paid Gemini and Gemini Enterprise Agent Platform API keys. And if you’re excited to try Antigravity CLI, you can use it now with your 
+> Google Cloud projects
+> .
+>
+> We welcome your feedback in the Antigravity CLI 
+> community forum
+> , especially if there is a feature you’d like to request during this transition. We look forward to seeing what you build next with Antigravity 2.0 and Antigravity CLI.
+>
+> Explore this announcement and all Google I/O 2026 updates on 
+> io.google
+> .
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  posted in:
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+> AI
+>
+>  
+>
+>  
+>  
+>
+>  
+> Announcements
+>
+>  
+>
+>  
+>  
+>
+>  
+> Learn
+>
+>  
+>
+>  
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+> Previous
+>
+>  
+>
+>  
+>
+>  
+> Next
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+> Related Posts
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>  
+>  
+> AI
+>
+>  
+>  
+>  
+> Case Studies
+>
+>  
+>  
+> Community
+>
+>  
+>  
+>  
+>
+>  
+> Decoding cosmic signals with deep learning and Keras
+>
+>  
+>
+>  
+> AUG. 27, 2026
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>  
+>  
+> AI
+>
+>  
+>  
+> Cloud
+>
+>  
+>  
+>  
+> Announcements
+>
+>  
+>  
+> Best Practices
+>
+>  
+>  
+>  
+>
+>  
+> Build zero-trust AI agents with Google&#x27;s Agent Development Kit
+>
+>  
+>
+>  
+> AUG. 17, 2026
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>  
+>  
+> AI
+>
+>  
+>  
+> Cloud
+>
+>  
+>  
+>  
+> Announcements
+>
+>  
+>  
+> Best Practices
+>
+>  
+>  
+>  
+>
+>  
+> Enterprise-Grade Precision for Long-Context Multimodal Embedding Inference on Cloud TPU
+>
+>  
+>
+>  
+> AUG. 26, 2026
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Connect
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Blog
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Bluesky
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Instagram
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  LinkedIn
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  X (Twitter)
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  YouTube
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Programs
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Google Developer Program
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Google Developer Groups
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Google Developer Experts
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Accelerators
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Women Techmakers
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Google Cloud &amp; NVIDIA
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Developer consoles
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Google API Console
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Google Cloud Platform Console
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Google Play Console
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Firebase Console
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Actions on Google Console
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Cast SDK Developer Console
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Chrome Web Store Dashboard
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  Google Home Developer Console
+>  
+>
+>  
+>
+>  
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Android
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Chrome
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Firebase
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Google Cloud Platform
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  All products
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Manage cookies
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Terms
+>  
+>
+>  
+>
+>  
+>
+>  
+>
+>  Privacy

@@ -16,9 +16,12 @@ Failures seen in the field and how agentd behaves.
 ```bash
 agentd daemon start
 agentd daemon status --json
+agentd daemon enable   # optional: start automatically when you log in
 ```
 
 Check `--socket` matches the edge process. Stale sockets are cleaned only under the start lock. Daemon operational logs: `agentd.log` in the [state directory](./configuration.md#state-directory).
+
+To start agentd automatically on login: `agentd daemon enable`. If enable failed but `daemon status --json` shows `"autostart":{"enabled":true}`, fix your config and run `daemon start` or log in again — you do not need to run enable twice. See [Operations → Autostart at login](./operations.md#autostart-at-login).
 
 ## Daemon start fails (invalid user config)
 
