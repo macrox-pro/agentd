@@ -4,7 +4,7 @@
 
 How to install, configure, and operate agentd (v1). Facts below match the shipped CLI and config schema.
 
-> **Release:** [v0.0.4](../../CHANGELOG.md#v004--2026-08-29) — login autostart and curated config toggles.
+> **Release:** [v0.0.5](../../CHANGELOG.md#v005--2026-08-29) — daemon and session trajectory counters.
 
 Start with [Why agentd](./why.md) if you need the problem statement; otherwise [Getting started](./getting-started.md).
 
@@ -21,7 +21,7 @@ Start with [Why agentd](./why.md) if you need the problem statement; otherwise [
 | [Dispatch](./dispatch.md) | Modes, targets, timeouts, async queue |
 | [Approvals](./approvals.md) | Ask → record-decision, blocks, persist |
 | [Providers](./providers.md) | Per-agent install, entrypoints, **quirks** — [Claude](./providers-claude-code.md) · [Cursor](./providers-cursor.md) · [Codex](./providers-codex.md) · [Gemini](./providers-gemini.md) · [OpenCode](./providers-opencode.md) · [Kimi](./providers-kimi.md) |
-| [Operations](./operations.md) | Status, stop, reload |
+| [Operations](./operations.md) | Status, stop, reload, trajectory stats |
 | [Troubleshooting](./troubleshooting.md) | Common failures |
 | [Maintaining docs](./maintaining.md) | When/how to update EN+RU (contributors) |
 

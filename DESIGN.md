@@ -317,7 +317,8 @@ agentd
 ├── install/         # agenthooks install wrapper
 ├── config/          # validate|show|enable|disable|get|patch|record-decision
 ├── dispatch/        # routes introspection
-└── session/         # trajectory list|show|export|search|import|replay|fork|subscribe
+└── session/         # trajectory list|show|export|search|import|replay|fork|subscribe|stats
+└── trajectory/      # trajectory stats (daemon rollup; requires running daemon)
 ```
 
 **Architecture notes (not duplicated in user docs):**
@@ -330,7 +331,7 @@ agentd
 | `version` vs `daemon status` | `version` = this CLI binary; Status `version` = running daemon process |
 | `hook notify` | Codex argv JSON; always async semantics |
 | `hook serve` | OpenCode NDJSON stdio; long-lived |
-| `session subscribe` | Only command that dials daemon for trajectory; rest reads local JSONL |
+| `session subscribe` | Live trajectory stream from daemon; also `trajectory stats` for rollup counters |
 | Login autostart | `daemon enable` / `disable` register OS user-level autostart (systemd / launchd / schtasks); `disable` never stops running daemon; partial enable failure keeps autostart — [docs/en/operations.md](./docs/en/operations.md#autostart-at-login) |
 | Config toggles | `config enable\|disable\|get` write curated booleans to user/project YAML only; `config patch` is runtime overlay; distinct from `daemon enable` (autostart) |
 | New command | Update **docs/en/cli.md + docs/ru/cli.md**; add row here only if architecturally significant |
@@ -424,8 +425,9 @@ Tests: [CONVENTIONS.md § Tests](./CONVENTIONS.md#tests) · `go test ./... -race
 | M9–M12 / v0.0.2 | **done** | Trajectory P0–P3 (ledger, import, replay/fork, Subscribe) |
 | M13 / v0.0.3 | **done** | `policy.offline` hook edge (OfflineFor, DialReady, serve offline cache); `e2e-m13` |
 | M14 / v0.0.4 | **done** | `daemon enable`/`disable` login autostart; `config enable`/`disable`/`get` toggles; `e2e-m14` |
+| M15 / v0.0.5 | **done** | Trajectory statistics: daemon rollup (`trajectory stats`) + offline `session stats` |
 
-**Shipped:** v0.0.4. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
+**Shipped:** v0.0.5. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
 
 ---
 
@@ -467,7 +469,7 @@ Contiguous `seq` per session; `schema_version` **1**; `ignorable` types skippabl
 
 Correlation: `session_id` + `tool_use_id` / call ids when present; else synthetic `(provider, project_root, weak_id)` — never silently merge unrelated runs.
 
-Config keys: `trajectory.enabled`, `include_raw`, `redact_secret_rules`, `max_event_bytes`, `import.<provider>` — see §7 / [configuration.md](./docs/en/configuration.md).
+Config keys: `trajectory.enabled`, `statistics`, `include_raw`, `redact_secret_rules`, `max_event_bytes`, `import.<provider>` — see §7 / [configuration.md](./docs/en/configuration.md).
 
 ### 14.3 Provider support matrix
 
@@ -512,3 +514,14 @@ Importer status enum: `supported` | `partial` | `none`. Per-provider hook quirks
 - Go plugin importers (in-tree + YAML enable flags)
 
 Complementary to async `file`/`http`/`log` sinks — structured ledger with identity, seq, read APIs.
+
+### 14.6 Statistics
+
+Two surfaces, both gated by `trajectory.enabled && trajectory.statistics`:
+
+| Surface | Command | Storage | Notes |
+|---------|---------|---------|-------|
+| Daemon rollup | `agentd trajectory stats` | In-memory until daemon restart | gRPC `TrajectoryService.Statistics`; `since` = daemon `StartedAt` |
+| Session scan | `agentd session stats ID --provider P` | None (computed) | Offline JSONL scan after config gate |
+
+Token fields require `include_raw: true` at record time. Gemini/OpenCode/Kimi: hooks-only counters in v1 (no token extractors).

@@ -17,6 +17,7 @@ func TestCompileTrajectoryDefaultsOff(t *testing.T) {
 	res, err := config.CompileMerged(nil, nil, nil)
 	require.NoError(t, err)
 	assert.False(t, res.Trajectory.Enabled, "default off")
+	assert.False(t, res.Trajectory.Statistics, "default statistics off")
 	assert.False(t, res.Trajectory.IncludeRaw)
 	assert.True(t, res.Trajectory.RedactSecretRules)
 	assert.Equal(t, 262144, res.Trajectory.MaxEventBytes)
@@ -64,6 +65,62 @@ func TestFingerprintIncludesTrajectory(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, []byte(`version: 1
 trajectory:
   enabled: true
+`), 0o600))
+	store, err := config.Load(context.Background(), path)
+	require.NoError(t, err)
+	fpB := store.Current().Fingerprint
+	assert.NotEqual(t, fpA, fpB)
+}
+
+func TestParseTrajectory_statistics(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		yaml string
+		want bool
+	}{
+		{
+			name: "default_false",
+			yaml: `version: 1
+trajectory:
+  enabled: true`,
+			want: false,
+		},
+		{
+			name: "enabled_and_statistics",
+			yaml: `version: 1
+trajectory:
+  enabled: true
+  statistics: true`,
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			path := filepath.Join(dir, "agentd.yaml")
+			require.NoError(t, os.WriteFile(path, []byte(tt.yaml), 0o600))
+			store, err := config.Load(context.Background(), path)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, store.Current().Trajectory.Statistics)
+		})
+	}
+}
+
+func TestFingerprintIncludesTrajectoryStatistics(t *testing.T) {
+	t.Parallel()
+	a, err := config.CompileMerged(nil, nil, nil)
+	require.NoError(t, err)
+	fpA, err := config.Fingerprint(a.Merged)
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "agentd.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`version: 1
+trajectory:
+  enabled: true
+  statistics: true
 `), 0o600))
 	store, err := config.Load(context.Background(), path)
 	require.NoError(t, err)

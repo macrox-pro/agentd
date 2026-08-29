@@ -83,6 +83,17 @@ agentd daemon stop --timeout 10s
 
 При остановке: сначала дождаться синхронных запросов, затем асинхронной очереди (не дольше `--timeout`), потом снять сокет и PID-файл.
 
+## Статистика trajectory
+
+```bash
+agentd config enable trajectory
+agentd config enable trajectory-statistics
+agentd trajectory stats [--provider ID] [--json]
+agentd session stats SESSION_ID --provider ID [--json]
+```
+
+`trajectory stats` читает in-memory счётчики демона (`TrajectoryService.Statistics`) и требует запущенный daemon; счётчики сбрасываются при перезапуске. `session stats` сканирует локальный JSONL и демон не нужен. Оба требуют `trajectory.enabled` и `trajectory.statistics`. См. [Trajectory](./trajectory.md#статистика-демона).
+
 ## Логирование
 
 На пути хука не писать отладку в stdout. Демон дописывает операционные логи в `agentd.log` в [state directory](./configuration.md#state-directory); `agentd daemon start --foreground` также дублирует в stderr. Асинхронная цель dispatch `target: log` использует тот же slog-логгер.

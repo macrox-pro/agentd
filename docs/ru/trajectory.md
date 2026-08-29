@@ -52,7 +52,18 @@ trajectory:
 | `agentd session import --provider ID …` | Импорт transcript (`source=transcript`) или `--out` — parse-only JSONL |
 | `agentd session replay --policy --provider ID --session ID` | Dry-run policy по сохранённому Raw |
 | `agentd session fork --provider ID --session SRC --new-session DST` | Копия префикса ledger (аудит) |
+| `agentd session stats ID --provider ID [--json]` | Offline-статистика сессии (нужен `trajectory.statistics`) |
 | `agentd session subscribe [--json]` | **Live** поток от демона (нужен запущенный daemon + trajectory.enabled) |
+
+## Статистика демона
+
+```bash
+agentd config enable trajectory
+agentd config enable trajectory-statistics
+agentd trajectory stats [--provider ID] [--json]
+```
+
+Нужен **запущенный daemon**. Счётчики сбрасываются при перезапуске; `since` — время старта демона. Опциональный `--provider` фильтрует rollup. Токены появляются только если при записи был `trajectory.include_raw`.
 
 ## Subscribe (live-поток)
 

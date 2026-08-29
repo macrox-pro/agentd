@@ -9,6 +9,7 @@ import (
 	"github.com/macrox-pro/agentd/internal/decision"
 	"github.com/macrox-pro/agentd/internal/dispatch"
 	"github.com/macrox-pro/agentd/internal/trajectory"
+	"github.com/macrox-pro/agentd/internal/trajectory/statistics"
 )
 
 // SnapshotSource supplies project-aware compiled config for one Invoke.
@@ -25,12 +26,13 @@ var (
 )
 
 // NewHookService builds the HookService gRPC handler with injectable ports.
-func NewHookService(snap SnapshotSource, inv Invoker, rec *trajectory.Recorder, log *slog.Logger) agentdv1.HookServiceServer {
+func NewHookService(snap SnapshotSource, inv Invoker, rec *trajectory.Recorder, collector *statistics.Collector, log *slog.Logger) agentdv1.HookServiceServer {
 	return &hookService{
-		snap:     snap,
-		engine:   inv,
-		recorder: rec,
-		log:      log,
+		snap:      snap,
+		engine:    inv,
+		recorder:  rec,
+		collector: collector,
+		log:       log,
 	}
 }
 
@@ -74,16 +76,20 @@ func (h *hookService) Invoke(ctx context.Context, req *agentdv1.InvokeRequest) (
 	}
 	resp.Decision = result.Decision
 	resp.AsyncDispatchedCount = result.AsyncDispatchedCount
+	recIn := trajectory.RecordInput{
+		Provider:       req.GetProvider(),
+		InvocationMode: normalizeInvocationMode(req.GetProvider(), req.GetInvocationMode()),
+		CWD:            req.GetCwd(),
+		ProjectRoot:    req.GetProjectRoot(),
+		RawPayload:     req.GetRawPayload(),
+		Result:         result,
+		Snap:           snap,
+	}
+	if h.collector != nil {
+		h.collector.Observe(recIn)
+	}
 	if h.recorder != nil {
-		h.recorder.Record(trajectory.RecordInput{
-			Provider:       req.GetProvider(),
-			InvocationMode: normalizeInvocationMode(req.GetProvider(), req.GetInvocationMode()),
-			CWD:            req.GetCwd(),
-			ProjectRoot:    req.GetProjectRoot(),
-			RawPayload:     req.GetRawPayload(),
-			Result:         result,
-			Snap:           snap,
-		})
+		h.recorder.Record(recIn)
 	}
 	return resp, nil
 }

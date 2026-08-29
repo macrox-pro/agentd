@@ -4,7 +4,7 @@
 
 Установка, настройка и эксплуатация agentd (v1). Содержание сверено с CLI и схемой YAML.
 
-> **Релиз:** [v0.0.4](../../CHANGELOG.md#v004--2026-08-29) — автозапуск при входе и curated config toggles.
+> **Релиз:** [v0.0.5](../../CHANGELOG.md#v005--2026-08-29) — счётчики trajectory демона и offline-статистика сессии.
 
 Начните с [Зачем нужен agentd](./why.md), если нужна постановка задачи; иначе — с [Быстрого старта](./getting-started.md).
 
@@ -21,7 +21,7 @@
 | [Маршрутизация (dispatch)](./dispatch.md) | Режимы, цели, таймауты, асинхронная очередь |
 | [Одобрения (approvals)](./approvals.md) | Ask → `record-decision`, временные блокировки, сохранение |
 | [Провайдеры](./providers.md) | Install, точки входа и **особенности** — [Claude](./providers-claude-code.md) · [Cursor](./providers-cursor.md) · [Codex](./providers-codex.md) · [Gemini](./providers-gemini.md) · [OpenCode](./providers-opencode.md) · [Kimi](./providers-kimi.md) |
-| [Эксплуатация](./operations.md) | Статус, остановка, перезагрузка конфига |
+| [Эксплуатация](./operations.md) | Статус, остановка, перезагрузка, статистика trajectory |
 | [Диагностика](./troubleshooting.md) | Типичные сбои |
 | [Актуализация документации](./maintaining.md) | Когда и как обновлять EN+RU (для разработчиков) |
 

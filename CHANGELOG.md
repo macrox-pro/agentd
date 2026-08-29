@@ -1,9 +1,14 @@
 # Changelog
 
-## Unreleased
+## [v0.0.5] — 2026-08-29
 
-### Added
+Daemon-lifetime trajectory counters and offline session stats.
 
+### Highlights
+
+- **`trajectory stats`** — in-memory daemon rollup via `TrajectoryService.Statistics`; `since` is daemon start; counters reset on restart; optional `--provider` filter
+- **`session stats`** — offline JSONL scan for one session (`--provider` required); no daemon needed
+- **`trajectory.statistics`** — both surfaces require `trajectory.enabled` and this key (default off); toggle `trajectory-statistics`
 - **`session import --out`** — emit parsed transcript events as JSONL to stdout (`-`) or a file without writing the session ledger or import checkpoint; summary on stderr when `--out` is set
 
 ## [v0.0.4] — 2026-08-29

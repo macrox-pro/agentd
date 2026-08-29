@@ -19,7 +19,7 @@ Installs into `$(go env GOPATH)/bin` (ensure that directory is on `PATH`).
 Pre-built binaries (linux / darwin / windows, amd64 / arm64) ship via goreleaser on [GitHub Releases](https://github.com/macrox-pro/agentd/releases). Pin a version:
 
 ```bash
-go install github.com/macrox-pro/agentd@v0.0.4
+go install github.com/macrox-pro/agentd@v0.0.5
 ```
 
 ## Build from source

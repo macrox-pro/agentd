@@ -16,6 +16,7 @@ import (
 	"github.com/macrox-pro/agentd/internal/server"
 	"github.com/macrox-pro/agentd/internal/transport"
 	"github.com/macrox-pro/agentd/internal/trajectory"
+	"github.com/macrox-pro/agentd/internal/trajectory/statistics"
 )
 
 const (
@@ -148,6 +149,7 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	trajCfg := snap.Trajectory
 	recorder := trajectory.NewRecorder(trajectory.DefaultSessionsDir(), trajCfg.QueueCapacity, log)
 	defer recorder.Close(5 * time.Second)
+	collector := statistics.NewCollector()
 
 	watcher, err := store.Watch(config.WatchOptions{Log: log})
 	if err != nil {
@@ -163,6 +165,7 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 		Store:      store,
 		Engine:     engine,
 		Recorder:   recorder,
+		Collector:  collector,
 		Logger:     log,
 		StartedAt:  time.Now().UTC(),
 		Version:    opts.Version,

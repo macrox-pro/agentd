@@ -1,6 +1,7 @@
 package cmd_test
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -11,6 +12,11 @@ import (
 
 func TestConfigGet(t *testing.T) {
 	dir := t.TempDir()
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(dir))
+	t.Cleanup(func() { _ = os.Chdir(cwd) })
+
 	configPath := filepath.Join(dir, "user.yaml")
 
 	off := executeRoot(t, execOpts{args: []string{"config", "get", "trajectory"}, configPath: configPath})

@@ -122,7 +122,7 @@ func TestHookServiceInvokeMapping(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			conn := dialHook(t, server.NewHookService(tt.snap, tt.inv, nil, nil))
+			conn := dialHook(t, server.NewHookService(tt.snap, tt.inv, nil, nil, nil))
 			hook := agentdv1.NewHookServiceClient(conn)
 
 			resp, err := hook.Invoke(ctx, &agentdv1.InvokeRequest{
@@ -188,7 +188,7 @@ func TestHookServiceInvocationMode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			rec := &recordingInvoker{}
-			conn := dialHook(t, server.NewHookService(fakeSnapshotSource{snap: baseSnap}, rec, nil, nil))
+			conn := dialHook(t, server.NewHookService(fakeSnapshotSource{snap: baseSnap}, rec, nil, nil, nil))
 			hook := agentdv1.NewHookServiceClient(conn)
 
 			_, err := hook.Invoke(ctx, &agentdv1.InvokeRequest{

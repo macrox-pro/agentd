@@ -27,6 +27,7 @@ func TestLookupToggle(t *testing.T) {
 		{name: "list_toggle_names_sorted", in: "", wantDef: false},
 		{name: "trajectory", in: "trajectory", wantDef: true},
 		{name: "trajectory-raw", in: "trajectory-raw", wantDef: true},
+		{name: "trajectory-statistics", in: "trajectory-statistics", wantDef: true},
 		{name: "guard-shell", in: "guard-shell", wantDef: true},
 		{name: "guard-mcp", in: "guard-mcp", wantDef: true},
 		{name: "guard-paths", in: "guard-paths", wantDef: true},
@@ -38,7 +39,7 @@ func TestLookupToggle(t *testing.T) {
 			if tt.name == "list_toggle_names_sorted" {
 				names := config.ListToggleNames()
 				require.True(t, sort.StringsAreSorted(names), "ListToggleNames() sorted")
-				assert.Len(t, names, 5, "ListToggleNames()")
+				assert.Len(t, names, 6, "ListToggleNames()")
 				return
 			}
 			_, err := config.LookupToggle(tt.in)
@@ -95,6 +96,23 @@ func TestSetToggle(t *testing.T) {
 			scope:   config.ToggleScopeUser,
 			enabled: true,
 			wantErr: config.ErrToggleAlreadySet,
+		},
+		{
+			name: "trajectory-statistics",
+			setup: func(t *testing.T) (string, string) {
+				dir := t.TempDir()
+				userPath := filepath.Join(dir, "user.yaml")
+				require.NoError(t, os.WriteFile(userPath, []byte("version: 1\npolicy:\n  fail: fail_closed\ntrajectory:\n  enabled: true\n"), 0o600))
+				return userPath, dir
+			},
+			toggle:  "trajectory-statistics",
+			scope:   config.ToggleScopeUser,
+			enabled: true,
+			after: func(t *testing.T, userPath, _ string) {
+				raw, err := os.ReadFile(userPath)
+				require.NoError(t, err, "ReadFile(%q)", userPath)
+				assert.Contains(t, string(raw), "statistics: true", "trajectory statistics")
+			},
 		},
 		{
 			name: "disable_trajectory_explicit_false",
@@ -460,6 +478,22 @@ func TestGetToggle(t *testing.T) {
 		wantOn     bool
 		wantSource config.ToggleSource
 	}{
+		{
+			name: "trajectory-statistics",
+			setup: func(t *testing.T) (string, string) {
+				dir := t.TempDir()
+				userPath := filepath.Join(dir, "user.yaml")
+				_, err := config.SetToggle(config.SetToggleOptions{
+					Name: "trajectory-statistics", Scope: config.ToggleScopeUser, Enabled: true,
+					UserPath: userPath, ProjectDir: dir,
+				})
+				require.NoError(t, err, "SetToggle(trajectory-statistics)")
+				return userPath, dir
+			},
+			toggle:     "trajectory-statistics",
+			wantOn:     true,
+			wantSource: config.ToggleSourceUser,
+		},
 		{
 			name: "get_shows_default_off",
 			setup: func(t *testing.T) (string, string) {

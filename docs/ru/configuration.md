@@ -95,6 +95,7 @@ agentd config validate --config ~/.agentd.yaml
 | Ключ | По умолчанию |
 |------|--------------|
 | `enabled` | `false` |
+| `statistics` | `false` (нужен `enabled`; для rollup демона и `session stats`) |
 | `include_raw` | `false` |
 | `redact_secret_rules` | `true` |
 | `max_event_bytes` | `262144` |

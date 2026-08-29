@@ -1,0 +1,38 @@
+// Trajectory-domain RPCs (statistics; not on the hook hot path).
+syntax = "proto3";
+
+package agentd.v1;
+
+import "agentd/v1/common.proto";
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/macrox-pro/agentd/gen/agentd/v1;agentdv1";
+
+// TrajectoryService exposes daemon-lifetime trajectory counters (not on the hook hot path).
+service TrajectoryService {
+  // Statistics returns in-memory counters since daemon start; resets on restart.
+  rpc Statistics(StatisticsRequest) returns (StatisticsResponse);
+}
+
+message StatisticsRequest {
+  Provider provider = 1 [(buf.validate.field).enum.defined_only = true]; // UNSPECIFIED = global rollup
+}
+
+// StatisticsResponse mirrors agentd trajectory stats --json.
+message StatisticsResponse {
+  google.protobuf.Timestamp since = 1; // daemon StartedAt (counter epoch)
+  StatisticsRollup rollup = 2;
+}
+
+// StatisticsRollup is monotonic daemon-lifetime totals (one increment per successful Invoke).
+message StatisticsRollup {
+  map<int32, uint64> hooks_by_kind = 1;     // keys are EventKind enum values (proto has no enum map keys)
+  map<int32, uint64> decisions_by_kind = 2; // keys are DecisionKind enum values
+  uint64 async_dispatched_total = 3;        // sum of InvokeResponse.async_dispatched_count
+  uint64 input_tokens_total = 4;            // best-effort extract from raw_payload
+  uint64 output_tokens_total = 5;
+  uint64 cache_read_tokens_total = 6;
+  uint64 cache_write_tokens_total = 7;
+  uint64 context_tokens_last = 8;           // last seen context window size (e.g. Cursor preCompact)
+}

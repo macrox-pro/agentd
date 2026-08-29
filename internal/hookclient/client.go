@@ -1,9 +1,9 @@
 // Package hookclient provides a gRPC client for the local agentd daemon.
 //
-// Owns: dial transport, HookService/ConfigService/SessionService RPC wrappers.
+// Owns: dial transport, HookService/ConfigService/SessionService/TrajectoryService RPC wrappers.
 // Must not: hook wire decode/encode (hookedge).
 //
-// Entry: Dial, DialReady, Client.Invoke, Client.Subscribe, Client.Health.
+// Entry: Dial, DialReady, Client.Invoke, Client.Subscribe, Client.Statistics, Client.Health.
 // See DESIGN.md §1.5 (invoke_sync, async_side).
 package hookclient
 
@@ -21,13 +21,14 @@ import (
 
 const grpcDialTarget = "passthrough:///agentd"
 
-// Client wraps daemon, hook, config, and session service clients.
+// Client wraps daemon, hook, config, session, and trajectory service clients.
 type Client struct {
-	conn    *grpc.ClientConn
-	daemon  agentdv1.DaemonServiceClient
-	hook    agentdv1.HookServiceClient
-	config  agentdv1.ConfigServiceClient
-	session agentdv1.SessionServiceClient
+	conn        *grpc.ClientConn
+	daemon      agentdv1.DaemonServiceClient
+	hook        agentdv1.HookServiceClient
+	config      agentdv1.ConfigServiceClient
+	session     agentdv1.SessionServiceClient
+	trajectory  agentdv1.TrajectoryServiceClient
 }
 
 // Dial connects to the daemon socket.
@@ -48,11 +49,12 @@ func Dial(ctx context.Context, socket string) (*Client, error) {
 		return nil, fmt.Errorf("dial daemon: %w", err)
 	}
 	return &Client{
-		conn:    conn,
-		daemon:  agentdv1.NewDaemonServiceClient(conn),
-		hook:    agentdv1.NewHookServiceClient(conn),
-		config:  agentdv1.NewConfigServiceClient(conn),
-		session: agentdv1.NewSessionServiceClient(conn),
+		conn:       conn,
+		daemon:     agentdv1.NewDaemonServiceClient(conn),
+		hook:       agentdv1.NewHookServiceClient(conn),
+		config:     agentdv1.NewConfigServiceClient(conn),
+		session:    agentdv1.NewSessionServiceClient(conn),
+		trajectory: agentdv1.NewTrajectoryServiceClient(conn),
 	}, nil
 }
 
@@ -122,4 +124,9 @@ func (c *Client) RecordDecision(ctx context.Context, req *agentdv1.RecordDecisio
 // Subscribe opens a live trajectory event stream from the daemon.
 func (c *Client) Subscribe(ctx context.Context, req *agentdv1.SubscribeRequest) (agentdv1.SessionService_SubscribeClient, error) {
 	return c.session.Subscribe(ctx, req)
+}
+
+// Statistics returns daemon-lifetime trajectory counters.
+func (c *Client) Statistics(ctx context.Context, req *agentdv1.StatisticsRequest) (*agentdv1.StatisticsResponse, error) {
+	return c.trajectory.Statistics(ctx, req)
 }

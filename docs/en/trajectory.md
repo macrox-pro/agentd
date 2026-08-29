@@ -52,7 +52,18 @@ Recording happens on the daemon async path — sync hook latency is unchanged.
 | `agentd session import --provider ID …` | Append transcript events (`source=transcript`) or `--out` parse-only JSONL emit |
 | `agentd session replay --policy --provider ID --session ID` | Dry-run stored Raw through Dispatch Engine |
 | `agentd session fork --provider ID --session SRC --new-session DST` | Copy ledger prefix (audit lineage) |
+| `agentd session stats ID --provider ID [--json]` | Offline session ledger statistics (requires `trajectory.statistics`) |
 | `agentd session subscribe [--json]` | **Live** stream from daemon (requires running daemon + trajectory.enabled) |
+
+## Daemon statistics
+
+```bash
+agentd config enable trajectory
+agentd config enable trajectory-statistics
+agentd trajectory stats [--provider ID] [--json]
+```
+
+Requires a **running daemon**. Counters reset on daemon restart; `since` reflects daemon start time. Optional `--provider` filters the rollup. Token totals appear only when `trajectory.include_raw` was true at record time.
 
 ## Subscribe (live stream)
 

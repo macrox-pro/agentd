@@ -31,6 +31,7 @@ type toggleKind int
 const (
 	toggleTrajectory toggleKind = iota
 	toggleTrajectoryRaw
+	toggleTrajectoryStatistics
 	toggleGuardShell
 	toggleGuardMCP
 	toggleGuardPaths
@@ -45,6 +46,7 @@ type toggleDef struct {
 var toggleCatalog = []toggleDef{
 	{name: "trajectory", defaultScope: ToggleScopeUser, kind: toggleTrajectory},
 	{name: "trajectory-raw", defaultScope: ToggleScopeUser, kind: toggleTrajectoryRaw},
+	{name: "trajectory-statistics", defaultScope: ToggleScopeUser, kind: toggleTrajectoryStatistics},
 	{name: "guard-shell", defaultScope: ToggleScopeProject, kind: toggleGuardShell},
 	{name: "guard-mcp", defaultScope: ToggleScopeProject, kind: toggleGuardMCP},
 	{name: "guard-paths", defaultScope: ToggleScopeProject, kind: toggleGuardPaths},
@@ -362,6 +364,10 @@ func layerBool(fc *fileConfig, kind toggleKind) *bool {
 		if fc.Trajectory != nil {
 			return fc.Trajectory.IncludeRaw
 		}
+	case toggleTrajectoryStatistics:
+		if fc.Trajectory != nil {
+			return fc.Trajectory.Statistics
+		}
 	case toggleGuardShell:
 		if fc.Guards != nil && fc.Guards.Shell != nil {
 			return fc.Guards.Shell.Enabled
@@ -393,6 +399,11 @@ func setLayerBool(fc *fileConfig, kind toggleKind, v bool) {
 			fc.Trajectory = &fileTrajectory{}
 		}
 		fc.Trajectory.IncludeRaw = &v
+	case toggleTrajectoryStatistics:
+		if fc.Trajectory == nil {
+			fc.Trajectory = &fileTrajectory{}
+		}
+		fc.Trajectory.Statistics = &v
 	case toggleGuardShell:
 		if fc.Guards == nil {
 			fc.Guards = &fileGuards{}
@@ -426,6 +437,8 @@ func effectiveBool(res CompileResult, kind toggleKind) bool {
 		return res.Trajectory.Enabled
 	case toggleTrajectoryRaw:
 		return res.Trajectory.IncludeRaw
+	case toggleTrajectoryStatistics:
+		return res.Trajectory.Statistics
 	case toggleGuardShell:
 		return res.Guards.Shell.Enabled
 	case toggleGuardMCP:

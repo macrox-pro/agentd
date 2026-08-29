@@ -71,6 +71,7 @@ Curated-переключатели (`enable` / `disable` / `get`) пишут т�
 |---------|-----------|---------------|
 | `trajectory` | `trajectory.enabled` | `user` |
 | `trajectory-raw` | `trajectory.include_raw` | `user` |
+| `trajectory-statistics` | `trajectory.statistics` | `user` |
 | `guard-shell` | `guards.shell.enabled` | `project` |
 | `guard-mcp` | `guards.mcp.enabled` | `project` |
 | `guard-paths` | `guards.paths.enabled` | `project` |
@@ -116,7 +117,15 @@ agentd config enable guard-shell
 
 ## session (журнал trajectory)
 
-Просмотр и экспорт JSONL ([Trajectory](./trajectory.md)). Offline — читает `sessions/` в [state directory](./configuration.md#state-directory). **Исключение:** `session subscribe` требует запущенный daemon.
+Просмотр и экспорт JSONL ([Trajectory](./trajectory.md)). Offline — читает `sessions/` в [state directory](./configuration.md#state-directory). **Исключения:** `session subscribe` и `trajectory stats` требуют запущенный daemon.
+
+## trajectory stats
+
+```bash
+agentd trajectory stats [--provider ID] [--json]
+```
+
+Счётчики за время жизни демона с момента старта процесса (`since` в выводе). Нужны `trajectory.enabled` и `trajectory.statistics`. См. [Trajectory § Статистика демона](./trajectory.md#статистика-демона).
 
 | Команда | Флаги |
 |---------|-------|
@@ -127,6 +136,7 @@ agentd config enable guard-shell
 | `session import` | `--provider` (обязателен), `--session`, `--path`, `--out`, `--dry-run`, `--json` |
 | `session replay` | `--policy` (обязателен), `--provider`, `--session`, `--seq`, `--json` |
 | `session fork` | `--provider`, `--session`, `--new-session`, `--at-seq`, `--json` |
+| `session stats` | `SESSION_ID`, `--provider` (обязателен), `--json` |
 | `session subscribe` | `--provider`, `--session`, `--source`, `--json` (live; нужен daemon) |
 
 `session search` сканирует JSONL построчно (O(объём); без индекса). `session import`: Claude Code и Codex — `supported`; Cursor — `partial` (лучше `--path`); остальные — явный `none`. `session replay --policy` требует `include_raw` при записи. `session fork` — только аудит (исходник неизменяем). `session subscribe` — live с момента подключения; история через show/export.

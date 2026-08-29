@@ -95,6 +95,7 @@ Opt-in session ledger ([Trajectory](./trajectory.md)). Default **off**.
 | Key | Default |
 |-----|---------|
 | `enabled` | `false` |
+| `statistics` | `false` (requires `enabled`; gates daemon rollup + `session stats`) |
 | `include_raw` | `false` |
 | `redact_secret_rules` | `true` |
 | `max_event_bytes` | `262144` |

@@ -85,6 +85,17 @@ agentd daemon stop --timeout 10s
 
 Stop drains sync then async (up to timeout), then removes socket/PID.
 
+## Trajectory statistics
+
+```bash
+agentd config enable trajectory
+agentd config enable trajectory-statistics
+agentd trajectory stats [--provider ID] [--json]
+agentd session stats SESSION_ID --provider ID [--json]
+```
+
+`trajectory stats` reads in-memory daemon counters (`TrajectoryService.Statistics`) and needs a running daemon; counters reset on restart. `session stats` scans a local JSONL ledger and does not need the daemon. Both require `trajectory.enabled` and `trajectory.statistics`. See [Trajectory](./trajectory.md#daemon-statistics).
+
 ## Logging
 
 Hook path: never debug on stdout. The daemon appends operational logs to `agentd.log` in the [state directory](./configuration.md#state-directory); `agentd daemon start --foreground` also mirrors to stderr. Async dispatch `target: log` uses the same slog logger.

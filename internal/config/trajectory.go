@@ -20,6 +20,7 @@ type ImportProviderConfig struct {
 // TrajectoryConfig is compiled trajectory ledger settings.
 type TrajectoryConfig struct {
 	Enabled           bool
+	Statistics        bool
 	IncludeRaw        bool
 	RedactSecretRules bool
 	MaxEventBytes     int
@@ -30,6 +31,7 @@ type TrajectoryConfig struct {
 func defaultTrajectory() TrajectoryConfig {
 	return TrajectoryConfig{
 		Enabled:           false,
+		Statistics:        false,
 		IncludeRaw:        false,
 		RedactSecretRules: true,
 		MaxEventBytes:     defaultMaxEventBytes,
@@ -48,6 +50,7 @@ func defaultImportProviders() map[string]ImportProviderConfig {
 
 type fileTrajectory struct {
 	Enabled           *bool                          `yaml:"enabled,omitempty"`
+	Statistics        *bool                          `yaml:"statistics,omitempty"`
 	IncludeRaw        *bool                          `yaml:"include_raw,omitempty"`
 	RedactSecretRules *bool                          `yaml:"redact_secret_rules,omitempty"`
 	MaxEventBytes     *int                           `yaml:"max_event_bytes,omitempty"`
@@ -67,6 +70,9 @@ func parseTrajectory(in *fileTrajectory, base TrajectoryConfig) (TrajectoryConfi
 	}
 	if in.Enabled != nil {
 		out.Enabled = *in.Enabled
+	}
+	if in.Statistics != nil {
+		out.Statistics = *in.Statistics
 	}
 	if in.IncludeRaw != nil {
 		out.IncludeRaw = *in.IncludeRaw
@@ -123,6 +129,9 @@ func mergeTrajectoryPtr(base, user *fileTrajectory) *fileTrajectory {
 	}
 	if user.Enabled != nil {
 		out.Enabled = user.Enabled
+	}
+	if user.Statistics != nil {
+		out.Statistics = user.Statistics
 	}
 	if user.IncludeRaw != nil {
 		out.IncludeRaw = user.IncludeRaw

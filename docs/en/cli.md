@@ -71,6 +71,7 @@ Curated feature toggles (`enable` / `disable` / `get`) write **user or project**
 |---------|-----------|---------------|
 | `trajectory` | `trajectory.enabled` | `user` |
 | `trajectory-raw` | `trajectory.include_raw` | `user` |
+| `trajectory-statistics` | `trajectory.statistics` | `user` |
 | `guard-shell` | `guards.shell.enabled` | `project` |
 | `guard-mcp` | `guards.mcp.enabled` | `project` |
 | `guard-paths` | `guards.paths.enabled` | `project` |
@@ -116,7 +117,15 @@ Offline compile of defaults ⊕ user ⊕ optional project (no daemon required).
 
 ## session
 
-Trajectory ledger inspect/export ([Trajectory](./trajectory.md)). Offline — reads `sessions/` under the [state directory](./configuration.md#state-directory). **Exception:** `session subscribe` requires a running daemon.
+Trajectory ledger inspect/export ([Trajectory](./trajectory.md)). Offline — reads `sessions/` under the [state directory](./configuration.md#state-directory). **Exceptions:** `session subscribe` and `trajectory stats` require a running daemon.
+
+## trajectory stats
+
+```bash
+agentd trajectory stats [--provider ID] [--json]
+```
+
+Daemon-lifetime counters since process start (`since` in output). Requires `trajectory.enabled` and `trajectory.statistics`. See [Trajectory § Daemon statistics](./trajectory.md#daemon-statistics).
 
 | Command | Flags |
 |---------|-------|
@@ -127,6 +136,7 @@ Trajectory ledger inspect/export ([Trajectory](./trajectory.md)). Offline — re
 | `session import` | `--provider` (required), `--session`, `--path`, `--out`, `--dry-run`, `--json` |
 | `session replay` | `--policy` (required), `--provider`, `--session`, `--seq`, `--json` |
 | `session fork` | `--provider`, `--session`, `--new-session`, `--at-seq`, `--json` |
+| `session stats` | `SESSION_ID`, `--provider` (required), `--json` |
 | `session subscribe` | `--provider`, `--session`, `--source`, `--json` (live firehose; daemon required) |
 
 `session search` scans JSONL line-by-line (O(total bytes); no index). `session import`: Claude Code and Codex `supported`; Cursor `partial` (prefer `--path`); others explicit `none`. `session replay --policy` needs `include_raw` at record time. `session fork` is audit lineage only (source immutable). `session subscribe` is live-only from dial time — use show/export for history.

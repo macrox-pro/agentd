@@ -35,7 +35,8 @@ Does not require a running daemon. If the daemon is running, it reloads
 automatically when the config file changes.`,
 	Example: `  agentd config enable trajectory
   agentd config enable guard-shell --scope project
-  agentd config enable trajectory-raw`,
+  agentd config enable trajectory-raw
+  agentd config enable trajectory-statistics`,
 	Args: cobra.ExactArgs(1),
 	RunE: runConfigSetToggle(true),
 }

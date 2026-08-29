@@ -314,6 +314,42 @@ func TestSubscribeClient(t *testing.T) {
 	}
 }
 
+func TestStatisticsClient(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	dir := t.TempDir()
+	socket := filepath.Join(dir, "s.sock")
+	ln, err := transport.Listen(socket)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = ln.Close() })
+	gs := grpc.NewServer()
+	agentdv1.RegisterDaemonServiceServer(gs, &daemonStub{})
+	agentdv1.RegisterTrajectoryServiceServer(gs, statsStub{})
+	go func() { _ = gs.Serve(ln) }()
+	t.Cleanup(gs.Stop)
+	waitForSocket(t, socket)
+
+	cli, err := hookclient.Dial(ctx, socket)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = cli.Close() })
+	resp, err := cli.Statistics(ctx, &agentdv1.StatisticsRequest{})
+	require.NoError(t, err)
+	require.NotNil(t, resp.GetSince())
+}
+
+type statsStub struct {
+	agentdv1.UnimplementedTrajectoryServiceServer
+}
+
+func (statsStub) Statistics(context.Context, *agentdv1.StatisticsRequest) (*agentdv1.StatisticsResponse, error) {
+	return &agentdv1.StatisticsResponse{
+		Since: timestamppb.Now(),
+		Rollup: &agentdv1.StatisticsRollup{
+			HooksByKind: map[int32]uint64{int32(agentdv1.EventKind_EVENT_KIND_TOOL_PRE): 1},
+		},
+	}, nil
+}
+
 func TestCloseNil(t *testing.T) {
 	t.Parallel()
 	var cli *hookclient.Client

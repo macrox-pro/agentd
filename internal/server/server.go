@@ -1,4 +1,4 @@
-// Package server implements thin gRPC mapping for DaemonService, HookService, ConfigService, and SessionService.
+// Package server implements thin gRPC mapping for DaemonService, HookService, ConfigService, SessionService, and TrajectoryService.
 //
 // Owns: proto ↔ internal type mapping; HookService maps via Invoker and SnapshotSource.
 // Must not: policy logic, route match, guard checks, config compile.
@@ -8,7 +8,8 @@
 //   - typed-nil-safe New (opts.Store / opts.Engine assigned only when non-nil).
 //   - handler does not route, run guards, or compile config.
 //
-// Entry: NewHookService, HookService.Invoke (Invoker, SnapshotSource), ConfigService handlers, SessionService.Subscribe.
+// Entry: NewHookService, HookService.Invoke (Invoker, SnapshotSource), TrajectoryService.Statistics,
+// ConfigService handlers, SessionService.Subscribe.
 // See DESIGN.md §1.5 (invoke_sync, config_reload, async_side).
 package server
 
@@ -22,6 +23,7 @@ import (
 	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/dispatch"
 	"github.com/macrox-pro/agentd/internal/trajectory"
+	"github.com/macrox-pro/agentd/internal/trajectory/statistics"
 )
 
 const defaultVersion = "dev"
@@ -31,6 +33,7 @@ type Options struct {
 	Store      *config.Store
 	Engine     *dispatch.Engine
 	Recorder   *trajectory.Recorder
+	Collector  *statistics.Collector
 	Logger     *slog.Logger
 	StartedAt  time.Time
 	Version    string
@@ -44,10 +47,11 @@ type daemonService struct {
 
 type hookService struct {
 	agentdv1.UnimplementedHookServiceServer
-	snap     SnapshotSource
-	engine   Invoker
-	recorder *trajectory.Recorder
-	log      *slog.Logger
+	snap      SnapshotSource
+	engine    Invoker
+	recorder  *trajectory.Recorder
+	collector *statistics.Collector
+	log       *slog.Logger
 }
 
 // New registers DaemonService, HookService, and ConfigService on a new gRPC server.
@@ -68,8 +72,9 @@ func New(opts Options) *grpc.Server {
 	if opts.Engine != nil {
 		inv = opts.Engine
 	}
-	agentdv1.RegisterHookServiceServer(s, NewHookService(snap, inv, opts.Recorder, opts.Logger))
+	agentdv1.RegisterHookServiceServer(s, NewHookService(snap, inv, opts.Recorder, opts.Collector, opts.Logger))
 	agentdv1.RegisterConfigServiceServer(s, &configService{store: opts.Store})
+	agentdv1.RegisterTrajectoryServiceServer(s, &trajectoryService{opts: opts})
 	if opts.Recorder != nil {
 		agentdv1.RegisterSessionServiceServer(s, &sessionService{hub: opts.Recorder.Hub()})
 	} else {
