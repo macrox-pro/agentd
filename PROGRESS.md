@@ -4,22 +4,20 @@
 
 ## Current
 
-**Config feature toggles** (2026-08-29) · done · hot path: `config_reload` · next: **none**
+**v0.0.4** (2026-08-29) · shipped · next: **none**
 
-`agentd config enable|disable|get FEATURE` — curated offline toggles for trajectory, trajectory-raw, guard-shell, guard-mcp, guard-paths. Writes user/project YAML only (no runtime overlay). L1/L2 idempotent SetToggle; GetToggle excludes runtime.
+Login autostart (`daemon enable`/`disable`) + curated config toggles (`config enable`/`disable`/`get`). Tag `v0.0.4` — push to trigger goreleaser.
 
 ```bash
-go test ./internal/config/... ./cmd/... -race -count=1 -run 'TestLookupToggle|TestSetToggle|TestGetToggle|TestConfigEnable|TestConfigDisable|TestConfigGet'
-make lint && make intent-check && make docs-check
+make lint && make intent-check && make docs-check && make test
+./scripts/release-notes.sh v0.0.4
 ```
-
-**Files:** `internal/config/toggle.go`, `toggle_test.go`, `errors.go`, `config.go`; `cmd/config_enable.go`, `config_disable.go`, `config_get.go`, `config.go`, `*_test.go`; `docs/en/cli.md`, `configuration.md`, `getting-started.md`; `docs/ru/cli.md`, `configuration.md`, `getting-started.md`; `DESIGN.md` §6; `CHANGELOG.md`
 
 ## Recent (done)
 
 | When | Phase | One-liner |
 |------|-------|-----------|
-| 2026-08-29 | Config toggles | `config enable\|disable\|get FEATURE`; 5 curated features; C1–C40 tests |
+| 2026-08-29 | v0.0.4 | M14 autostart + config toggles; CHANGELOG + docs version bump |
 | 2026-08-29 | Gemini research | `research/gemini/` hooks/MCP/settings/skills/GEMINI.md + T2 managed agents + migration delta |
 | 2026-08-29 | M14 autostart | `daemon enable/disable`, status autostart JSON, `e2e-m14` |
 | 2026-08-29 | user config bootstrap | `PrepareUserConfig` on daemon start; omitempty YAML; `LayerYAML` normalize |
@@ -63,7 +61,7 @@ Historical acceptance (M0–M14 shipped). Architecture: [DESIGN.md](./DESIGN.md)
 | M11 | All importer rows, replay/fork, `e2e-m11` |
 | M12 / v0.0.2 | `SessionService.Subscribe`, `e2e-m9…m12` |
 | M13 / v0.0.3 | `policy.offline` hook edge, docs EN/RU |
-| M14 | `daemon enable\|disable`, autostart status JSON, `e2e-m14` |
+| M14 / v0.0.4 | `daemon enable\|disable`, config toggles, `e2e-m14` |
 
 ## Verify (repo green)
 

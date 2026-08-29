@@ -22,8 +22,8 @@ func TestVersionCLI(t *testing.T) {
 		},
 		{
 			name:    "ldflags v-prefixed",
-			version: "v0.0.3",
-			want:    "v0.0.3\n",
+			version: "v0.0.4",
+			want:    "v0.0.4\n",
 		},
 	}
 

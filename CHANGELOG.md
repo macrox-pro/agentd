@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## [v0.0.4] — 2026-08-29
+
+Login autostart and curated config toggles for trajectory and guards.
+
 ### Highlights
 
 - **`config enable` / `disable` / `get`** — curated offline toggles for trajectory and guards (user/project YAML); distinct from `daemon enable` (login autostart)

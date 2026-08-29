@@ -18,9 +18,9 @@ func TestResolve(t *testing.T) {
 	}{
 		{
 			name:   "ldflags semver wins",
-			linked: "v0.0.3",
+			linked: "v0.0.4",
 			info:   &debug.BuildInfo{Main: debug.Module{Version: "v9.9.9"}},
-			want:   "v0.0.3",
+			want:   "v0.0.4",
 		},
 		{
 			name:   "nil info defaults",
@@ -37,8 +37,8 @@ func TestResolve(t *testing.T) {
 		{
 			name:   "go install module version",
 			linked: "dev",
-			info:   &debug.BuildInfo{Main: debug.Module{Version: "v0.0.3"}},
-			want:   "v0.0.3",
+			info:   &debug.BuildInfo{Main: debug.Module{Version: "v0.0.4"}},
+			want:   "v0.0.4",
 		},
 		{
 			name:   "go install pseudo version",

@@ -4,7 +4,7 @@
 
 How to install, configure, and operate agentd (v1). Facts below match the shipped CLI and config schema.
 
-> **Release:** [v0.0.3](../../CHANGELOG.md#v003--2026-08-26) — `policy.offline` on hook edge when the daemon is down.
+> **Release:** [v0.0.4](../../CHANGELOG.md#v004--2026-08-29) — login autostart and curated config toggles.
 
 Start with [Why agentd](./why.md) if you need the problem statement; otherwise [Getting started](./getting-started.md).
 
