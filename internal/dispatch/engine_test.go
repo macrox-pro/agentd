@@ -34,13 +34,13 @@ func claudeToolPre(t *testing.T, command string) []byte {
 
 func testSnap(t *testing.T) *config.Snapshot {
 	t.Helper()
-	_, async, guards, routes, err := config.Compile(nil)
+	res, err := config.CompileMerged(nil, nil, nil)
 	require.NoError(t, err)
 	return &config.Snapshot{
 		Generation: 1,
-		Async:      async,
-		Guards:     guards,
-		Routes:     routes,
+		Async:      res.Async,
+		Guards:     res.Guards,
+		Routes:     res.Routes,
 		Policy: config.Policy{
 			Fail:        config.FailClosed,
 			AskFallback: config.AskFallbackDeny,

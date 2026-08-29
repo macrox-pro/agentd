@@ -47,11 +47,9 @@ type Store struct {
 	gen         atomic.Uint64
 	reloadMu    sync.Mutex
 
-	userRaw    []byte
 	userFC     *fileConfig
 	runtimeRaw []byte
 	runtimeFC  *fileConfig
-	mergedFC   *fileConfig // base merged (no project)
 
 	projects map[string]*projectState // abs .agentd.yaml path → state
 
@@ -62,7 +60,6 @@ type Store struct {
 
 type projectState struct {
 	path string
-	raw  []byte
 	fc   *fileConfig
 	snap *Snapshot
 }
@@ -324,43 +321,23 @@ func (s *Store) LayerYAML(layer Layer, cwd, projectRoot string) ([]byte, error) 
 		if !ok {
 			return nil, nil
 		}
-		if ps, hit := s.projects[path]; hit {
-			if ps.fc == nil {
-				return nil, nil
-			}
-			return yaml.Marshal(ps.fc)
-		}
-		raw, err := readOptionalYAML(path)
+		fc, err := s.projectFCLocked(path)
 		if err != nil {
 			return nil, err
 		}
-		if len(raw) == 0 {
+		if fc == nil {
 			return nil, nil
 		}
-		var fc fileConfig
-		if err := yaml.Unmarshal(raw, &fc); err != nil {
-			return nil, fmt.Errorf("parse project config %q: %w", path, err)
-		}
-		return yaml.Marshal(&fc)
+		return yaml.Marshal(fc)
 	case LayerMerged:
 		path, ok := FindProjectConfig(cwd, projectRoot)
 		var project *fileConfig
 		if ok {
-			if ps, hit := s.projects[path]; hit {
-				project = ps.fc
-			} else {
-				raw, err := readOptionalYAML(path)
-				if err != nil {
-					return nil, err
-				}
-				if len(raw) > 0 {
-					var fc fileConfig
-					if err := yaml.Unmarshal(raw, &fc); err != nil {
-						return nil, fmt.Errorf("parse project config %q: %w", path, err)
-					}
-					project = &fc
-				}
+			fc, err := s.projectFCLocked(path)
+			if err != nil {
+				return nil, err
 			}
+			project = fc
 		}
 		merged := mergeFile(baseFileConfig(), s.userFC)
 		merged = mergeFile(merged, project)
@@ -378,7 +355,7 @@ func (s *Store) reloadBase() error {
 }
 
 func (s *Store) reloadAllLocked() error {
-	userRaw, userFC, err := readFileConfig(s.userPath)
+	_, userFC, err := readFileConfig(s.userPath)
 	if err != nil {
 		return err
 	}
@@ -386,7 +363,6 @@ func (s *Store) reloadAllLocked() error {
 	if err != nil {
 		return err
 	}
-	s.userRaw = userRaw
 	s.userFC = userFC
 	s.runtimeRaw = runtimeRaw
 	s.runtimeFC = runtimeFC
@@ -410,7 +386,6 @@ func (s *Store) recompileAllLocked() error {
 	if err != nil {
 		return err
 	}
-	s.mergedFC = res.Merged
 	gen := s.gen.Add(1)
 	base := snapshotFrom(res, gen, fp, s.userPath, s.runtimePath, "")
 	s.snap.Store(base)
@@ -463,11 +438,22 @@ func snapshotFrom(res CompileResult, gen uint64, fp, userPath, runtimePath, proj
 }
 
 func (s *Store) readProjectLocked(path string) (*projectState, error) {
-	raw, fc, err := readFileConfig(path)
+	_, fc, err := readFileConfig(path)
 	if err != nil {
 		return nil, err
 	}
-	return &projectState{path: path, raw: raw, fc: fc}, nil
+	return &projectState{path: path, fc: fc}, nil
+}
+
+func (s *Store) projectFCLocked(path string) (*fileConfig, error) {
+	if ps, hit := s.projects[path]; hit {
+		return ps.fc, nil
+	}
+	_, fc, err := readFileConfig(path)
+	if err != nil {
+		return nil, err
+	}
+	return fc, nil
 }
 
 func (s *Store) reloadProjectFile(path string) error {
@@ -494,7 +480,7 @@ func readFileConfig(path string) ([]byte, *fileConfig, error) {
 	}
 	var fc fileConfig
 	if err := yaml.Unmarshal(raw, &fc); err != nil {
-		return nil, nil, fmt.Errorf("parse config %q: %w", path, err)
+		return nil, nil, fmt.Errorf("%w %q: %w", ErrParseConfig, path, err)
 	}
 	return raw, &fc, nil
 }

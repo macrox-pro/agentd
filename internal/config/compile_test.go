@@ -13,7 +13,7 @@ import (
 	"github.com/macrox-pro/agentd/internal/config"
 )
 
-func TestCompile(t *testing.T) {
+func TestCompileMerged(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -35,14 +35,14 @@ func TestCompile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			pol, async, guards, routes, err := config.Compile(nil)
-			require.NoError(t, err, "Compile(nil)")
-			assert.Equal(t, config.FailClosed, pol.Fail, "Compile policy")
-			assert.Equal(t, config.FailOpen, pol.Offline, "Compile offline")
-			assert.Equal(t, 1024, async.QueueCapacity, "Compile async")
-			assert.True(t, guards.Secrets.Enabled, "Compile secrets")
+			res, err := config.CompileMerged(nil, nil, nil)
+			require.NoError(t, err, "CompileMerged(nil, nil, nil)")
+			assert.Equal(t, config.FailClosed, res.Policy.Fail, "CompileMerged policy")
+			assert.Equal(t, config.FailOpen, res.Policy.Offline, "CompileMerged offline")
+			assert.Equal(t, 1024, res.Async.QueueCapacity, "CompileMerged async")
+			assert.True(t, res.Guards.Secrets.Enabled, "CompileMerged secrets")
 			byKind := map[string]config.CompiledRoute{}
-			for _, r := range routes {
+			for _, r := range res.Routes {
 				byKind[r.Kind] = r
 			}
 			for kind, mode := range tt.wantMode {

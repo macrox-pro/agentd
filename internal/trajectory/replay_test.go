@@ -42,16 +42,16 @@ func TestReplayPolicy(t *testing.T) {
 			sid := "replay-" + tt.prov
 			writeReplayLedger(t, root, tt.prov, sid, tt.mode, raw)
 
-			_, async, guards, routes, err := config.Compile(nil)
+			res, err := config.CompileMerged(nil, nil, nil)
 			require.NoError(t, err)
 			snap := &config.Snapshot{
 				Generation: 1,
-				Async:      async,
-				Guards:     guards,
-				Routes:     routes,
+				Async:      res.Async,
+				Guards:     res.Guards,
+				Routes:     res.Routes,
 				Policy:     config.Policy{Fail: config.FailClosed, AskFallback: config.AskFallbackDeny},
 			}
-			q := dispatch.NewQueue(async, nil)
+			q := dispatch.NewQueue(res.Async, nil)
 			t.Cleanup(func() { q.Close(2 * time.Second) })
 			eng := dispatch.NewEngine(q, nil)
 
@@ -80,10 +80,10 @@ func TestReplayMissingRaw(t *testing.T) {
 	line := `{"seq":1,"type":"hook/invoked","source":"hook","provider":"claude-code","session_id":"no-raw","data":{"kind":"tool.pre"}}` + "\n"
 	require.NoError(t, os.WriteFile(path, []byte(line), 0o600))
 
-	_, async, guards, routes, err := config.Compile(nil)
+	res, err := config.CompileMerged(nil, nil, nil)
 	require.NoError(t, err)
-	snap := &config.Snapshot{Generation: 1, Async: async, Guards: guards, Routes: routes}
-	q := dispatch.NewQueue(async, nil)
+	snap := &config.Snapshot{Generation: 1, Async: res.Async, Guards: res.Guards, Routes: res.Routes}
+	q := dispatch.NewQueue(res.Async, nil)
 	t.Cleanup(func() { q.Close(2 * time.Second) })
 	eng := dispatch.NewEngine(q, nil)
 

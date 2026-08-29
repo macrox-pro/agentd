@@ -271,3 +271,67 @@ func TestSnapshotFor(t *testing.T) {
 	again := store.SnapshotFor(projDir, "")
 	assert.Equal(t, proj.Generation, again.Generation)
 }
+
+func TestLayerYAML_project(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	userPath := filepath.Join(dir, "user.yaml")
+	projDir := filepath.Join(dir, "proj")
+	require.NoError(t, os.MkdirAll(projDir, 0o700))
+	projPath := filepath.Join(projDir, ".agentd.yaml")
+	require.NoError(t, os.WriteFile(userPath, []byte("version: 1\npolicy:\n  fail: fail_closed\n"), 0o600))
+	require.NoError(t, os.WriteFile(projPath, []byte("version: 1\npolicy:\n  fail: fail_open\n"), 0o600))
+
+	store, err := config.Load(context.Background(), userPath)
+	require.NoError(t, err, "Load(%q)", userPath)
+
+	raw, err := store.LayerYAML(config.LayerProject, projDir, "")
+	require.NoError(t, err, "LayerYAML(project)")
+	assert.Contains(t, string(raw), "fail_open")
+	assert.NotContains(t, string(raw), "null:")
+}
+
+func TestLayerYAML_merged(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	userPath := filepath.Join(dir, "user.yaml")
+	projDir := filepath.Join(dir, "proj")
+	require.NoError(t, os.MkdirAll(projDir, 0o700))
+	projPath := filepath.Join(projDir, ".agentd.yaml")
+	require.NoError(t, os.WriteFile(userPath, []byte("version: 1\npolicy:\n  fail: fail_closed\n"), 0o600))
+	require.NoError(t, os.WriteFile(projPath, []byte("version: 1\npolicy:\n  fail: fail_open\n"), 0o600))
+
+	store, err := config.Load(context.Background(), userPath)
+	require.NoError(t, err, "Load(%q)", userPath)
+
+	raw, err := store.LayerYAML(config.LayerMerged, projDir, "")
+	require.NoError(t, err, "LayerYAML(merged)")
+	assert.Contains(t, string(raw), "fail_open", "merged_order: project overrides user")
+}
+
+func TestLayerYAML_project_cached(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	userPath := filepath.Join(dir, "user.yaml")
+	projDir := filepath.Join(dir, "proj")
+	require.NoError(t, os.MkdirAll(projDir, 0o700))
+	projPath := filepath.Join(projDir, ".agentd.yaml")
+	require.NoError(t, os.WriteFile(userPath, []byte("version: 1\n"), 0o600))
+	require.NoError(t, os.WriteFile(projPath, []byte("version: 1\npolicy:\n  fail: fail_open\n"), 0o600))
+
+	store, err := config.Load(context.Background(), userPath)
+	require.NoError(t, err, "Load(%q)", userPath)
+
+	uncached, err := store.LayerYAML(config.LayerProject, projDir, "")
+	require.NoError(t, err, "LayerYAML(project)")
+
+	_, err = store.EnsureProject(projDir, "")
+	require.NoError(t, err, "EnsureProject(%q)", projDir)
+
+	cached, err := store.LayerYAML(config.LayerProject, projDir, "")
+	require.NoError(t, err, "LayerYAML(project)")
+	assert.Equal(t, string(uncached), string(cached), "project_cached")
+}

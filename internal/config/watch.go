@@ -215,7 +215,7 @@ func (w *Watcher) loop(ctx context.Context, fw *fsnotify.Watcher) {
 				continue
 			}
 			w.mu.Lock()
-			kind, tracked := w.files[abs]
+			_, tracked := w.files[abs]
 			if !tracked {
 				w.mu.Unlock()
 				continue
@@ -227,7 +227,6 @@ func (w *Watcher) loop(ctx context.Context, fw *fsnotify.Watcher) {
 				}
 				delete(w.ignore, abs)
 			}
-			_ = kind
 			w.pending[abs] = struct{}{}
 			w.mu.Unlock()
 

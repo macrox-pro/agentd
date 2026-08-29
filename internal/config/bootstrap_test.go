@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -74,6 +75,7 @@ func TestPrepareUserConfig_invalid_returns_error(t *testing.T) {
 	var notify bytes.Buffer
 	err := config.PrepareUserConfig(path, &notify)
 	require.Error(t, err, "PrepareUserConfig(%q)", path)
+	assert.False(t, errors.Is(err, config.ErrParseConfig))
 	assert.Contains(t, notify.String(), path)
 	assert.Contains(t, notify.String(), "invalid user config")
 
@@ -92,6 +94,7 @@ func TestPrepareUserConfig_invalid_parse_notify(t *testing.T) {
 	var notify bytes.Buffer
 	err := config.PrepareUserConfig(path, &notify)
 	require.Error(t, err, "PrepareUserConfig(%q)", path)
+	assert.ErrorIs(t, err, config.ErrParseConfig)
 	assert.Contains(t, notify.String(), "invalid user config")
 	assert.NotContains(t, notify.String(), "read config:")
 }
@@ -120,6 +123,7 @@ func TestPrepareUserConfig_unreadable(t *testing.T) {
 	var notify bytes.Buffer
 	err := config.PrepareUserConfig(path, &notify)
 	require.Error(t, err, "PrepareUserConfig(%q)", path)
+	assert.False(t, errors.Is(err, config.ErrParseConfig))
 	assert.NotContains(t, notify.String(), "invalid user config")
 }
 

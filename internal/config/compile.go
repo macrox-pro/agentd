@@ -55,15 +55,6 @@ type CompileResult struct {
 	Merged          *fileConfig
 }
 
-// Compile merges defaults with optional user fileConfig and produces Snapshot fields.
-func Compile(user *fileConfig) (Policy, AsyncConfig, Guards, []CompiledRoute, error) {
-	res, err := CompileMerged(user, nil, nil)
-	if err != nil {
-		return Policy{}, AsyncConfig{}, Guards{}, nil, err
-	}
-	return res.Policy, res.Async, res.Guards, res.Routes, nil
-}
-
 // CompileMerged merges defaults ⊕ user ⊕ project ⊕ runtime and compiles Snapshot fields.
 func CompileMerged(user, project, runtime *fileConfig) (CompileResult, error) {
 	merged := mergeFile(baseFileConfig(), user)

@@ -1,10 +1,10 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -30,13 +30,13 @@ func PrepareUserConfig(userPath string, notify io.Writer) error {
 	}
 	_, fc, err := readFileConfig(userPath)
 	if err != nil {
-		if isUserConfigParseError(err) {
+		if errors.Is(err, ErrParseConfig) {
 			notifyInvalidUserConfig(notify, userPath, err)
 			return fmt.Errorf("invalid user config %q: %w", userPath, err)
 		}
 		return fmt.Errorf("read user config: %w", err)
 	}
-	if _, _, _, _, err := Compile(fc); err != nil {
+	if _, err := CompileMerged(fc, nil, nil); err != nil {
 		notifyInvalidUserConfig(notify, userPath, err)
 		return fmt.Errorf("invalid user config %q: %w", userPath, err)
 	}
@@ -75,8 +75,4 @@ func notifyInvalidUserConfig(notify io.Writer, userPath string, err error) {
 		return
 	}
 	_, _ = fmt.Fprintf(notify, "%s%s: %v\n", invalidUserConfigNotifyPrefix, userPath, err)
-}
-
-func isUserConfigParseError(err error) bool {
-	return strings.Contains(err.Error(), "parse config")
 }

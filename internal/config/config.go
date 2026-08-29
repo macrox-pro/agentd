@@ -1,6 +1,6 @@
 // Package config merges and compiles agentd configuration into immutable snapshots.
 //
-// Owns: four-layer merge, Compile, Store hot-path snapshot, debounced reload, persist,
+// Owns: four-layer merge, CompileMerged, Store hot-path snapshot, debounced reload, persist,
 // PrepareUserConfig (daemon-start user bootstrap), OfflineFor (edge unreachable path).
 // Must not: dispatch routing (dispatch), hook wire (hookedge).
 //
@@ -10,6 +10,6 @@
 //   - OfflineFor may read disk; used only when the daemon is unreachable.
 //   - PrepareUserConfig runs only from daemon start; Load/LoadWith never bootstrap.
 //
-// Entry: Store.Current, Compile, PrepareUserConfig, OfflineFor.
+// Entry: Store.Current, CompileMerged, PrepareUserConfig, OfflineFor.
 // See DESIGN.md §1.5 (config_reload), §7.
 package config
