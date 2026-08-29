@@ -60,7 +60,7 @@ Historical acceptance (M0–M14 shipped). Architecture: [DESIGN.md](./DESIGN.md)
 | M10 | `session search`, Claude import, `e2e-m10` |
 | M11 | All importer rows, replay/fork, `e2e-m11` |
 | M12 / v0.0.2 | `SessionService.Subscribe`, `e2e-m9…m12` |
-| M13 / v0.0.3 | `policy.offline` hook edge, docs EN/RU |
+| M13 / v0.0.3 | `policy.offline` hook edge, docs EN/RU, `e2e-m13` |
 | M14 / v0.0.4 | `daemon enable\|disable`, config toggles, `e2e-m14` |
 
 ## Verify (repo green)

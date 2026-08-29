@@ -405,7 +405,7 @@ Tests: [CONVENTIONS.md § Tests](./CONVENTIONS.md#tests) · `go test ./... -race
 | M0–M7 | **done** | Daemon through approvals / runtime persist |
 | M8 / v0.0.1 | **done** | Ops polish, conformance, release gate |
 | M9–M12 / v0.0.2 | **done** | Trajectory P0–P3 (ledger, import, replay/fork, Subscribe) |
-| M13 / v0.0.3 | **done** | `policy.offline` hook edge (OfflineFor, DialReady, serve offline cache) |
+| M13 / v0.0.3 | **done** | `policy.offline` hook edge (OfflineFor, DialReady, serve offline cache); `e2e-m13` |
 | M14 / v0.0.4 | **done** | `daemon enable`/`disable` login autostart; `config enable`/`disable`/`get` toggles; `e2e-m14` |
 
 **Shipped:** v0.0.4. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
