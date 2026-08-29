@@ -110,12 +110,44 @@ agentd config validate --config ~/.agentd.yaml
 
 Переполнение очереди увеличивает `trajectory_dropped_count` в Status.
 
+## Переключатели features
+
+`agentd config enable|disable|get FEATURE` переключает curated-boolean без ручного YAML ([CLI](./cli.md#config-конфиг)).
+
+| Поведение | Детали |
+|-----------|--------|
+| Запись | User (`--config` / `~/.agentd.yaml`) или project (`.agentd.yaml` под `--cwd`) |
+| Runtime overlay | **Не** изменяется — временные override через `config patch` |
+| Нет user-файла | `config enable` создаёт тот же bootstrap, что и `daemon start` |
+| Reload | fsnotify на user/project; или `agentd daemon reload` |
+| `config get` | defaults ⊕ user ⊕ project; **без** runtime |
+| Idempotent | Повторный enable/disable при том же effective → exit 0, без записи |
+| YAML round-trip | Marshal может удалить ручные комментарии в изменённых файлах |
+| Охранник secrets | Не curated toggle — правьте `guards.secrets` в YAML |
+| Чтение vs запись project | `config get` ищет `.agentd.yaml` вверх; `enable`/`disable` (project) пишет только под `--cwd` |
+
+**Примеры stdout:**
+
+```text
+agentd config get trajectory
+trajectory: on (user)
+
+agentd config enable guard-shell    # из корня репо; project scope по умолчанию
+guard-shell: enabled (project /path/to/repo/.agentd.yaml)
+
+agentd config enable trajectory     # уже включено
+trajectory: already enabled (user /home/you/.agentd.yaml)
+```
+
+См. также: [Trajectory](./trajectory.md#включение), [Guards](./guards.md#включение-через-cli).
+
 ## Команды для работы с конфигом
 
 | Команда | Роль |
 |---------|------|
 | `agentd config validate [--config] [--cwd]` | Проверка и компиляция **без** демона |
 | `agentd config show [--merged] [--layer user\|project\|runtime] [--cwd]` | Просмотр слоёв |
+| `agentd config enable\|disable\|get FEATURE` | Curated persistent toggles ([Переключатели features](#переключатели-features)) |
 | `agentd config patch --file DELTA.yaml` | Изменить runtime (с сохранением на диск) |
 | `agentd config record-decision …` | Записать одобрение ([Одобрения](./approvals.md)) |
 

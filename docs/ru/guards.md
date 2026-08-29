@@ -15,6 +15,18 @@
 
 В маршруте у sync-цели `builtin` можно сузить список: `guards: [secrets, shell]`. Пустой список — встроенный набор по умолчанию для этой цели.
 
+## Включение через CLI
+
+Охранники shell, MCP и paths по умолчанию пишутся в **project** scope — из корня репозитория:
+
+```bash
+cd /path/to/repo
+agentd config enable guard-shell
+agentd config get guard-shell          # guard-shell: on (project)
+```
+
+Features: `guard-shell`, `guard-mcp`, `guard-paths` ([CLI](./cli.md#config-конфиг)). **`secrets` не curated toggle** — по умолчанию включён в bootstrap YAML; меняйте `action` / `rules` в user или project конфиге.
+
 ## Спросить (Ask) и запретить (Deny)
 
 - **Deny** — жёсткий отказ; провайдер получает запрет в своём формате.

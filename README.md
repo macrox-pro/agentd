@@ -184,6 +184,9 @@ Full schema: [docs/en/configuration.md](./docs/en/configuration.md) · layer/run
 | `agentd hook serve` | OpenCode NDJSON bridge |
 | `agentd install` | Write agent hook configs (via agenthooks) |
 | `agentd config validate` | Validate YAML offline (CI-friendly) |
+| `agentd config enable FEATURE` | Curated toggles (trajectory, guards) — user/project YAML |
+| `agentd config disable FEATURE` | Turn off a curated toggle |
+| `agentd config get FEATURE` | Effective on/off + winning layer (no runtime) |
 | `agentd config show` | Inspect merged config |
 | `agentd config patch` | Patch runtime overlay (persisted) |
 | `agentd config record-decision` | Record approval after Ask |

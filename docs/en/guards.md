@@ -15,6 +15,18 @@ Declarative sync checks on `tool.pre` (and related kinds via builtin). Config un
 
 Route sync builtin can subset: `guards: [secrets, shell]`. Omitting the list uses the compiled default set for that target.
 
+## Enable via CLI
+
+Shell, MCP, and paths guards default to **project** scope — from the repo root:
+
+```bash
+cd /path/to/repo
+agentd config enable guard-shell
+agentd config get guard-shell          # guard-shell: on (project)
+```
+
+Features: `guard-shell`, `guard-mcp`, `guard-paths` ([CLI](./cli.md#config)). **`secrets` is not a curated toggle** — it stays on by default in bootstrap YAML; change `action` / `rules` in user or project config.
+
 ## Ask vs Deny
 
 - **Deny** — hard stop; provider encodes deny.

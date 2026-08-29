@@ -53,6 +53,13 @@ guards:
 
 После правки пользовательский файл обычно подхватывается наблюдателем файловой системы (fsnotify); `agentd daemon reload` принудительно заново сливает слои конфига.
 
+Включить trajectory ledger без правки YAML:
+
+```bash
+agentd config enable trajectory
+agentd config get trajectory
+```
+
 ## 4. Установить хуки в агент
 
 Из каталога проекта (пример: Claude Code, область `project`):

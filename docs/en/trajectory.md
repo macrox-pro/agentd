@@ -6,6 +6,18 @@ Opt-in append-only ledger of hook Invokes (`hook/invoked`, `hook/decided`, async
 
 ## Enable
 
+Without hand-editing YAML ([Feature toggles](./configuration.md#feature-toggles)):
+
+```bash
+agentd config enable trajectory
+agentd config get trajectory          # trajectory: on (user)
+
+# Raw payloads for session replay --policy (can enable before or after trajectory)
+agentd config enable trajectory-raw
+```
+
+Or edit YAML:
+
 ```yaml
 trajectory:
   enabled: true

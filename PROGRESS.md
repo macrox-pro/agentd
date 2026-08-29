@@ -4,22 +4,22 @@
 
 ## Current
 
-**Gemini docs research** (2026-08-29) · done · hot path: `other` · next: **M14 follow-ups / none**
+**Config feature toggles** (2026-08-29) · done · hot path: `config_reload` · next: **none**
 
-Structured verbatim dump under `research/gemini/` (geminicli.com T1, ai.google.dev Managed Agents T2, agenthooks fixtures, Antigravity migration delta T4). Snapshot **2026-08-29**.
+`agentd config enable|disable|get FEATURE` — curated offline toggles for trajectory, trajectory-raw, guard-shell, guard-mcp, guard-paths. Writes user/project YAML only (no runtime overlay). L1/L2 idempotent SetToggle; GetToggle excludes runtime.
 
 ```bash
-# verify research tree
-find research/gemini -name '*.md' | wc -l
-head research/gemini/README.md
+go test ./internal/config/... ./cmd/... -race -count=1 -run 'TestLookupToggle|TestSetToggle|TestGetToggle|TestConfigEnable|TestConfigDisable|TestConfigGet'
+make lint && make intent-check && make docs-check
 ```
 
-**Files:** `research/gemini/**` (57 topic files, SOURCES.md, README.md, TEMPLATE.md, schemas/)
+**Files:** `internal/config/toggle.go`, `toggle_test.go`, `errors.go`, `config.go`; `cmd/config_enable.go`, `config_disable.go`, `config_get.go`, `config.go`, `*_test.go`; `docs/en/cli.md`, `configuration.md`, `getting-started.md`; `docs/ru/cli.md`, `configuration.md`, `getting-started.md`; `DESIGN.md` §6; `CHANGELOG.md`
 
 ## Recent (done)
 
 | When | Phase | One-liner |
 |------|-------|-----------|
+| 2026-08-29 | Config toggles | `config enable\|disable\|get FEATURE`; 5 curated features; C1–C40 tests |
 | 2026-08-29 | Gemini research | `research/gemini/` hooks/MCP/settings/skills/GEMINI.md + T2 managed agents + migration delta |
 | 2026-08-29 | M14 autostart | `daemon enable/disable`, status autostart JSON, `e2e-m14` |
 | 2026-08-29 | user config bootstrap | `PrepareUserConfig` on daemon start; omitempty YAML; `LayerYAML` normalize |

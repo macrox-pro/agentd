@@ -4,6 +4,7 @@
 
 ### Highlights
 
+- **`config enable` / `disable` / `get`** — curated offline toggles for trajectory and guards (user/project YAML); distinct from `daemon enable` (login autostart)
 - **`daemon enable` / `disable`** — user-level login autostart (systemd user unit, macOS LaunchAgent, Windows Task Scheduler); `daemon status --json` always includes `autostart`
 - **`e2e-m14.sh`** — isolated HOME: enable starts daemon + autostart on → disable keeps daemon running → manifest removed
 

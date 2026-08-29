@@ -53,6 +53,13 @@ guards:
 
 After edit, fsnotify reloads the user file; `agentd daemon reload` forces a re-merge.
 
+Enable trajectory ledger without editing YAML:
+
+```bash
+agentd config enable trajectory
+agentd config get trajectory
+```
+
 ## 4. Install hooks for an agent
 
 From a project directory (example: Claude Code, project scope):

@@ -6,6 +6,18 @@
 
 ## Включение
 
+Без правки YAML ([Переключатели features](./configuration.md#переключатели-features)):
+
+```bash
+agentd config enable trajectory
+agentd config get trajectory          # trajectory: on (user)
+
+# Raw для session replay --policy (можно до или после trajectory)
+agentd config enable trajectory-raw
+```
+
+Или через YAML:
+
 ```yaml
 trajectory:
   enabled: true

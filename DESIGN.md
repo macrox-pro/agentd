@@ -315,7 +315,7 @@ agentd
 ├── hook/            # agent entrypoint (run|notify|serve)
 ├── agenthooks/      # hidden install argv sentinel (same as hook *)
 ├── install/         # agenthooks install wrapper
-├── config/          # validate|show|patch|record-decision
+├── config/          # validate|show|enable|disable|get|patch|record-decision
 ├── dispatch/        # routes introspection
 └── session/         # trajectory list|show|export|search|import|replay|fork|subscribe
 ```
@@ -332,6 +332,7 @@ agentd
 | `hook serve` | OpenCode NDJSON stdio; long-lived |
 | `session subscribe` | Only command that dials daemon for trajectory; rest reads local JSONL |
 | Login autostart | `daemon enable` / `disable` register OS user-level autostart (systemd / launchd / schtasks); `disable` never stops running daemon; partial enable failure keeps autostart — [docs/en/operations.md](./docs/en/operations.md#autostart-at-login) |
+| Config toggles | `config enable\|disable\|get` write curated booleans to user/project YAML only; `config patch` is runtime overlay; distinct from `daemon enable` (autostart) |
 | New command | Update **docs/en/cli.md + docs/ru/cli.md**; add row here only if architecturally significant |
 
 ---

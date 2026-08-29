@@ -53,12 +53,47 @@ Install writes `agentd agenthooks run|notify|serve --provider=…`. Same behavio
 
 ## config
 
-| Command | Flags |
-|---------|-------|
-| `config validate` | `--cwd` |
-| `config show` | `--merged`, `--layer user\|project\|runtime`, `--cwd` |
-| `config patch` | `--file` (required) |
-| `config record-decision` | `--fingerprint` (required), `--scope` (`project` default), `--project-root`, `--session-id`, `--expires-at` (RFC3339) |
+Curated feature toggles (`enable` / `disable` / `get`) write **user or project** YAML only — not the runtime overlay. Use `config patch` for temporary runtime overrides. **`daemon enable`** is login autostart, not a config toggle.
+
+| Command | Flags | Notes |
+|---------|-------|-------|
+| `config validate` | `--cwd` | Offline parse + compile |
+| `config show` | `--merged`, `--layer user\|project\|runtime`, `--cwd` | Inspect layers |
+| `config enable FEATURE` | `--scope user\|project`, `--cwd` | Persist `enabled: true` (creates user bootstrap if missing) |
+| `config disable FEATURE` | `--scope user\|project`, `--cwd` | Persist `enabled: false` |
+| `config get FEATURE` | `--cwd` | Effective on/off + winning layer (`default` \| `user` \| `project`); runtime excluded |
+| `config patch` | `--file` (required) | Patch runtime overlay (daemon required) |
+| `config record-decision` | `--fingerprint` (required), `--scope` (`project` default), `--project-root`, `--session-id`, `--expires-at` (RFC3339) | Upsert approval |
+
+**Features:** `trajectory`, `trajectory-raw`, `guard-shell`, `guard-mcp`, `guard-paths`. Default `--scope`: user for trajectory toggles; project for guard toggles. Offline; running daemon reloads via fsnotify.
+
+| Feature | YAML path | Default scope |
+|---------|-----------|---------------|
+| `trajectory` | `trajectory.enabled` | `user` |
+| `trajectory-raw` | `trajectory.include_raw` | `user` |
+| `guard-shell` | `guards.shell.enabled` | `project` |
+| `guard-mcp` | `guards.mcp.enabled` | `project` |
+| `guard-paths` | `guards.paths.enabled` | `project` |
+
+**Output:** `get` prints `FEATURE: on|off (SOURCE)` where `SOURCE` is `default`, `user`, or `project`. `enable` / `disable` print `FEATURE: enabled|disabled (SCOPE PATH)`; idempotent re-run prints `already enabled|disabled` and exits 0.
+
+```bash
+# trajectory (default scope user → ~/.agentd.yaml)
+agentd config enable trajectory
+# trajectory: enabled (user /home/you/.agentd.yaml)
+
+agentd config get trajectory
+# trajectory: on (user)
+
+# guards (default scope project → .agentd.yaml under --cwd)
+cd /path/to/repo
+agentd config enable guard-shell
+# guard-shell: enabled (project /path/to/repo/.agentd.yaml)
+```
+
+**Project path asymmetry:** `config get --cwd DIR` walks up from `DIR` to find `.agentd.yaml` (same as hook merge). `config enable|disable` with project scope writes **only** `DIR/.agentd.yaml` — it does not update a parent repo config. Run from the repo root (or pass `--cwd` there) when you intend project-level guards.
+
+**Not toggleable via CLI:** `guards.secrets` (and other non-boolean knobs) — edit YAML or use `config show` / `config patch`. Only the five features above are curated toggles.
 
 ## install
 

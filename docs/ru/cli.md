@@ -53,12 +53,47 @@
 
 ## config (конфиг)
 
-| Команда | Флаги |
-|---------|-------|
-| `config validate` | `--cwd` |
-| `config show` | `--merged`, `--layer user\|project\|runtime`, `--cwd` |
-| `config patch` | `--file` (обязателен) |
-| `config record-decision` | `--fingerprint` (обязателен), `--scope` (по умолчанию `project`), `--project-root`, `--session-id`, `--expires-at` (RFC3339) |
+Curated-переключатели (`enable` / `disable` / `get`) пишут только в **user или project** YAML — не в runtime overlay. Для временных override — `config patch`. **`daemon enable`** — автозапуск при входе, не toggle конфига.
+
+| Команда | Флаги | Заметки |
+|---------|-------|---------|
+| `config validate` | `--cwd` | Offline parse + compile |
+| `config show` | `--merged`, `--layer user\|project\|runtime`, `--cwd` | Просмотр слоёв |
+| `config enable FEATURE` | `--scope user\|project`, `--cwd` | Записать `enabled: true` (создаёт user bootstrap при отсутствии файла) |
+| `config disable FEATURE` | `--scope user\|project`, `--cwd` | Записать `enabled: false` |
+| `config get FEATURE` | `--cwd` | Эффективное on/off + слой-победитель (`default` \| `user` \| `project`); runtime не учитывается |
+| `config patch` | `--file` (обязателен) | Patch runtime overlay (нужен демон) |
+| `config record-decision` | `--fingerprint` (обязателен), `--scope` (по умолчанию `project`), `--project-root`, `--session-id`, `--expires-at` (RFC3339) | Upsert approval |
+
+**Features:** `trajectory`, `trajectory-raw`, `guard-shell`, `guard-mcp`, `guard-paths`. Scope по умолчанию: `user` для trajectory; `project` для guards. Offline; работающий демон подхватывает через fsnotify.
+
+| Feature | YAML path | Default scope |
+|---------|-----------|---------------|
+| `trajectory` | `trajectory.enabled` | `user` |
+| `trajectory-raw` | `trajectory.include_raw` | `user` |
+| `guard-shell` | `guards.shell.enabled` | `project` |
+| `guard-mcp` | `guards.mcp.enabled` | `project` |
+| `guard-paths` | `guards.paths.enabled` | `project` |
+
+**Вывод:** `get` печатает `FEATURE: on|off (SOURCE)`, где `SOURCE` — `default`, `user` или `project`. `enable` / `disable` — `FEATURE: enabled|disabled (SCOPE PATH)`; повтор при том же состоянии — `already enabled|disabled`, exit 0.
+
+```bash
+# trajectory (scope по умолчанию user → ~/.agentd.yaml)
+agentd config enable trajectory
+# trajectory: enabled (user /home/you/.agentd.yaml)
+
+agentd config get trajectory
+# trajectory: on (user)
+
+# guards (scope по умолчанию project → .agentd.yaml под --cwd)
+cd /path/to/repo
+agentd config enable guard-shell
+# guard-shell: enabled (project /path/to/repo/.agentd.yaml)
+```
+
+**Асимметрия project-пути:** `config get --cwd DIR` ищет `.agentd.yaml` вверх от `DIR` (как при merge хуков). `config enable|disable` с project scope пишет **только** в `DIR/.agentd.yaml` — родительский конфиг репозитория не обновляется. Для project-guards запускайте из корня репо (или `--cwd` на корень).
+
+**Не через CLI:** `guards.secrets` и прочие не-boolean поля — правка YAML или `config show` / `config patch`. Curated toggles — только пять features выше.
 
 ## install (установка хуков в агент)
 

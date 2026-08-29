@@ -110,12 +110,44 @@ When `import.claude-code.enabled` is true, the daemon watches the projects direc
 
 Overflow increments `trajectory_dropped_count` on Status.
 
+## Feature toggles
+
+Use `agentd config enable|disable|get FEATURE` to flip curated booleans without hand-editing YAML ([CLI](./cli.md#config)).
+
+| Behavior | Detail |
+|----------|--------|
+| Layers written | User (`--config` / `~/.agentd.yaml`) or project (`.agentd.yaml` under `--cwd`) only |
+| Runtime overlay | **Not** modified — use `config patch` for temporary runtime overrides |
+| Missing user file | `config enable` creates the same bootstrap shape as `daemon start` |
+| Reload | User/project file changes → fsnotify debounce; or `agentd daemon reload` |
+| `config get` | Merges defaults ⊕ user ⊕ project; **excludes** runtime overlay |
+| Idempotent | Re-enable / disable when already at effective value → exit 0, no write |
+| YAML round-trip | Marshal may drop hand-written comments in touched files |
+| Secrets guard | Not a curated toggle — edit `guards.secrets` in YAML |
+| Project read vs write | `config get` walks up for `.agentd.yaml`; `enable`/`disable` (project scope) writes only under `--cwd` |
+
+**Stdout examples:**
+
+```text
+agentd config get trajectory
+trajectory: on (user)
+
+agentd config enable guard-shell    # from repo root; default project scope
+guard-shell: enabled (project /path/to/repo/.agentd.yaml)
+
+agentd config enable trajectory     # already on
+trajectory: already enabled (user /home/you/.agentd.yaml)
+```
+
+See also: [Trajectory](./trajectory.md#enable), [Guards](./guards.md#enable-via-cli).
+
 ## CLI against config
 
 | Command | Role |
 |---------|------|
 | `agentd config validate [--config] [--cwd]` | Offline parse + compile |
 | `agentd config show [--merged] [--layer user\|project\|runtime] [--cwd]` | Inspect layers |
+| `agentd config enable\|disable\|get FEATURE` | Curated persistent toggles ([Feature toggles](#feature-toggles)) |
 | `agentd config patch --file DELTA.yaml` | Patch runtime (persisted) |
 | `agentd config record-decision …` | Upsert approval ([Approvals](./approvals.md)) |
 
