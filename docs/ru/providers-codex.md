@@ -30,9 +30,9 @@ agentd hook notify --provider=codex '{"type":"agent-turn-complete"}'
 
 | Тема | Поведение |
 |------|-----------|
-| **Нет Ask** | На ToolPre есть Deny/Allow/…, но **нет CapAsk**. Охранник с `action: ask` уходит в `policy.ask_fallback` (по умолчанию deny) |
+| **Нет Ask** | На ToolPre есть Deny/Allow/…, но **агент не умеет спрашивать пользователя**. Проверка с `action: ask` уходит в `policy.ask_fallback` (по умолчанию deny) |
 | **Пустой ответ** | No-op = **пустой stdout**, код 0 — **не** `{}` |
-| **Notify** | Только async; не использовать для блокирующих гейтов |
+| **Notify** | Только асинхронная семантика; не использовать для блокирующих проверок |
 | **Путь trust** | Ключи доверия содержат **абсолютный** путь к `hooks.json`; смена CODEX_HOME → переустановка |
 | **Смысл пустого stdout** | В отличие от Claude, пустой stdout в диалекте Codex — allow/no-op (кодирует agenthooks) |
 

@@ -34,7 +34,7 @@ Contributor rules: [AGENTS.md](./AGENTS.md) · Code style: [CONVENTIONS.md](./CO
 | Low latency on hot path | In-memory config snapshot; zero disk I/O per `Invoke` |
 | Sync + async hooks | Dispatch Engine with hybrid modes |
 | Safe defaults | Declarative guards; fail-closed policy option |
-| Cross-platform | gRPC over Unix socket / Windows named pipe |
+| Cross-platform | gRPC **IPC** (inter-process communication) over Unix socket / Windows named pipe |
 | Cross-agent trajectory | Append-only session ledger (default on) — §14 |
 
 **Decisions:** one daemon per user; declarative YAML guards/dispatch; daemon writes runtime overlay only; trajectory is async side channel (default on; `redact_secret_rules` default true, PII).
@@ -76,7 +76,7 @@ flowchart TB
 | Process | Role | Lifecycle |
 |---------|------|-----------|
 | **Daemon** | gRPC, Dispatch, guards, ConfigStore, async queue | One per user |
-| **Hook CLI** | Wire decode/encode; single gRPC `Invoke` | Process-per-event |
+| **Hook edge** (Hook CLI) | Wire decode/encode; single gRPC `Invoke` | Process-per-event |
 | **Mgmt CLI** | start/stop/status/install/config/doctor/setup | Short-lived |
 
 ### agenthooks integration
@@ -87,7 +87,7 @@ flowchart TB
 | Install sentinel | `agentd agenthooks …` (hidden) | `agenthooks/install` appends this to generated configs |
 | Install | `agentd install --provider=P --scope=S` or `--all-detected` | `Command` = absolute `agentd` path; library appends `agenthooks run\|serve\|notify`; `--all-detected` writes only with `--yes` |
 
-Both `hook` and `agenthooks` wrap the same `hookedge` path (`cmd/hook.go`). Daemon owns `*agenthooks.Runner` for `builtin` sync targets; guards → sync, observers → async `observe: true`. OpenCode: `hook serve` holds stdio; NDJSON frames → `Invoke`; session mutex in daemon.
+Both `hook` and `agenthooks` wrap the same hook-edge path (`cmd/hook.go`, package `internal/hookedge`). Daemon owns `*agenthooks.Runner` for `builtin` sync targets; guards → sync, observers → async `observe: true`. OpenCode: `hook serve` holds stdio; **NDJSON** (newline-delimited JSON) frames → `Invoke`; session mutex in daemon.
 
 **Providers:** `claude-code`, `cursor`, `codex`, `gemini`, `opencode`, `kimi-code` (+ variants). Canonical ids: `internal/provider`.
 
@@ -182,6 +182,8 @@ dispatch_defaults:
   notification:     { mode: async_only,      blocking: false }
   other:            { mode: async_only,      blocking: false }
 ```
+
+Wire kind names (`tool.pre`, `prompt.submitted`, `agent.stop`, `tool.post`, `notification`, `other`): [docs/en/dispatch.md § Event kinds](./docs/en/dispatch.md#event-kinds-kind) · [glossary](./docs/en/glossary.md).
 
 ### Routes
 
@@ -322,7 +324,7 @@ agentd
 ├── hook/            # agent entrypoint (run|notify|serve)
 ├── agenthooks/      # hidden install argv sentinel (same as hook *)
 ├── doctor           # read-only discover + hook status
-├── setup            # TUI wizard (TTY; AGENTD_NO_TUI / CI bypass)
+├── setup            # TUI (text terminal UI) wizard; AGENTD_NO_TUI / CI bypass
 ├── install          # --provider or --all-detected (plan-only unless --yes)
 ├── config/          # validate|show|enable|disable|get|patch|record-decision
 ├── dispatch/        # routes introspection
@@ -344,7 +346,7 @@ agentd
 | Login autostart | `daemon enable` / `disable` register OS user-level autostart (systemd / launchd / schtasks); `disable` never stops running daemon; partial enable failure keeps autostart — [docs/en/operations.md](./docs/en/operations.md#autostart-at-login) |
 | Config toggles | `config enable\|disable\|get` write curated booleans to user/project YAML only; `config patch` is runtime overlay; distinct from `daemon enable` (autostart) |
 | Doctor | Read-only Discover+Plan; daemon unreachable is a report field, not an error |
-| Setup / TUI | `internal/install/tui`; `install` must not import `tui` (`cmd/` wires both). Non-TTY / `AGENTD_NO_TUI` / `CI` → `--provider` or `--all-detected` |
+| Setup / TUI | `internal/install/tui`; **TUI** = interactive terminal wizard. `install` must not import `tui` (`cmd/` wires both). Non-TTY / `AGENTD_NO_TUI` / `CI` → `--provider` or `--all-detected` |
 | Auto-install | `--all-detected` uses high-confidence findings only; writes require `--yes` |
 | New command | Update **docs/en/cli.md + docs/ru/cli.md**; add row here only if architecturally significant |
 
@@ -402,7 +404,7 @@ blocks:
       until: "2026-08-20T15:00:00Z"
 ```
 
-Persist: debounced atomic flush (`runtime.yaml.tmp` → `runtime.yaml`).
+Persist: debounced atomic flush (`runtime.yaml.tmp` → `runtime.yaml`). Approval **TTL** (time to live): project-scoped defaults to 24h unless `expires_at` (RFC3339) is set; session-scoped approvals match `--session-id` without wall-clock expiry by default.
 
 ---
 
@@ -450,7 +452,7 @@ Tests: [CONVENTIONS.md § Tests](./CONVENTIONS.md#tests) · `go test ./... -race
 
 ## 14. Trajectory hub
 
-**Cross-agent session ledger** (default on) — hooks live (L0 for all six providers); optional transcript importers (L2+) where stable on-disk formats exist. agentd stays **gate + observer outside the agent loop**.
+**Cross-agent session ledger** (default on) — hooks live (L0 for all six providers; tier definitions §14.3); optional transcript importers (L2+) where stable on-disk formats exist. agentd stays **gate + observer outside the agent loop**.
 
 **Product claim:** *Every supported agent's hooks are traceable on one stream; transcript/thinking depth varies by provider (§14.3).*  
 **Not claimed:** byte-identical “everything the model sees”; agent-loop resume.

@@ -43,7 +43,7 @@ agentd config validate --config ~/.agentd.yaml
 | 1 | встроенные значения (`defaults`) | внутри бинарника |
 | 2 | пользовательский (`user`) | `--config` или `~/.agentd.yaml` |
 | 3 | проектный (`project`) | `.agentd.yaml`, поиск вверх от текущей директории / корня проекта |
-| 4 | время работы (`runtime`) | файл демона (одобрения, временные запреты) |
+| 4 | временный слой (`runtime`) | файл демона (одобрения, временные блокировки) |
 
 **Путь временного слоя:** `runtime.yaml` в [каталоге состояния](#каталог-состояния).
 
@@ -55,31 +55,31 @@ agentd config validate --config ~/.agentd.yaml
 
 В проектном файле обычно `guards` / `dispatch`. Блоки `approvals` и `blocks` чаще попадают в runtime через CLI или gRPC.
 
-### policy (политика ошибок)
+### policy
 
-| Ключ | Значения | По умолчанию | Смысл |
-|------|----------|--------------|--------|
-| `fail` | `fail_open` \| `fail_closed` | `fail_closed` | При сбое: пропустить или закрыть |
-| `unsupported` | `degrade` \| `strict` | `degrade` | Неподдерживаемое: смягчить или строго |
-| `ask_fallback` | `deny` \| `no_decision` | `deny` | Если «спросить» недоступно |
-| `offline` | `fail_open` \| `fail_closed` | `fail_open` | Демон недоступен: пропустить или закрыть |
+| Ключ | Значения | По умолчанию |
+|------|----------|--------------|
+| `fail` | `fail_open` \| `fail_closed` | `fail_closed` |
+| `unsupported` | `degrade` \| `strict` | `degrade` |
+| `ask_fallback` | `deny` \| `no_decision` | `deny` |
+| `offline` | `fail_open` \| `fail_closed` | `fail_open` |
 
-Когда демон недоступен, край хука читает локальный конфиг (defaults ⊕ user ⊕ project(cwd) ⊕ runtime) и применяет `policy.offline`. По умолчанию `fail_open` — нейтральное решение (или код 0 для notify), агент продолжает работу; `fail_closed` — выход с кодом **1**. В обоих режимах в stderr пишется `daemon not running`.
+Когда демон недоступен, внешняя часть хука читает локальный конфиг (defaults ⊕ user ⊕ project(cwd) ⊕ runtime) и применяет `policy.offline`. По умолчанию `fail_open` — нейтральное решение (или код 0 для notify), агент продолжает работу; `fail_closed` — выход с кодом **1**. В обоих режимах в stderr пишется `daemon not running`.
 
-### async (асинхронная очередь)
+### async
 
-| Ключ | По умолчанию | Смысл |
-|------|--------------|--------|
-| `queue_capacity` | `1024` | Ёмкость очереди |
-| `worker_limit` | `8` | Число воркеров |
-| `target_timeout` | `30s` | Таймаут одной асинхронной цели |
-| `on_overflow` | `drop` (`drop` \| `log`) | При переполнении: отбросить; `log` ещё пишет предупреждение |
+| Ключ | По умолчанию |
+|------|--------------|
+| `queue_capacity` | `1024` |
+| `worker_limit` | `8` |
+| `target_timeout` | `30s` |
+| `on_overflow` | `drop` (`drop` \| `log`) |
 
 При переполнении задача **всегда** отбрасывается, счётчик `async_dropped_count` в статусе растёт.
 
-### logging (операционные логи демона)
+### logging
 
-Не путать с асинхронной целью dispatch `target: log`.
+Операционные логи демона (не асинхронная цель dispatch `target: log`).
 
 | Ключ | По умолчанию |
 |------|--------------|
@@ -88,14 +88,14 @@ agentd config validate --config ~/.agentd.yaml
 
 `agentd daemon start --foreground` дублирует логи в stderr и в файл. Флаги CLI `--log-level` и `--log-file` переопределяют YAML только для этого процесса.
 
-### trajectory (журнал сессий)
+### trajectory
 
-Журнал сессий ([Trajectory](./trajectory.md)). По умолчанию **включён**.
+Журнал сессий ([Журнал сессий](./trajectory.md)). По умолчанию **включён**.
 
 | Ключ | По умолчанию |
 |------|--------------|
 | `enabled` | `true` |
-| `statistics` | `true` (нужен `enabled`; для rollup демона и `session stats`) |
+| `statistics` | `true` (нужен `enabled`; для сводной статистики демона и `session stats`) |
 | `include_raw` | `true` |
 | `redact_secret_rules` | `true` |
 | `max_event_bytes` | `262144` |
@@ -107,26 +107,26 @@ agentd config validate --config ~/.agentd.yaml
 | `import.codex.enabled` | `false` |
 | `import.codex.path` | `""` (по умолчанию `$CODEX_HOME/sessions` или `~/.codex/sessions`) |
 
-При `import.claude-code.enabled: true` демон асинхронно следит за каталогом projects. CLI `session import` работает offline без этого флага. Для `session replay --policy` нужен `include_raw: true` при записи.
+При `import.claude-code.enabled: true` демон следит за каталогом projects и асинхронно дописывает новые строки транскрипта. CLI `session import` работает офлайн без этого флага. Задайте `include_raw: true`, если нужен `session replay --policy`.
 
 Переполнение очереди увеличивает `trajectory_dropped_count` в Status.
 
 ### metrics
 
-Опциональный endpoint Prometheus ([Эксплуатация → Метрики Prometheus](./operations.md#prometheus-metrics)). По умолчанию **выключен**.
+Опциональный endpoint Prometheus ([Эксплуатация → Метрики Prometheus](./operations.md#метрики-prometheus)). По умолчанию **выключен**.
 
 | Ключ | По умолчанию |
 |------|--------------|
 | `enabled` | `false` |
 | `listen` | `127.0.0.1:2112` (`host:port`; обязателен при `enabled: true`) |
 
-При включении демон отдаёт `/metrics` по loopback TCP только на старте. Смена `metrics.listen` или `enabled` требует **`agentd daemon restart`** (не reload). CLI `--metrics-listen` включает метрики для этого процесса и переопределяет `listen`.
+При включении демон отдаёт `/metrics` по loopback TCP только на старте. Смена `metrics.listen` или `enabled` требует **`agentd daemon stop`**, затем **`agentd daemon start`** — `daemon reload` не перепривязывает HTTP listener метрик. CLI `--metrics-listen` включает метрики для этого процесса и переопределяет `listen`.
 
 Привязка к `0.0.0.0` допустима, но открывает метрики на всех интерфейсах — предпочитайте loopback, если не понимаете риск.
 
 ## Переключатели
 
-`agentd config enable|disable|get FEATURE` включает и выключает готовые флаги без ручного YAML ([команды](./cli.md#config-конфиг)).
+`agentd config enable|disable|get FEATURE` включает и выключает готовые флаги без ручного YAML ([команды](./cli.md#config)).
 
 | Поведение | Детали |
 |-----------|--------|
@@ -153,15 +153,15 @@ agentd config enable trajectory     # уже включено
 trajectory: already enabled (user /home/you/.agentd.yaml)
 ```
 
-См. также: [Trajectory](./trajectory.md#включение), [Guards](./guards.md#включение-через-cli).
+См. также: [Журнал сессий](./trajectory.md#включение), [Проверки](./guards.md#включение-через-cli).
 
 ## Команды для работы с конфигом
 
 | Команда | Роль |
 |---------|------|
-| `agentd config validate [--config] [--cwd]` | Проверка и компиляция **без** демона |
+| `agentd config validate [--config] [--cwd]` | Офлайн-разбор и компиляция |
 | `agentd config show [--merged] [--layer user\|project\|runtime] [--cwd]` | Просмотр слоёв |
-| `agentd config enable\|disable\|get FEATURE` | Curated persistent toggles ([Переключатели features](#переключатели-features)) |
+| `agentd config enable\|disable\|get FEATURE` | Готовые постоянные переключатели ([Переключатели](#переключатели)) |
 | `agentd config patch --file DELTA.yaml` | Изменить runtime (с сохранением на диск) |
 | `agentd config record-decision …` | Записать одобрение ([Одобрения](./approvals.md)) |
 

@@ -11,7 +11,9 @@
 
 <hr />
 
-agentd sits between your AI coding agents (Claude Code, Cursor, Codex, Gemini CLI, OpenCode, Kimi Code) and your hook logic. Agents invoke a thin CLI entrypoint; a user-level daemon applies policies, dispatches sync and async pipelines, and returns provider-correct responses. Built on [agenthooks](https://github.com/speakeasy-api/agenthooks) for wire compatibility.
+agentd sits between **coding agents** (tools like Claude Code and Cursor that edit code for you) and your **hooks** (small programs the agent runs at lifecycle moments — for example before a shell command). Each agent spawns a thin **hook edge** process; a user-level **daemon** applies your YAML policy, runs guards and dispatch, and returns a reply in the format that agent expects. Built on [agenthooks](https://github.com/speakeasy-api/agenthooks) for wire compatibility.
+
+Terms: [docs/en/glossary.md](./docs/en/glossary.md).
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/macrox-pro/agentd.svg)](https://pkg.go.dev/github.com/macrox-pro/agentd)
 ![Go Version](https://img.shields.io/badge/go-1.26+-00ADD8?logo=go)
@@ -21,7 +23,7 @@ agentd sits between your AI coding agents (Claude Code, Cursor, Codex, Gemini CL
 
 ## Documentation
 
-- [User guide (English)](./docs/en/) — default ([why agentd](./docs/en/why.md) · [getting started](./docs/en/getting-started.md))
+- [User guide (English)](./docs/en/) — default ([why agentd](./docs/en/why.md) · [getting started](./docs/en/getting-started.md) · [glossary](./docs/en/glossary.md))
 - [Руководство (русский)](./docs/ru/) ([зачем нужен](./docs/ru/why.md) · [быстрый старт](./docs/ru/getting-started.md))
 - Keeping docs current: [docs/en/maintaining.md](./docs/en/maintaining.md)
 
@@ -43,13 +45,9 @@ Stub dirs for other agents (`opencode`, `kimi-code`) live under [`research/`](./
 
 ## Why agentd?
 
-Coding-agent hooks are powerful but painful to operationalize:
+Coding-agent hooks are powerful, but each agent speaks a slightly different wire format, timeout, and failure mode. Running full policy logic in a new process on every tool call adds latency. Mixing blocking guards with audit webhooks in one script couples concerns that want different lifecycles.
 
-- **Duplicated glue** — each provider speaks a slightly different JSON dialect, timeout unit, and failure mode.
-- **Heavy cold starts** — spawning full hook logic on every tool call adds latency.
-- **Mixed concerns** — blocking guards, audit webhooks, and metrics want different lifecycles but share one process.
-
-agentd centralizes hook logic in a **long-lived daemon** while keeping the **agent-facing contract** compatible with agenthooks. You configure declarative guards and dispatch routes; the daemon hot-reloads config without re-reading disk on every event.
+agentd centralizes policy in a **long-lived daemon** while keeping the **agent-facing contract** compatible with agenthooks. You configure declarative guards and dispatch routes in YAML; the daemon reloads config from memory without disk I/O on every event.
 
 ## Features
 
@@ -59,7 +57,7 @@ agentd centralizes hook logic in a **long-lived daemon** while keeping the **age
 - **Approvals & temporary blocks** — Ask once / approve with TTL; runtime overlay persisted across restarts
 - **Session ledger** — hook calls logged by default (`agentd config get trajectory`); disable with `config disable trajectory`
 - **Detect and install** — `agentd doctor` (read-only); `install --all-detected` (plan unless `--yes`); `setup` in a terminal
-- **Efficient config reload** — in-memory snapshots, fsnotify with debounce; zero config I/O on the hot path
+- **Efficient config reload** — in-memory snapshots; file changes debounced into a new snapshot (zero config disk I/O on the hook hot path)
 - **Cross-platform IPC** — gRPC over Unix domain sockets (Linux/macOS) or named pipes (Windows)
 - **Provider-faithful I/O** — stdout/stderr discipline and exit codes handled per agenthooks codecs
 - **Ops Status** — queue depth, async drops, optional Prometheus listen address on `daemon status --json`
@@ -148,7 +146,7 @@ cd your-repo
 agentd install --provider=claude-code --scope=project
 ```
 
-In a terminal, `agentd setup` walks the same flow. CI: `AGENTD_NO_TUI=1`.
+In a terminal, `agentd setup` walks the same flow. In CI or non-interactive shells: `AGENTD_NO_TUI=1` or `CI=true`.
 
 **4. Verify** — trigger a tool call in your agent; check daemon status:
 

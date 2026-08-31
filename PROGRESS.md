@@ -4,33 +4,26 @@
 
 ## Current
 
-**v0.0.7 release** — ready for tag.
+**Documentation refactoring** — complete.
 
-- Setup wizard (`agentd setup`, interactive `install` on TTY; `AGENTD_NO_TUI` / `CI` bypass)
-- Doctor + `install --all-detected` (plan-only default, `--yes` to apply); `e2e-m17`
-- Trajectory compile defaults on (`enabled`, `include_raw`, `statistics`)
-- Codex transcript tail token fallback on `Stop` when hook raw has no usage
-- CHANGELOG + docs version bump to v0.0.7
+- Added `docs/en/glossary.md` + `docs/ru/glossary.md`; style rules in [CONVENTIONS.md § Documentation style](./CONVENTIONS.md#documentation-style)
+- Factual fixes: `daemon restart` → stop+start; six CLI toggles; anchor/link repairs; RU translation cleanup
+- EN+RU page rewrites: dispatch kind table, trajectory readability, provider uniformity, de-duplicated tables
+- `scripts/check-docs-terms.sh` + `scripts/check-docs-links.sh` wired into `make docs-check`
+- [README.md](./README.md) and [DESIGN.md](./DESIGN.md) updated (glossary link, IPC/TUI/NDJSON/TTL, hook edge naming)
 
 ```bash
-make lint && make intent-check && make docs-check && make test && make e2e
-# tag (user): git tag -a v0.0.7 -m "v0.0.7" && git push origin v0.0.7
-# release binaries: goreleaser (GitHub Actions on tag push)
+make docs-check && make lint && make intent-check
 ```
 
-**Next:** Claude transcript token investigation (separate PR).
+**Next:** tag v0.0.7 if not yet pushed; Claude transcript token investigation (separate PR).
 
 ## Recent (done)
 
 | When | Phase | One-liner |
 |------|-------|-----------|
+| 2026-09-01 | Docs refactor | Glossary, EN/RU rewrite, docs-check linters, README/DESIGN/CONVENTIONS style |
 | 2026-08-31 | v0.0.7 | Setup wizard, doctor, `--all-detected`, trajectory default-on; CHANGELOG + docs version bump |
-| 2026-08-31 | M17/M18 | Doctor, `--all-detected`, setup TUI, trajectory default-on |
-| 2026-08-31 | M16 Codex tokens | Transcript tail fallback on Stop; hook usage wins when present |
-| 2026-08-31 | v0.0.6 | Prometheus metrics + trajectory token stats; CHANGELOG + docs version bump |
-| 2026-08-31 | daemon tests | Isolate unit tests from production socket, agentd.log, runtime.yaml |
-| 2026-08-31 | metrics | Prometheus scrape HTTP + Observer histograms + reload hook |
-| 2026-08-29 | v0.0.5 | Trajectory counters + session import `--out`; CHANGELOG + docs version bump |
 
 ## Verify (repo green)
 

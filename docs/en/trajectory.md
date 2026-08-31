@@ -2,6 +2,10 @@
 
 > **Language:** [English](./trajectory.md) · [Русский](../ru/trajectory.md)
 
+Chronological log of hook calls and related events for audit and replay.
+
+Terms: [Glossary](./glossary.md).
+
 A chronological log of hook calls (`hook/invoked`, `hook/decided`, async metadata). **On by default.** Payloads can contain secrets; `redact_secret_rules` defaults to true.
 
 ## Enable
@@ -29,7 +33,7 @@ trajectory:
   queue_capacity: 1024
   import:
     claude-code:
-      enabled: false            # optional daemon fsnotify import
+      enabled: false            # optional daemon watches projects dir for new transcript lines
       path: ""                  # default ~/.claude/projects
     cursor:
       enabled: false
@@ -45,17 +49,7 @@ Recording happens on the daemon async path — sync hook latency is unchanged.
 
 ## CLI
 
-| Command | Role |
-|---------|------|
-| `agentd session list [--provider ID] [--json]` | List sessions (offline; `--json` includes `importer_status`) |
-| `agentd session show ID --provider ID [--json]` | Print events |
-| `agentd session export [--provider ID] [--session ID] [--out PATH]` | Export JSONL |
-| `agentd session search [--provider ID] [--query TEXT] …` | Filter ledger (O(n) JSONL scan) |
-| `agentd session import --provider ID …` | Append transcript events (`source=transcript`) or `--out` parse-only JSONL emit |
-| `agentd session replay --policy --provider ID --session ID` | Dry-run stored Raw through Dispatch Engine |
-| `agentd session fork --provider ID --session SRC --new-session DST` | Copy ledger prefix (audit lineage) |
-| `agentd session stats ID --provider ID [--json]` | Offline session ledger statistics (requires `trajectory.statistics`) |
-| `agentd session subscribe [--json]` | **Live** stream from daemon (requires running daemon + trajectory.enabled) |
+Offline commands read `sessions/` under the [state directory](./configuration.md#state-directory). `session subscribe` and `trajectory stats` need a running daemon. Full command and flag reference: [CLI → session](./cli.md#session).
 
 ## Daemon statistics
 
@@ -65,7 +59,14 @@ agentd config get trajectory-statistics
 agentd trajectory stats [--provider ID] [--json]
 ```
 
-Requires a **running daemon**. Counters reset on daemon restart; `since` reflects daemon start time. Optional `--provider` filters the rollup. Daemon token totals are extracted from each Invoke `RawPayload` (not gated by `include_raw`). Cursor billing tokens appear on `stop` hooks (cumulative per session, delta-aggregated); `context_tokens_last` on `preCompact`. Codex billing tokens are read from the rollout transcript tail on `Stop` when hook raw carries no usage (`transcript_path` in raw). Offline `session stats` token fields require `include_raw` in the JSONL ledger (Codex transcript fallback needs `transcript_path` in stored raw).
+Requires a **running daemon**. Counters reset when the daemon process restarts; `since` reflects daemon start time. Optional `--provider` filters the session rollup.
+
+Daemon token totals are extracted from each Invoke `RawPayload` (not gated by `include_raw`):
+
+- **Cursor** — billing tokens on `stop` hooks (cumulative per session, delta-aggregated); `context_tokens_last` on `preCompact`.
+- **Codex** — billing tokens from the rollout transcript tail on `Stop` when hook raw carries no usage (`transcript_path` in raw).
+
+Offline `session stats` token fields require `include_raw` in the JSONL ledger (Codex transcript fallback needs `transcript_path` in stored raw).
 
 ## Subscribe (live stream)
 
@@ -75,13 +76,13 @@ Requires a **running daemon**. Counters reset on daemon restart; `since` reflect
 - Offline `session import` / `fork` do not publish to Subscribe (no Hub); Claude daemon import watcher does.
 - `schema_version: 1` on every event; `ignorable` marks forward-compat hints (readers may skip unknown **types**; Subscribe still delivers transcript events).
 - `raw` on the stream follows the same redaction rules as JSONL (`include_raw`, `redact_secret_rules`).
-- Global ledger mirror: `trajectory.enabled` records all Invokes — no separate webhook or `target: trajectory` in M12.
+- Global ledger mirror: `trajectory.enabled` records all Invokes — there is no separate webhook or dispatch target for the ledger.
 
 ## Trajectory contract
 
 | Field | Meaning |
 |-------|---------|
-| `schema_version` | Frozen at `1` for v0.0.2 |
+| `schema_version` | Frozen at `1` since the trajectory feature shipped |
 | `seq` | Contiguous per session |
 | `type` | Event catalog (`hook/invoked`, `transcript/message`, …) |
 | `source` | `hook`, `decision`, `transcript`, `system` |
@@ -119,7 +120,7 @@ agentd session import --provider claude-code --session s1 --out - 2>/dev/null | 
 - Event `seq` values match what a normal import would assign (including continuation after existing hook events).
 - With `--out`, human summary moves to stderr; use `--json` for machine-readable summary there.
 
-For persisted ledger + Subscribe history, use default import (no `--out`). Details: [CLI §session import --out](./cli.md#session-import-out).
+For persisted ledger + Subscribe history, use default import (no `--out`). Details: [CLI §Import without writing the ledger](./cli.md#import-without-writing-the-ledger).
 
 ## Policy replay
 
@@ -137,7 +138,14 @@ agentd session fork --provider claude-code --session s1 --new-session s1-fork --
 
 Copies a prefix into a new session id and appends `session/fork` + `session/end-seed` metadata. Source ledger stays immutable. Audit lineage only — not agent resume.
 
-## Coverage (L0 vs richer tiers)
+## Coverage tiers
+
+| Tier | Meaning |
+|------|---------|
+| **L0 Live** | Every hook call → `hook/invoked` + `hook/decided` (required for all six providers). |
+| **L1 Correlate** | Stable session and tool ids in events (quality varies by provider; not a separate documentation tier). |
+| **L2 Import** | On-disk transcript → `transcript/*` events via `session import`. |
+| **L3 Thinking** | Reasoning/thinking lines when the vendor persists them (provider-specific). |
 
 | Provider | Entrypoint | L0 live | L2 import status | L3 thinking |
 |----------|------------|---------|------------------|-------------|
@@ -148,10 +156,10 @@ Copies a prefix into a new session id and appends `session/fork` + `session/end-
 | opencode | `hook serve` | required | none | unknown |
 | kimi-code | `hook run` | required | none | unknown |
 
-Honest claim: every **supported agent’s hooks** are traceable on one stream; transcript/thinking depth varies by provider ([DESIGN §14.3](../../DESIGN.md#143-provider-support-matrix)).
+Every supported agent’s hooks are traceable on one stream; transcript and thinking depth varies by provider ([DESIGN §14.3](../../DESIGN.md#143-provider-support-matrix)).
 
 ## Status
 
 `trajectory_dropped_count` — monotonic overflow drops when the trajectory queue is full ([Operations](./operations.md)).
 
-See also: [Configuration](./configuration.md), [CLI](./cli.md).
+See also: [Configuration](./configuration.md), [CLI](./cli.md), [Glossary](./glossary.md).

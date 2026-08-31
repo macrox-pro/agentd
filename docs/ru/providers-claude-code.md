@@ -37,7 +37,7 @@ echo '{"session_id":"s","cwd":"/tmp","hook_event_name":"PreToolUse","tool_name":
 | **Пустой ответ** | Нейтральное решение → stdout `{}`, код 0 |
 | **Ask / Deny** | На ToolPre доступны Deny, Ask, Allow, правка входа, system message, stop-agent (матрица agenthooks) |
 | **PromptSubmitted** | Deny / контекст / system message — **без Ask** |
-| **Таймауты** | В HookSpec — секунды; бюджет sync берёт defaults install, если у Invoke нет deadline |
+| **Таймауты** | В спецификации хуков — секунды; бюджет синхронного пути берётся из значений по умолчанию при установке, если у вызова нет срока |
 | **Блокирующие хуки** | ToolPre / PromptSubmitted / Stop в наборе install по умолчанию — blocking |
 
 См. также: [Агенты](./providers.md), [Одобрения](./approvals.md), [Проверки](./guards.md).

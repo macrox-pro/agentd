@@ -2,11 +2,11 @@
 
 > **Language:** [English](./troubleshooting.md) · [Русский](../ru/troubleshooting.md)
 
-Failures seen in production and what agentd does.
+Common failures and what agentd does in each case.
 
 ## Daemon not running
 
-`hook run|notify|serve` prints `daemon not running` on stderr, then applies `policy.offline` from local config (defaults ⊕ user ⊕ project ⊕ runtime).
+`hook run|notify|serve` prints `daemon not running` on stderr, then applies `policy.offline` from local config (defaults merged with user merged with project merged with runtime).
 
 | `policy.offline` | Behavior |
 |------------------|----------|
@@ -19,7 +19,9 @@ agentd daemon status --json
 agentd daemon enable   # optional: start automatically when you log in
 ```
 
-Check `--socket` matches the edge process. Stale sockets are cleaned only under the start lock. Daemon operational logs: `agentd.log` in the [state directory](./configuration.md#state-directory).
+Check `--socket` matches the edge process. Daemon operational logs: `agentd.log` in the [state directory](./configuration.md#state-directory).
+
+**Start lock:** `daemon start` acquires `agentd.lock` next to the socket before removing a stale socket or PID from a crashed prior run. If another start is in progress or a live daemon holds the lock, start fails with “already running.” Only one process cleans stale files, and only under that lock.
 
 To start agentd automatically on login: `agentd daemon enable`. If enable failed but `daemon status --json` shows `"autostart":{"enabled":true}`, fix your config and run `daemon start` or log in again — you do not need to run enable twice. See [Operations → Autostart at login](./operations.md#autostart-at-login).
 
@@ -55,7 +57,7 @@ Same tool keeps Asking → no matching approval. Extract `approval_fingerprint=`
 
 ## Windows named pipe
 
-Default pipe is SID-scoped (`\\.\pipe\agentd-<SID>`). Mismatched user/session → dial failures that look like “daemon not running”.
+Default pipe is scoped to your Windows user **SID** (security identifier): `\\.\pipe\agentd-<SID>`. Mismatched user or session → dial failures that look like [Daemon not running](#daemon-not-running).
 
 ## Codex empty no-op
 
@@ -65,7 +67,7 @@ Codex/Kimi no-op is **empty stdout**, exit 0 — not `{}`. Do not treat empty as
 
 `policy.offline` controls soft vs hard failure when the daemon is unreachable (see [Daemon not running](#daemon-not-running)). Invalid local YAML is treated as `fail_closed`.
 
-## Not in v1
+## Out of scope for the current release
 
 No agent auth, transcript pipelines, Go plugins, hooks DSL, async retry storms, or sync `exec` decisions ([DESIGN.md §11](../../DESIGN.md#11-non-goals-v1)).
 

@@ -440,6 +440,37 @@ Every new subcommand:
 
 User-facing docs live under [docs/](./docs/). EN is canonical; RU is a full mirror. When behavior, YAML, Status, or install changes, follow [docs/en/maintaining.md](./docs/en/maintaining.md) and run `make docs-check`.
 
+## Documentation style
+
+Applies to user-facing pages (`docs/en/`, `docs/ru/`, `README.md`). Sources: [Diátaxis](https://diataxis.fr/) (page types), [Google developer documentation style guide](https://developers.google.com/style) (voice, terms), [Microsoft Writing Style Guide](https://learn.microsoft.com/en-us/style-guide/welcome/) (scannability), Stripe/Twilio (task-first runnable examples), Ильяхов «Пиши, сокращай» (RU informational style).
+
+- **One page, one type** (Diátaxis): tutorial (`getting-started`), how-to (`providers-*`), reference (`cli`, `configuration`), explanation (`why`). No mixed-type pages.
+- **Beginner-first terms** — define at first use or link the glossary (`docs/en/glossary.md`). Never leak internals into user docs: Go symbols (`Runner.Decide`, `HookSpec`, `slog`, `fsnotify`), agenthooks constants (`CapAsk`), package names (`hookedge`), milestone refs (`e2e-mN`, `M12`).
+- **Prose** — short sentences, one idea each; active voice; present tense; "you". No fluff: every sentence carries a command, key, field, or behavior.
+- **Scannable** — tables for reference material. Page anatomy: purpose line → terms (or glossary link) → body → "See also" footer.
+- **Examples run as printed** — no invented flags or YAML keys (verify against `cmd/` and `internal/config/file.go`).
+- **No version numbers in pages** — the current release is named in `docs/README.md` and `CHANGELOG.md` only.
+- **EN first, RU mirrors** — same filename, same section order; identifiers (commands, YAML keys, JSON fields) stay English in RU prose.
+- **Docs as code** — `make docs-check` enforces filename parity, terminology, and links/anchors; extend the scripts, not memory.
+
+### RU terminology
+
+Translate everything except terms already accepted in Russian IT (хук, демон, конфиг, флаг, сокет, бинарник, воркер, CI). Canonical choices — binding for every RU page:
+
+| English | Canonical RU | Forbidden |
+|---|---|---|
+| daemon | демон | daemon (Latin) |
+| guard | проверка | охранник, гвард |
+| temporary blocks | временные блокировки | временные запреты |
+| runtime layer | временный слой (`runtime` at first mention) | время работы |
+| session ledger | журнал сессий | ledger, журнал trajectory |
+| transcript | транскрипт | расшифровка диалогов |
+| offline | офлайн / без демона | offline |
+| snapshot | снимок | snapshot |
+| sync/async (prose) | синхронный / асинхронный | sync, async (fine as YAML values in code) |
+| named pipe | именованный канал | pipe |
+| time units | мс, с | ms, s in Russian prose |
+
 ## Session handoff & PR
 
 On stop or context limit:

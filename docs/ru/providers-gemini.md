@@ -25,7 +25,7 @@ agentd install --provider=gemini --scope=user
 |------|-----------|
 | **Единица таймаута** | В settings Gemini — **миллисекунды**; agenthooks переводит длительности при install |
 | **Имена хуков** | Установщик задаёт отображаемые имена для UX `/hooks` |
-| **stderr** | Hookedge **не** должен писать отладку в stderr (Gemini может иначе интерпретировать поток). Аудит — в async `file` / `log` ([DESIGN.md §2](../../DESIGN.md#2-hook-dispatch-engine)) |
+| **stderr** | Внешняя часть хука **не** должна писать отладку в stderr (Gemini может иначе интерпретировать поток). Аудит — в async `file` / `log` ([DESIGN.md §2](../../DESIGN.md#2-hook-dispatch-engine)) |
 | **Ask** | На ToolPre Ask/Deny/Allow поддерживаются |
 | **Коды выхода** | Семантика блокировки отличается от Claude; кодирование — зона agenthooks, не выдумывайте коды в agentd |
 

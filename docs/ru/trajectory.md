@@ -2,7 +2,7 @@
 
 > **Language:** [English](../en/trajectory.md) · [Русский](./trajectory.md)
 
-Хронологическая запись вызовов хуков (`hook/invoked`, `hook/decided`, фоновые сведения). **Включён по умолчанию.** В данных могут быть секреты; `redact_secret_rules` по умолчанию включён.
+Хронологическая запись вызовов хуков и связанных событий. **Включена по умолчанию.** В данных могут быть секреты; маскирование по правилам секретов (`redact_secret_rules`) включено по умолчанию. Термины: [Глоссарий](./glossary.md).
 
 ## Включение
 
@@ -11,19 +11,17 @@
 ```bash
 agentd config get trajectory          # trajectory: on (default)
 
-# Отключить, если журнал сессий не нужен
 agentd config disable trajectory
 
-# Raw включён по умолчанию; отключите, если не нужен session replay --policy
-agentd config disable trajectory-raw
+agentd config disable trajectory-raw   # если не нужен session replay --policy
 ```
 
 Или через YAML:
 
 ```yaml
 trajectory:
-  enabled: true               # по умолчанию on; false — выключить
-  include_raw: true           # по умолчанию on; false — без raw payload
+  enabled: true
+  include_raw: true
   redact_secret_rules: true
   max_event_bytes: 262144
   queue_capacity: 1024
@@ -39,23 +37,11 @@ trajectory:
       path: ""
 ```
 
-Хранение: `sessions/<provider>/<session_id>.jsonl` в [каталоге состояния](./configuration.md#каталог-состояния).
-
-Запись идёт по async-пути демона — синхронная задержка хука не меняется.
+Хранение: `sessions/<provider>/<session_id>.jsonl` в [каталоге состояния](./configuration.md#каталог-состояния). Запись идёт асинхронно — синхронная задержка хука не меняется.
 
 ## CLI
 
-| Команда | Назначение |
-|---------|------------|
-| `agentd session list [--provider ID] [--json]` | Список сессий (`importer_status` в `--json`) |
-| `agentd session show ID --provider ID [--json]` | События одной сессии |
-| `agentd session export …` | Экспорт JSONL |
-| `agentd session search …` | Поиск (O(n) скан JSONL) |
-| `agentd session import --provider ID …` | Импорт transcript (`source=transcript`) или `--out` — parse-only JSONL |
-| `agentd session replay --policy --provider ID --session ID` | Dry-run policy по сохранённому Raw |
-| `agentd session fork --provider ID --session SRC --new-session DST` | Копия префикса ledger (аудит) |
-| `agentd session stats ID --provider ID [--json]` | Offline-статистика сессии (нужен `trajectory.statistics`) |
-| `agentd session subscribe [--json]` | **Live** поток от демона (нужен запущенный daemon + trajectory.enabled) |
+Офлайн-команды читают `sessions/` в [каталоге состояния](./configuration.md#каталог-состояния). `session subscribe` и `trajectory stats` нужен запущенный демон. Полный справочник: [CLI → session](./cli.md#session).
 
 ## Статистика демона
 
@@ -65,33 +51,40 @@ agentd config get trajectory-statistics
 agentd trajectory stats [--provider ID] [--json]
 ```
 
-Нужен **запущенный daemon**. Счётчики сбрасываются при перезапуске; `since` — время старта демона. Опциональный `--provider` фильтрует rollup. Токены daemon rollup извлекаются из `RawPayload` каждого Invoke (не зависят от `include_raw`). Billing-токены Cursor — на хуке `stop` (кумулятивные по сессии, дельта-агрегация); `context_tokens_last` — на `preCompact`. Billing-токены Codex читаются из хвоста rollout-транскрипта на `Stop`, когда в hook raw нет usage (`transcript_path` в raw). Для offline `session stats` токены в JSONL нужен `include_raw` (fallback Codex по транскрипту требует `transcript_path` в сохранённом raw).
+Нужен **запущенный демон**. Счётчики сбрасываются при перезапуске процесса; `since` — время старта демона. `--provider` фильтрует сводку.
 
-## Subscribe (live-поток)
+Счётчики токенов демона берутся из сырой полезной нагрузки каждого вызова (не зависят от `include_raw`):
 
-`session subscribe` читает in-memory ledger демона с момента подключения (gRPC `SessionService.Subscribe`). Фильтры: `--provider`, `--session`, `--source`. История **не** воспроизводится — используйте `session show` или `session export`.
+- **Cursor** — токены биллинга на хуке `stop` (кумулятивно по сессии, с дельтой); `context_tokens_last` на `preCompact`.
+- **Codex** — токены из хвоста rollout-транскрипта на `Stop`, если в raw хука нет usage (`transcript_path` в raw).
+
+Для офлайн `session stats` поля токенов в JSONL требуют `include_raw` (запасной путь Codex — `transcript_path` в сохранённом raw).
+
+## Subscribe (поток в реальном времени)
+
+`session subscribe` читает журнал демона в памяти с момента подключения. Фильтры: `--provider`, `--session`, `--source`. История **не** воспроизводится — `session show` или `session export`.
 
 - Нужен **запущенный демон** с `trajectory.enabled`.
-- Offline `session import` / `fork` не публикуют в Subscribe; watcher импорта Claude — публикует.
-- `schema_version: 1` на каждом событии; `ignorable` — forward-compat (пропуск неизвестных **type**; transcript всё равно доставляется).
-- `raw` на потоке следует тем же правилам redaction, что и JSONL.
-- Зеркало ledger: `trajectory.enabled` — отдельный webhook / `target: trajectory` в M12 нет.
+- Офлайн `session import` / `fork` не публикуют в поток; наблюдатель импорта Claude в демоне — публикует.
+- `schema_version: 1` на каждом событии; `ignorable` — подсказки совместимости.
+- `raw` на потоке следует тем же правилам маскирования, что и JSONL.
+- При `trajectory.enabled` записывается каждый вызов хука — отдельного webhook или цели dispatch для журнала нет.
 
-## Контракт trajectory
+## Контракт журнала
 
 | Поле | Смысл |
 |------|-------|
-| `schema_version` | Зафиксировано `1` для v0.0.2 |
-| `seq` | Монотонный в рамках сессии |
-| `type` | Каталог событий |
+| `schema_version` | Зафиксировано `1` с момента появления журнала сессий |
+| `seq` | Монотонный номер в рамках сессии |
+| `type` | Каталог событий (`hook/invoked`, `transcript/message`, …) |
 | `source` | `hook`, `decision`, `transcript`, `system` |
-| `ignorable` | Forward-compat для неизвестных **type** |
+| `ignorable` | Старые читатели могут пропускать неизвестные **type** |
 
-Каталог событий: [DESIGN §14.2](../../DESIGN.md#142-event-catalog).
+Каталог: [DESIGN §14.2](../../DESIGN.md#142-event-catalog).
 
 ## Поиск
 
-`session search` обходит JSONL построчно без индекса. Фильтры: `--provider`, `--session`, `--kind`, `--source`, `--query`, `--limit`.
+`session search` обходит JSONL построчно. Индекса нет — фильтры: `--provider`, `--session`, `--kind`, `--source`, `--query`, `--limit`.
 
 ## Импорт
 
@@ -99,27 +92,17 @@ agentd trajectory stats [--provider ID] [--json]
 agentd session import --provider claude-code --session SESSION_ID
 agentd session import --provider cursor --path /path/to/transcript.jsonl
 agentd session import --provider codex --session SESSION_ID
-agentd session import --provider codex --path /path/to/rollout-…-SESSION_ID.jsonl
 ```
 
-Transcript-события дописываются после hook-событий (монотонный `seq`). Повторный импорт пропускает строки из sidecar `<session_id>.import.json`. Cursor — **partial** (лучше `--path`; thinking/tool-output не выдумываются). Codex — **supported** через `~/.codex/sessions/**/rollout-*-{session_id}.jsonl` (thinking только из plaintext `agent_reasoning`).
+События транскрипта дописываются после событий хуков. Повторный импорт использует сопутствующий файл `<session_id>.import.json`. Cursor — **частично** (лучше `--path`). Codex — **поддерживается**.
 
 ### Импорт в stdout или файл (`--out`)
 
-Preview/transcode без изменения ledger:
-
 ```bash
 agentd session import --provider claude-code --path /path/to/session.jsonl --out -
-agentd session import --provider codex --session SESSION_ID --out /tmp/events.jsonl
-agentd session import --provider claude-code --session s1 --out - 2>/dev/null | wc -l
 ```
 
-- Не дописывает в `sessions/…jsonl` и не обновляет `<session>.import.json`.
-- Учитывает инкрементальный импорт (читает checkpoint для `startIndex`, если sidecar есть).
-- `seq` совпадает с обычным import (включая продолжение после hook-событий).
-- При `--out` summary на stderr; `--json` — машиночитаемый summary там же.
-
-Для записи в ledger и Subscribe — обычный import (без `--out`). Подробнее: [CLI §session import --out](./cli.md#session-import-out).
+Не дописывает в журнал на диске. Подробнее: [CLI → Импорт без записи в журнал](./cli.md#импорт-без-записи-в-журнал).
 
 ## Policy replay
 
@@ -127,7 +110,7 @@ agentd session import --provider claude-code --session s1 --out - 2>/dev/null | 
 agentd session replay --policy --provider claude-code --session s1 --json
 ```
 
-Повторный Invoke сохранённого `Raw` через Dispatch Engine offline. Нужен `trajectory.include_raw: true` при записи. Не обращается к живому агенту и не делает resume цикла.
+Пробный прогон сохранённых событий через маршрутизацию офлайн. Нужен `include_raw` при записи. **Не** обращается к живому агенту.
 
 ## Fork
 
@@ -135,23 +118,30 @@ agentd session replay --policy --provider claude-code --session s1 --json
 agentd session fork --provider claude-code --session s1 --new-session s1-fork --at-seq 4
 ```
 
-Копирует префикс в новый session id и добавляет `session/fork` + `session/end-seed`. Исходный ledger неизменяем. Только аудит — не resume агента.
+Копия префикса в новый id сессии. Только аудит происхождения — не возобновление агента.
 
-## Покрытие (L0 и выше)
+## Уровни покрытия
 
-| Provider | Entrypoint | L0 live | L2 import status | L3 thinking |
-|----------|------------|---------|------------------|-------------|
-| claude-code | `hook run` | обязательно | **supported** | из session files |
-| cursor | `hook run --argv-payload` | обязательно | **partial** (`--path`) | часто redacted |
-| codex | `run` + `hook notify` | обязательно | **supported** (`~/.codex/sessions` rollouts) | только plaintext `agent_reasoning` |
-| gemini | `hook run` | обязательно | none | unknown |
-| opencode | `hook serve` | обязательно | none | unknown |
-| kimi-code | `hook run` | обязательно | none | unknown |
+| Уровень | Смысл |
+|---------|--------|
+| **L0 Live** | Каждый вызов хука → `hook/invoked` + `hook/decided` (обязательно для всех шести агентов). |
+| **L1 Correlate** | Стабильные id сессии и инструмента (качество разное; отдельно в доке не выделяем). |
+| **L2 Import** | Транскрипт с диска → события `transcript/*` через `session import`. |
+| **L3 Thinking** | Строки рассуждений, если поставщик их сохраняет. |
 
-Формулировка: все **поддерживаемые агенты** дают один поток hook-событий; глубина transcript/thinking различается ([DESIGN §14.3](../../DESIGN.md#143-provider-support-matrix)).
+| Поставщик | Точка входа | L0 | L2 импорт | L3 |
+|-----------|-------------|----|-----------|-----|
+| claude-code | `hook run` | да | **поддерживается** | из файлов сессии |
+| cursor | `hook run --argv-payload` | да | **частично** (`--path`) | часто нет |
+| codex | `run` + `hook notify` | да | **поддерживается** | plaintext `agent_reasoning` |
+| gemini | `hook run` | да | нет | неизвестно |
+| opencode | `hook serve` | да | нет | неизвестно |
+| kimi-code | `hook run` | да | нет | неизвестно |
 
-## Status
+Все поддерживаемые агенты дают один поток событий хуков; глубина транскрипта и рассуждений различается ([DESIGN §14.3](../../DESIGN.md#143-provider-support-matrix)).
 
-`trajectory_dropped_count` — счётчик overflow очереди trajectory ([Эксплуатация](./operations.md)).
+## Статус
 
-См. также: [Configuration](./configuration.md), [CLI](./cli.md).
+`trajectory_dropped_count` — счётчик отброшенных записей при переполнении очереди ([Эксплуатация](./operations.md)).
+
+См. также: [Конфигурация](./configuration.md), [Справочник команд](./cli.md), [Глоссарий](./glossary.md).

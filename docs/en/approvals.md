@@ -2,13 +2,12 @@
 
 > **Language:** [English](./approvals.md) · [Русский](../ru/approvals.md)
 
-After the agent **asks** you, record “allow” so the same action is not asked again. Temporary **blocks** deny matching tools. Both live in the runtime layer.
+Record “allow” after an ask so the same action is not asked again, and set temporary tool blocks in the runtime layer.
 
 ## Ask → fingerprint → record
 
-1. Guard returns Ask; encoded `system_message` includes `approval_fingerprint=sha256:<kind>/<hex>`.
-2. `kind` is `secrets` or `shell`.
-3. Operator records Allow:
+1. Guard returns Ask; encoded `system_message` includes `approval_fingerprint=sha256:<kind>/<hex>` where `kind` is `secrets` or `shell`.
+2. Operator records Allow:
 
 ```bash
 agentd config record-decision \
@@ -17,14 +16,23 @@ agentd config record-decision \
   --session-id s1
 ```
 
+Project scope with wall-clock expiry:
+
+```bash
+agentd config record-decision \
+  --fingerprint 'sha256:secrets/…' \
+  --scope project \
+  --expires-at 2026-12-31T23:59:59Z
+```
+
 | `--scope` | Expiry |
 |-----------|--------|
-| `project` (default) | **24h** unless `--expires-at` (RFC3339) |
+| `project` (default) | **24h** unless `--expires-at` (RFC3339, for example `2026-12-31T23:59:59Z`) |
 | `session` | until cleared; matches `--session-id` (no wall clock by default) |
 
 `--project-root` scopes project approvals. Default `granted_by` is `ask_user`.
 
-Matching later `tool.pre` skips Ask within TTL (e2e-m7).
+Matching later `tool.pre` skips Ask within TTL.
 
 ## Temporary blocks
 

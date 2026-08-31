@@ -12,14 +12,14 @@ go install github.com/macrox-pro/agentd@latest
 
 Ставит бинарник в `$(go env GOPATH)/bin` (этот каталог должен быть в `PATH`).
 
-После `go install …@latest` / `@vX.Y.Z` команда `agentd version` показывает разрешённую модульную версию (semver или pseudo-version) из BuildInfo — без ручных ldflags.
+После `go install …@latest` / `@vX.Y.Z` команда `agentd version` показывает определённую версию модуля (semver или pseudo-version) из BuildInfo — без ручных ldflags.
 
 ## Готовые сборки (GitHub Releases)
 
 Бинарники для linux / darwin / windows (amd64 / arm64) публикуются через goreleaser на [странице релизов](https://github.com/macrox-pro/agentd/releases). Зафиксировать версию:
 
 ```bash
-go install github.com/macrox-pro/agentd@v0.0.7
+go install github.com/macrox-pro/agentd@latest
 ```
 
 ## Сборка из исходников

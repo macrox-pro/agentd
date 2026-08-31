@@ -2,7 +2,7 @@
 
 > **Language:** [English](./providers.md) · [Русский](../ru/providers.md)
 
-How to connect each supported coding agent, which `agentd hook` command it uses, and what that agent cannot do.
+How to connect each supported coding agent and what each one can express on the wire.
 
 **Before you install:** start the daemon ([Getting started](./getting-started.md)). If it is down, installed hooks follow `policy.offline` (default `fail_open`) so the agent is not blocked.
 
@@ -19,14 +19,14 @@ How to connect each supported coding agent, which `agentd hook` command it uses,
 
 ## What each agent can express
 
-| Agent | Can ask the user before a tool | “Do nothing” reply | Limits |
+| Agent | Can ask the user before a tool | “Do nothing” reply | Notes |
 |-------|--------------------------------|--------------------|--------|
-| Claude | yes | `{}` and exit 0 | Full ask / deny / allow on PreToolUse |
-| Cursor | only native shell and MCP | Cursor’s own JSON | A URL in the hook command breaks install; async must not change the sync reply |
-| Codex | **no** | **empty** stdout and exit 0 | Trust keys in `config.toml`; `notify` is observation only |
+| Claude | yes | `{}` and exit 0 | Full ask / deny / allow on `tool.pre` |
+| Cursor | only native shell and MCP | Cursor’s own JSON | Do not put URLs in the hook command string — Cursor drops the whole `hooks.json`; async must not change the sync reply |
+| Codex | no | **empty** stdout and exit 0 | Trust keys in `config.toml`; `notify` is observation only |
 | Gemini | yes | Gemini JSON; keep stderr clean | Timeouts in **milliseconds**; never print debug on stderr from the hook |
-| OpenCode | **no** on tool.pre | serve frames | Long-lived `serve`; one session at a time in the daemon |
-| Kimi | **no** | **empty** stdout and exit 0 | User-scope install only; JSON is deny/allow only |
+| OpenCode | no on `tool.pre` | empty JSON reply on the NDJSON stream | Long-lived `hook serve`; one session at a time in the daemon |
+| Kimi | no | **empty** stdout and exit 0 | User-scope install only; JSON is deny/allow only |
 
 What an agent can say comes from agenthooks. agentd maps your guards onto that surface (`policy.ask_fallback` when the agent cannot ask).
 
@@ -44,7 +44,7 @@ agentd install --provider=PROVIDER --scope=SCOPE [--dir PATH]
 
 On success, `agentd install` prints each created, updated, or unchanged file with an absolute path.
 
-Generated commands use `agentd agenthooks …` (same as `hook …`). Timeouts: before-tool and prompt-submit **30s**; shorter events **5s**.
+Generated commands use `agentd agenthooks …` (same as `hook …`). Timeouts: before-tool and prompt-submit **30s**; all other event kinds **5s**.
 
 Design: [DESIGN.md §1–§2](../../DESIGN.md) · codecs: [agenthooks](https://github.com/speakeasy-api/agenthooks).
 
@@ -67,3 +67,5 @@ Design: [DESIGN.md §1–§2](../../DESIGN.md) · codecs: [agenthooks](https://g
 | `kimi-code` | — | `$KIMI_CODE_HOME` or `~/.kimi-code` | user only |
 
 Plugin scope is never chosen automatically. Use `agentd install --provider=… --scope=plugin --dir=…`.
+
+See also: [Getting started](./getting-started.md), [CLI](./cli.md), [Glossary](./glossary.md).

@@ -32,6 +32,8 @@ docs-check:
 	(cd docs/ru && ls *.md | sort) >"$$tmp_ru"; \
 	diff -u "$$tmp_en" "$$tmp_ru" \
 		|| { echo "docs-check: docs/en and docs/ru must have the same *.md basenames" >&2; exit 1; }; \
+	bash scripts/check-docs-terms.sh; \
+	bash scripts/check-docs-links.sh; \
 	echo "docs-check: ok"
 
 intent-check:

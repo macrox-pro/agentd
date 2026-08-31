@@ -2,9 +2,9 @@
 
 > **Language:** [English](./getting-started.md) · [Русский](../ru/getting-started.md)
 
-Four steps: install the binary, start the background service, connect a coding agent, confirm it works.
+Five steps: install the binary, start the background service, optional user config, connect a coding agent, confirm it works.
 
-Why this exists: [Why agentd](./why.md).
+Why this exists: [Why agentd](./why.md). Terms: [Glossary](./glossary.md).
 
 ## Terms
 
@@ -19,11 +19,13 @@ Why this exists: [Why agentd](./why.md).
 
 ## 1. Install the binary
 
-See [Installation](./installation.md). Shortest path:
+See [Installation](./installation.md). Shortest path (requires [Go 1.26+](https://go.dev/dl/)):
 
 ```bash
 go install github.com/macrox-pro/agentd@latest
 ```
+
+Ensure `$(go env GOPATH)/bin` is on your `PATH`.
 
 ## 2. Start the daemon
 
@@ -93,7 +95,7 @@ agentd install --all-detected          # print the plan; do not write
 agentd install --all-detected --yes    # write the agent’s hook files
 ```
 
-In an interactive terminal: `agentd setup` (full flow) or `agentd install` with no flags (short flow). In CI set `AGENTD_NO_TUI=1`.
+In an interactive terminal, use the install wizard: `agentd setup` (full flow) or `agentd install` with no flags (short flow). In CI or scripts set `AGENTD_NO_TUI=1` or `CI=true`.
 
 One agent, this repository:
 
@@ -111,14 +113,7 @@ Per-agent paths and limits: [Providers](./providers.md).
 agentd daemon status --json
 ```
 
-Expect `"running": true`. Also present:
-
-| Field | Meaning |
-|-------|---------|
-| `generation` | How many times config was loaded since start (increments on reload). |
-| `fingerprint` | Hash of the merged config — changes when policy changes. |
-| `async_queue_depth` | Side-effect jobs waiting (logs, HTTP, …). |
-| `async_dropped_count` | Jobs dropped because the queue was full. |
+Expect `"running": true`. The JSON report includes config generation, fingerprint, async queue depth, and drop counters — see [Operations → Status](./operations.md#status).
 
 Use a tool in the agent, or send a test payload:
 

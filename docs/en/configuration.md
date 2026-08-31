@@ -2,6 +2,8 @@
 
 > **Language:** [English](./configuration.md) · [Русский](../ru/configuration.md)
 
+How agentd merges YAML layers into one effective config and where files live on disk.
+
 agentd builds one effective config from **four layers**. Later layers override earlier ones. YAML keys and reload: below. Layer contract: [DESIGN.md §7](../../DESIGN.md#7-configuration-schema).
 
 ## State directory
@@ -15,7 +17,9 @@ User config is the file `~/.agentd.yaml` — not a `~/.agentd/` folder. Data the
 | → runtime overlay | `runtime.yaml` (daemon only) |
 | → operational log | `agentd.log` |
 | → session ledger | `sessions/<provider>/<session_id>.jsonl` (when enabled) |
-| IPC socket (not state) | `$XDG_RUNTIME_DIR/agentd/agentd.sock` (Darwin fallback `~/Library/Caches/agentd/`; Linux `~/.local/run/agentd/`; else temp) — [DESIGN.md §5](../../DESIGN.md#5-transport) |
+| IPC socket (not state) | `$XDG_RUNTIME_DIR/agentd/agentd.sock` (macOS fallback `~/Library/Caches/agentd/`; Linux `~/.local/run/agentd/`; else temp) — [DESIGN.md §5](../../DESIGN.md#5-transport) |
+| → PID file | `agentd.pid` (next to the socket in the runtime directory) |
+| → lock file | `agentd.lock` (next to the socket; one daemon per user) |
 
 ## User config bootstrap
 
@@ -47,7 +51,7 @@ agentd config validate --config ~/.agentd.yaml
 
 **Runtime path:** `runtime.yaml` in the [state directory](#state-directory).
 
-Runtime writes are debounced (**500ms**), mode `0600`, atomic rename. Each hook call reads the in-memory snapshot — no disk I/O per call.
+Runtime writes are debounced (**500ms**), mode `0o600`, atomic rename. Each hook call reads the in-memory snapshot — no disk I/O per call.
 
 ## Top-level YAML keys
 
@@ -57,14 +61,14 @@ Project files typically carry `guards` / `dispatch`. `approvals` and `blocks` us
 
 ### policy
 
-| Key | Values | Default |
-|-----|--------|---------|
-| `fail` | `fail_open` \| `fail_closed` | `fail_closed` |
-| `unsupported` | `degrade` \| `strict` | `degrade` |
-| `ask_fallback` | `deny` \| `no_decision` | `deny` |
-| `offline` | `fail_open` \| `fail_closed` | `fail_open` |
+| Key | Values | Default | Meaning |
+|-----|--------|---------|---------|
+| `fail` | `fail_open` \| `fail_closed` | `fail_closed` | On sync pipeline errors: allow or deny |
+| `unsupported` | `degrade` \| `strict` | `degrade` | When a guard or decision shape is unsupported: **degrade** skips unsupported effects; **strict** treats it as failure |
+| `ask_fallback` | `deny` \| `no_decision` | `deny` | When the agent cannot ask the user: **deny** blocks; **no_decision** returns a neutral allow |
+| `offline` | `fail_open` \| `fail_closed` | `fail_open` | When the daemon is unreachable from the hook edge |
 
-When the daemon is unreachable, the hook edge loads local config (defaults ⊕ user ⊕ project(cwd) ⊕ runtime) and applies `policy.offline`. Default `fail_open` encodes a neutral decision (or exit 0 for notify) so agents keep working; `fail_closed` exits **1**. Stderr still prints `daemon not running` in both modes.
+When the daemon is unreachable, the hook edge loads local config (defaults merged with user merged with project(cwd) merged with runtime) and applies `policy.offline`. Default `fail_open` encodes a neutral decision (or exit 0 for notify) so agents keep working; `fail_closed` exits **1**. Stderr still prints `daemon not running` in both modes.
 
 ### async
 
@@ -120,21 +124,21 @@ Opt-in Prometheus scrape endpoint ([Operations → Metrics](./operations.md#prom
 | `enabled` | `false` |
 | `listen` | `127.0.0.1:2112` (`host:port`; required when enabled) |
 
-When enabled, the daemon serves `/metrics` on loopback TCP at start time only. Changing `metrics.listen` or toggling `enabled` requires **`agentd daemon restart`** (not reload). CLI `--metrics-listen` enables metrics for that process and overrides `listen`.
+When enabled, the daemon serves `/metrics` on loopback TCP at start time only. Changing `metrics.listen` or toggling `enabled` requires **`agentd daemon stop`** then **`agentd daemon start`** — `daemon reload` does not rebind the metrics HTTP listener. CLI `--metrics-listen` enables metrics for that process and overrides `listen`.
 
 Binding `0.0.0.0` is allowed but exposes metrics on all interfaces — prefer loopback unless you understand the risk.
 
 ## Feature toggles
 
-Use `agentd config enable|disable|get FEATURE` to flip curated booleans without hand-editing YAML ([CLI](./cli.md#config)).
+Use `agentd config enable|disable|get FEATURE` to flip curated booleans without hand-editing YAML. Full command reference: [CLI → config](./cli.md#config).
 
 | Behavior | Detail |
 |----------|--------|
 | Layers written | User (`--config` / `~/.agentd.yaml`) or project (`.agentd.yaml` under `--cwd`) only |
 | Runtime overlay | **Not** modified — use `config patch` for temporary runtime overrides |
 | Missing user file | `config enable` creates the same bootstrap shape as `daemon start` |
-| Reload | User/project file changes → fsnotify debounce; or `agentd daemon reload` |
-| `config get` | Merges defaults ⊕ user ⊕ project; **excludes** runtime overlay |
+| Reload | User/project file changes → config file watcher debounce; or `agentd daemon reload` |
+| `config get` | Merges defaults with user with project; **excludes** runtime overlay |
 | Idempotent | Re-enable / disable when already at effective value → exit 0, no write |
 | YAML round-trip | Marshal may drop hand-written comments in touched files |
 | Secrets guard | Not a curated toggle — edit `guards.secrets` in YAML |
@@ -167,7 +171,7 @@ See also: [Trajectory](./trajectory.md#enable), [Guards](./guards.md#enable-via-
 
 ## Reload
 
-- User/project file changes: fsnotify + debounce → re-merge
+- User/project file changes: file watcher + debounce → re-merge
 - `agentd daemon reload`: force re-merge from disk
 - Runtime patch / RecordDecision: in-memory update + debounced flush
 

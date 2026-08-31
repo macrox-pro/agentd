@@ -2,6 +2,8 @@
 
 > **Language:** [English](./providers-opencode.md) · [Русский](../ru/providers-opencode.md)
 
+Install and run agentd with OpenCode (`--provider=opencode`).
+
 `--provider=opencode`. Entrypoint: long-lived **`agentd hook serve`** (NDJSON stdio), not per-event `hook run`.
 
 ## Install
@@ -19,8 +21,8 @@ Writes `.opencode/plugin/agenthooks.ts`, spawning:
 ## Runtime
 
 1. `agentd daemon start`
-2. OpenCode loads the plugin; shim keeps a child on `serve`.
-3. Each NDJSON frame → gRPC `Invoke`.
+2. OpenCode loads the plugin; a small TypeScript wrapper keeps a child process on `hook serve`.
+3. Each NDJSON line on stdin/stdout is one event round-trip.
 
 ```bash
 agentd hook serve --provider=opencode
@@ -32,10 +34,10 @@ agentd hook serve --provider=opencode
 
 | Topic | Behavior |
 |-------|----------|
-| **Process model** | One long-lived serve process; frames multiplexed over stdio |
-| **Session ordering** | Daemon holds a **per-session mutex** for sync (and coordinates async) ([DESIGN.md §1](../../DESIGN.md)) |
-| **No CapAsk on tool.pre** | ToolPre capabilities are Deny + update-input only — no Ask. Use Deny or `ask_fallback` policy |
+| **Process model** | One long-lived serve process; events multiplexed over stdio |
+| **Session ordering** | The daemon serializes sync work per session (and coordinates async) so replies stay in order ([DESIGN.md §1](../../DESIGN.md)) |
+| **Cannot ask on tool.pre** | `tool.pre` capabilities are Deny + update-input only — no Ask. Use Deny or `ask_fallback` policy |
 | **Stop / session.idle** | Stop-like events may be non-blocking / empty capability set — do not expect Continue on every stop shape |
 | **Permission** | Permission events go through OpenCode’s permission channel (allow/deny), not Claude-style Ask JSON |
 
-See also: [Providers index](./providers.md), [CLI](./cli.md).
+See also: [Providers index](./providers.md), [CLI](./cli.md), [Glossary](./glossary.md).

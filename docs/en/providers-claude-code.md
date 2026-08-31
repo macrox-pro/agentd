@@ -2,6 +2,8 @@
 
 > **Language:** [English](./providers-claude-code.md) · [Русский](../ru/providers-claude-code.md)
 
+Install and run agentd with Claude Code (`--provider=claude-code`).
+
 `--provider=claude-code`. Entrypoint: `agentd hook run` (stdin JSON).
 
 ## Install
@@ -22,7 +24,7 @@ Generated command shape: `…/agentd agenthooks run --provider=claude-code`.
 ## Runtime
 
 1. `agentd daemon start`
-2. Use Claude Code; installed hooks (PreToolUse, …) spawn the CLI.
+2. Use Claude Code; installed hooks (`tool.pre`, …) spawn the CLI.
 3. Smoke:
 
 ```bash
@@ -35,9 +37,9 @@ echo '{"session_id":"s","cwd":"/tmp","hook_event_name":"PreToolUse","tool_name":
 | Topic | Behavior |
 |-------|----------|
 | **Wire no-op** | Neutral decision → stdout `{}`, exit 0 |
-| **Ask / Deny** | ToolPre supports Deny, Ask, Allow, update-input, system message, stop-agent (agenthooks capability matrix) |
+| **Ask / Deny** | `tool.pre` supports Deny, Ask, Allow, update-input, system message, stop-agent |
 | **PromptSubmitted** | Can Deny / add context / system message — **no Ask** |
-| **Timeouts** | HookSpec seconds; sync budget uses install defaults when Invoke has no deadline |
-| **Blocking** | ToolPre / PromptSubmitted / Stop are blocking in the default install set |
+| **Timeouts** | Hook timeouts in seconds; sync budget uses install defaults when Invoke has no deadline |
+| **Blocking** | `tool.pre` / `prompt.submitted` / `agent.stop` are blocking in the default install set |
 
 See also: [Providers index](./providers.md), [Approvals](./approvals.md), [Guards](./guards.md).

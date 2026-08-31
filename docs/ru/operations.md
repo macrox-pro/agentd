@@ -70,7 +70,7 @@ scrape_configs:
       - targets: ["127.0.0.1:2112"]
 ```
 
-Адрес metrics фиксируется при **старте демона**. После изменения `metrics` в YAML выполните `agentd daemon restart` — `daemon reload` обновляет snapshot конфига, но не перепривязывает HTTP listener.
+Адрес metrics фиксируется при **старте демона**. После изменения `metrics` в YAML выполните **`agentd daemon stop`**, затем **`agentd daemon start`** — `daemon reload` обновляет снимок конфига, но не перепривязывает HTTP listener.
 
 По умолчанию bind — loopback (`127.0.0.1`). Публикация на `0.0.0.0` возможна, но не рекомендуется на общих машинах.
 
@@ -115,9 +115,9 @@ agentd daemon stop --timeout 10s
 
 При остановке: сначала дождаться синхронных запросов, затем асинхронной очереди (не дольше `--timeout`), потом снять сокет и PID-файл.
 
-## Статистика trajectory
+## Статистика журнала сессий
 
-Trajectory и statistics включены по умолчанию. Явное включение (запись в user-слой) опционально:
+Журнал сессий и статистика включены по умолчанию. Явное включение (запись в пользовательский слой) опционально:
 
 ```bash
 agentd config get trajectory
@@ -126,10 +126,10 @@ agentd trajectory stats [--provider ID] [--json]
 agentd session stats SESSION_ID --provider ID [--json]
 ```
 
-`trajectory stats` читает in-memory счётчики демона (`TrajectoryService.Statistics`) и требует запущенный daemon; счётчики сбрасываются при перезапуске. `session stats` сканирует локальный JSONL и демон не нужен. Оба требуют `trajectory.enabled` и `trajectory.statistics`. См. [Trajectory](./trajectory.md#статистика-демона).
+`trajectory stats` читает счётчики демона в памяти (`TrajectoryService.Statistics`) и требует запущенный демон; счётчики сбрасываются при перезапуске. `session stats` сканирует локальный JSONL-журнал и демон не нужен. Оба требуют `trajectory.enabled` и `trajectory.statistics`. См. [Журнал сессий → Статистика демона](./trajectory.md#статистика-демона).
 
 ## Логирование
 
-На пути хука не писать отладку в stdout. Демон дописывает операционные логи в `agentd.log` в [каталоге состояния](./configuration.md#каталог-состояния); `agentd daemon start --foreground` также дублирует в stderr. Асинхронная цель dispatch `target: log` использует тот же slog-логгер.
+На пути хука не писать отладку в stdout. Демон дописывает операционные логи в `agentd.log` в [каталоге состояния](./configuration.md#каталог-состояния); `agentd daemon start --foreground` также дублирует в stderr. Асинхронная цель dispatch `target: log` пишет в тот же журнал работы демона.
 
 См. также: [Маршрутизация](./dispatch.md) (переполнение очереди), [Конфигурация](./configuration.md) (перезагрузка).

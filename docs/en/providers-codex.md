@@ -2,6 +2,8 @@
 
 > **Language:** [English](./providers-codex.md) · [Русский](../ru/providers-codex.md)
 
+Install and run agentd with OpenAI Codex (`--provider=codex`).
+
 `--provider=codex`. Entrypoints: `hook run` (blocking/stdin path) and `hook notify` (argv JSON, async-only).
 
 ## Install
@@ -26,11 +28,18 @@ agentd daemon start
 agentd hook notify --provider=codex '{"type":"agent-turn-complete"}'
 ```
 
+Smoke (`tool.pre`):
+
+```bash
+echo '{"session_id":"s","cwd":"/tmp","hook_event_name":"PreToolUse","tool_name":"Bash","tool_use_id":"t1","tool_input":{"command":"echo ok"}}' \
+  | agentd hook run --provider=codex
+```
+
 ## Provider quirks
 
 | Topic | Behavior |
 |-------|----------|
-| **No CapAsk** | ToolPre has Deny/Allow/… but **not Ask**. Guards with `action: ask` degrade via `policy.ask_fallback` (default deny) |
+| **Cannot ask** | `tool.pre` has Deny/Allow/… but **not Ask**. Guards with `action: ask` degrade via `policy.ask_fallback` (default deny) |
 | **Neutral wire** | Explicit no-op = **empty stdout**, exit 0 — **not** `{}` |
 | **Notify** | Always async semantics; never use notify for blocking gates |
 | **Trust path** | Trust state keys embed the **absolute** path of `hooks.json`; moving CODEX_HOME requires reinstall |

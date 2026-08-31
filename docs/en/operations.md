@@ -2,11 +2,11 @@
 
 > **Language:** [English](./operations.md) · [Русский](../ru/operations.md)
 
-Day-to-day control of the user daemon.
+Day-to-day control of the user daemon: status, reload, stop, metrics, and autostart.
 
 ## One daemon per user
 
-A lock and a socket stop a second copy from starting. Override the socket with `--socket`.
+A lock file (`agentd.lock`) and socket stop a second copy from starting. Override the socket with `--socket`. PID is written to `agentd.pid` next to the socket — see [Configuration → State directory](./configuration.md#state-directory).
 
 ## Status
 
@@ -70,7 +70,7 @@ scrape_configs:
       - targets: ["127.0.0.1:2112"]
 ```
 
-Metrics listen address is fixed at **daemon start**. After changing `metrics` in YAML, run `agentd daemon restart` — `daemon reload` updates config snapshots but does not rebind the HTTP listener.
+Metrics listen address is fixed at **daemon start**. After changing `metrics` in YAML, run **`agentd daemon stop`** then **`agentd daemon start`** — `daemon reload` updates config snapshots but does not rebind the HTTP listener.
 
 Default bind is loopback (`127.0.0.1`). Exposing metrics on `0.0.0.0` is possible but not recommended on shared machines.
 
@@ -115,7 +115,7 @@ agentd daemon reload
 agentd daemon stop --timeout 10s
 ```
 
-Stop drains sync then async (up to timeout), then removes socket/PID.
+Stop drains sync then async (up to timeout), then removes the socket, PID file (`agentd.pid`), and lock. Stale socket cleanup on the next start happens only while holding `agentd.lock`.
 
 ## Trajectory statistics
 
@@ -128,10 +128,10 @@ agentd trajectory stats [--provider ID] [--json]
 agentd session stats SESSION_ID --provider ID [--json]
 ```
 
-`trajectory stats` reads in-memory daemon counters (`TrajectoryService.Statistics`) and needs a running daemon; counters reset on restart. `session stats` scans a local JSONL ledger and does not need the daemon. Both require `trajectory.enabled` and `trajectory.statistics`. See [Trajectory](./trajectory.md#daemon-statistics).
+`trajectory stats` reads in-memory daemon counters and needs a running daemon; counters reset on restart. `session stats` scans a local JSONL ledger and does not need the daemon. Both require `trajectory.enabled` and `trajectory.statistics`. See [Trajectory](./trajectory.md#daemon-statistics).
 
 ## Logging
 
-Hook path: never debug on stdout. The daemon appends operational logs to `agentd.log` in the [state directory](./configuration.md#state-directory); `agentd daemon start --foreground` also mirrors to stderr. Async dispatch `target: log` uses the same slog logger.
+Hook path: never debug on stdout. The daemon appends operational logs to `agentd.log` in the [state directory](./configuration.md#state-directory); `agentd daemon start --foreground` also mirrors to stderr. Async dispatch `target: log` writes structured log lines to the same operational log.
 
 See also: [Dispatch](./dispatch.md) async overflow, [Configuration](./configuration.md) reload.

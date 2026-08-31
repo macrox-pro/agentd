@@ -2,7 +2,7 @@
 
 > **Language:** [English](./guards.md) · [Русский](../ru/guards.md)
 
-Checks that run **before** the agent’s reply is sent (typically the “before tool” event). Configured under `guards:`.
+Declarative checks that run **before** the agent’s reply is sent (typically on `tool.pre`). Configured under `guards:`. Terms: [Glossary](./glossary.md).
 
 ## Names
 
@@ -13,7 +13,9 @@ Checks that run **before** the agent’s reply is sent (typically the “before 
 | `mcp` | `false` | `deny_servers` |
 | `paths` | `false` | `deny_read`, `deny_write` |
 
-Route sync builtin can subset: `guards: [secrets, shell]`. Omitting the list uses the compiled default set for that target.
+On a `builtin` sync target, `guards: [secrets, shell]` runs only those guards for that route. Omit the list to run every enabled guard.
+
+`ask_on` (shell guard): tool names that trigger Ask instead of silent allow — for example `curl`, `wget`, `ssh`.
 
 ## Enable via CLI
 
@@ -32,7 +34,7 @@ Features: `guard-shell`, `guard-mcp`, `guard-paths` ([CLI](./cli.md#config)). **
 - **Deny** — hard stop; provider encodes deny.
 - **Ask** — provider Ask / permission prompt; message may include `approval_fingerprint=sha256:…` for later [Approvals](./approvals.md).
 
-Provider capability limits still apply (some agents cannot Ask).
+Provider capability limits still apply (some agents cannot ask).
 
 ## Example
 
@@ -56,4 +58,4 @@ guards:
 
 Temporary tool blocks (runtime) run before guards — see [Approvals](./approvals.md).
 
-Architecture: [DESIGN.md](../../DESIGN.md). Wire behavior: [Dispatch](./dispatch.md).
+See also: [Configuration](./configuration.md), [Dispatch](./dispatch.md), [Glossary](./glossary.md).

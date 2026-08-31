@@ -2,9 +2,11 @@
 
 > **Language:** [English](./installation.md) · [Русский](../ru/installation.md)
 
-Put an `agentd` binary on `PATH`. Building from source needs Go **1.26+**.
+How to put an `agentd` binary on your `PATH`. Building from source needs Go **1.26+**.
 
 ## go install
+
+Requires [Go 1.26+](https://go.dev/dl/).
 
 ```bash
 go install github.com/macrox-pro/agentd@latest
@@ -19,8 +21,10 @@ Installs into `$(go env GOPATH)/bin` (ensure that directory is on `PATH`).
 Pre-built binaries (linux / darwin / windows, amd64 / arm64) ship via goreleaser on [GitHub Releases](https://github.com/macrox-pro/agentd/releases). Pin a version:
 
 ```bash
-go install github.com/macrox-pro/agentd@v0.0.7
+go install github.com/macrox-pro/agentd@latest
 ```
+
+Or download a release asset and place it on your `PATH`.
 
 ## Build from source
 

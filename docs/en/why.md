@@ -2,6 +2,10 @@
 
 > **Language:** [English](./why.md) · [Русский](../ru/why.md)
 
+What agentd is for and what it is not in the current release.
+
+Terms: [Glossary](./glossary.md).
+
 **agentd** is a background service on your machine. It sits between coding agents and your rules: one policy for every agent, a reply in the format that agent expects, and side effects (logs, HTTP) that never delay that reply.
 
 Hook formats and writing agent settings use [agenthooks](https://github.com/speakeasy-api/agenthooks).
@@ -10,6 +14,7 @@ Hook formats and writing agent settings use [agenthooks](https://github.com/spea
 |------|---------|
 | **Hook** | Callback the agent runs at an event (for example: before a tool). |
 | **Coding agent** | Product such as Claude Code or Cursor (`--provider` in commands). |
+| **Daemon** | One long-lived `agentd` process per user. Hooks send events here; policy is decided here. |
 | **Sync path** | Decides allow / ask / deny and shapes the reply to the agent. |
 | **Async path** | Audit and notifications. Must not block the reply. |
 
@@ -23,7 +28,7 @@ Hook formats and writing agent settings use [agenthooks](https://github.com/spea
 | **Policy drift across repos** | Copied hook files; hard to approve once or block for a while | Layered YAML (user + project + runtime); approvals and temporary blocks |
 | **No operations picture** | Unclear whether the gate is up or the queue is full | `daemon status --json`: config generation, fingerprint, queue depth, drops |
 
-## What it is not (v1)
+## What it is not (current release)
 
 Not a login product for agent accounts, not a full transcript pipeline, not a plugin loader, and not a separate rules language. Routes are YAML. Running an external program (`exec`) is **async only**. See [DESIGN.md §11](../../DESIGN.md#11-non-goals-v1).
 

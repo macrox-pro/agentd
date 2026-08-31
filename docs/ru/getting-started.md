@@ -101,7 +101,7 @@ agentd install --all-detected --yes    # записать файлы хуков 
 agentd install --provider=claude-code --scope=project
 ```
 
-В настройках агента прописывается `agentd agenthooks …` (скрытый синоним `agentd hook …` — [зачем](./cli.md#agenthooks-скрытая-команда)). В документации и при ручной настройке удобнее `hook run` / `hook serve` / `hook notify`.
+В настройках агента прописывается `agentd agenthooks …` (скрытый синоним `agentd hook …` — [зачем](./cli.md#agenthooks-скрытая)). В документации и при ручной настройке удобнее `hook run` / `hook serve` / `hook notify`.
 
 Пути и ограничения по агентам: [Агенты](./providers.md).
 

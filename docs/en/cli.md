@@ -2,7 +2,9 @@
 
 > **Language:** [English](./cli.md) · [Русский](../ru/cli.md)
 
-Commands and flags as implemented under `cmd/`. Architecture notes: [DESIGN.md §6](../../DESIGN.md#6-cli-reference).
+Commands and flags for the `agentd` binary.
+
+Terms: [Glossary](./glossary.md). Architecture notes: [DESIGN.md §6](../../DESIGN.md#6-cli-reference).
 
 ## Persistent flags
 
@@ -67,7 +69,7 @@ Curated feature toggles (`enable` / `disable` / `get`) write **user or project**
 | `config patch` | `--file` (required) | Patch runtime overlay (daemon required) |
 | `config record-decision` | `--fingerprint` (required), `--scope` (`project` default), `--project-root`, `--session-id`, `--expires-at` (RFC3339) | Upsert approval |
 
-**Features:** `trajectory`, `trajectory-raw`, `guard-shell`, `guard-mcp`, `guard-paths`. Default `--scope`: user for trajectory toggles; project for guard toggles. Offline; running daemon reloads via fsnotify.
+**Features:** `trajectory`, `trajectory-raw`, `trajectory-statistics`, `guard-shell`, `guard-mcp`, `guard-paths`. Default `--scope`: user for trajectory toggles; project for guard toggles. Offline; running daemon reloads via config file watcher.
 
 | Feature | YAML path | Default scope |
 |---------|-----------|---------------|
@@ -92,11 +94,17 @@ agentd config get trajectory
 cd /path/to/repo
 agentd config enable guard-shell
 # guard-shell: enabled (project /path/to/repo/.agentd.yaml)
+
+# record-decision with wall-clock expiry (project scope)
+agentd config record-decision \
+  --fingerprint 'sha256:shell/…' \
+  --scope project \
+  --expires-at 2026-12-31T23:59:59Z
 ```
 
 **Project path asymmetry:** `config get --cwd DIR` walks up from `DIR` to find `.agentd.yaml` (same as hook merge). `config enable|disable` with project scope writes **only** `DIR/.agentd.yaml` — it does not update a parent repo config. Run from the repo root (or pass `--cwd` there) when you intend project-level guards.
 
-**Not toggleable via CLI:** `guards.secrets` (and other non-boolean knobs) — edit YAML or use `config show` / `config patch`. Only the five features above are curated toggles.
+**Not toggleable via CLI:** `guards.secrets` (and other non-boolean knobs) — edit YAML or use `config show` / `config patch`. Only the six features above are curated toggles.
 
 ## doctor
 
@@ -138,11 +146,11 @@ agentd install --all-detected --yes        # write files
 agentd install --provider=cursor --dry-run
 ```
 
-In an interactive terminal, `agentd install` with no flags opens the short wizard ([`setup`](#setup)). Scripts and CI must pass `--provider` or `--all-detected`.
+In an interactive terminal, `agentd install` with no flags opens the short install wizard ([`setup`](#setup)). Scripts and CI must pass `--provider` or `--all-detected`, or set `AGENTD_NO_TUI=1` or `CI=true`.
 
 ## setup
 
-Interactive flow in a real terminal: find agents, pick where to install, show the plan, optionally write files.
+Interactive install wizard in a real terminal: find agents, pick where to install, show the plan, optionally write files.
 
 | Flag | Default | Meaning |
 |------|---------|---------|
@@ -150,7 +158,7 @@ Interactive flow in a real terminal: find agents, pick where to install, show th
 | `--dry-run` | off | Show the plan; write nothing |
 | `--cwd` | current directory | Project root for detection |
 
-`AGENTD_NO_TUI=1` or `CI=true` turns this off (the command explains how to install without a terminal).
+`AGENTD_NO_TUI=1` or `CI=true` turns the wizard off (the command explains how to install without a terminal).
 
 ```bash
 agentd setup
@@ -163,19 +171,11 @@ agentd setup --yes
 |---------|-------|
 | `dispatch routes` | `--json`, `--cwd` |
 
-Offline compile of defaults ⊕ user ⊕ optional project (no daemon required).
+Offline compile of defaults merged with user merged with optional project (no daemon required).
 
 ## session
 
 Trajectory ledger inspect/export ([Trajectory](./trajectory.md)). Offline — reads `sessions/` under the [state directory](./configuration.md#state-directory). **Exceptions:** `session subscribe` and `trajectory stats` require a running daemon.
-
-## trajectory stats
-
-```bash
-agentd trajectory stats [--provider ID] [--json]
-```
-
-Daemon-lifetime counters since process start (`since` in output). Requires `trajectory.enabled` and `trajectory.statistics`. See [Trajectory § Daemon statistics](./trajectory.md#daemon-statistics).
 
 | Command | Flags |
 |---------|-------|
@@ -187,11 +187,11 @@ Daemon-lifetime counters since process start (`since` in output). Requires `traj
 | `session replay` | `--policy` (required), `--provider`, `--session`, `--seq`, `--json` |
 | `session fork` | `--provider`, `--session`, `--new-session`, `--at-seq`, `--json` |
 | `session stats` | `SESSION_ID`, `--provider` (required), `--json` |
-| `session subscribe` | `--provider`, `--session`, `--source`, `--json` (live firehose; daemon required) |
+| `session subscribe` | `--provider`, `--session`, `--source`, `--json` (live stream; daemon required) |
 
 `session search` scans JSONL line-by-line (O(total bytes); no index). `session import`: Claude Code and Codex `supported`; Cursor `partial` (prefer `--path`); others explicit `none`. `session replay --policy` needs `include_raw` at record time. `session fork` is audit lineage only (source immutable). `session subscribe` is live-only from dial time — use show/export for history.
 
-### session import `--out`
+### Import without writing the ledger
 
 **Default:** appends parsed transcript events to the session ledger under the [state directory](./configuration.md#state-directory); prints summary to **stdout**.
 
@@ -216,4 +216,12 @@ Pipe example:
 agentd session import --provider claude-code --path /path/to/session.jsonl --out - | jq -c 'select(.type=="transcript/message")'
 ```
 
-See also: [Getting started](./getting-started.md), [Providers](./providers.md).
+## trajectory stats
+
+```bash
+agentd trajectory stats [--provider ID] [--json]
+```
+
+Daemon-lifetime counters since process start (`since` in output). Requires `trajectory.enabled` and `trajectory.statistics`. See [Trajectory → Daemon statistics](./trajectory.md#daemon-statistics).
+
+See also: [Getting started](./getting-started.md), [Providers](./providers.md), [Glossary](./glossary.md).

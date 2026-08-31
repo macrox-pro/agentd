@@ -17,6 +17,7 @@ How to keep `docs/en/` and `docs/ru/` accurate when code changes. EN is canonica
 | Install providers / scopes / entrypoints / quirks | [providers.md](./providers.md) + `providers-*.md`, [getting-started.md](./getting-started.md) |
 | Install / Releases / version wiring | [installation.md](./installation.md) |
 | Failure modes / offline / timeouts | [troubleshooting.md](./troubleshooting.md) |
+| Trajectory / session ledger / import / subscribe | [trajectory.md](./trajectory.md), [cli.md](./cli.md) (session commands) |
 | User-visible README claims | [README.md](../../README.md) + matching docs page ([why.md](./why.md) if positioning changes) |
 
 If code and DESIGN disagree, **document code** and fix DESIGN in the same change when practical.
@@ -24,6 +25,7 @@ If code and DESIGN disagree, **document code** and fix DESIGN in the same change
 ## Rules
 
 - Edit **EN first**, then **RU** (same filename, same section order). Identifiers stay English in RU.
+- **Writing style:** [CONVENTIONS.md § Documentation style](../../CONVENTIONS.md#documentation-style) — page types, beginner terms, RU terminology table, no internal names in user docs.
 - No fluff; state commands, keys, and Status fields.
 - Do not invent flags or YAML keys not present in `cmd/` / `file.go`.
 - Non-goals (DESIGN §11) stay non-goals — do not oversell.
