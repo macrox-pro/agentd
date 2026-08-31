@@ -20,7 +20,7 @@ Contributor rules: [AGENTS.md](./AGENTS.md) · Code style: [CONVENTIONS.md](./CO
 | Trajectory / session ledger | **§14** | [docs/en/trajectory.md](./docs/en/trajectory.md) |
 | Provider quirks (hook wire) | **§14.3** matrix + [docs/en/providers.md](./docs/en/providers.md) | `providers-*.md` |
 | Intent note hot path tag | **§1.5** (`invoke_sync` \| `config_reload` \| `async_side` \| `other`) | — |
-| Milestone history / acceptance | [PROGRESS.md § Milestones archive](./PROGRESS.md#milestones-archive) | — |
+| Milestone history / acceptance | [PROGRESS.md](./PROGRESS.md) | — |
 
 **Invariants agents must preserve:** hook CLI decode/encode only (no policy); `Store.Current()` on Invoke (no disk I/O); async/trajectory never block sync wire; `Engine` must not switch on target kind (use `targets` factory); preserve `Event.Raw` verbatim; never log to hook stdout.
 
@@ -77,7 +77,7 @@ flowchart TB
 |---------|------|-----------|
 | **Daemon** | gRPC, Dispatch, guards, ConfigStore, async queue | One per user |
 | **Hook CLI** | Wire decode/encode; single gRPC `Invoke` | Process-per-event |
-| **Mgmt CLI** | start/stop/status/install/config | Short-lived |
+| **Mgmt CLI** | start/stop/status/install/config/doctor/setup | Short-lived |
 
 ### agenthooks integration
 
@@ -85,7 +85,7 @@ flowchart TB
 |---------|---------|-------|
 | Public hook CLI | `agentd hook run\|notify\|serve --provider=…` | Docs + manual setup |
 | Install sentinel | `agentd agenthooks …` (hidden) | `agenthooks/install` appends this to generated configs |
-| Install | `agentd install --provider=P --scope=S` | `Command` = absolute `agentd` path; library appends `agenthooks run\|serve\|notify` |
+| Install | `agentd install --provider=P --scope=S` or `--all-detected` | `Command` = absolute `agentd` path; library appends `agenthooks run\|serve\|notify`; `--all-detected` writes only with `--yes` |
 
 Both `hook` and `agenthooks` wrap the same `hookedge` path (`cmd/hook.go`). Daemon owns `*agenthooks.Runner` for `builtin` sync targets; guards → sync, observers → async `observe: true`. OpenCode: `hook serve` holds stdio; NDJSON frames → `Invoke`; session mutex in daemon.
 
@@ -151,7 +151,8 @@ When `trajectory.enabled`, `Invoke` also enqueues ledger records (separate bound
 | `internal/daemon` | `other` | start/stop, lock, status, reload signal |
 | `internal/transport` | `other` | Unix socket / named pipe I/O |
 | `internal/hookclient` | `invoke_sync` | gRPC client to daemon |
-| `internal/install` | `other` | Provider hook install via agenthooks |
+| `internal/install` | `other` | Discover, Plan, doctor report, hook install via agenthooks |
+| `internal/install/tui` | `other` | Setup wizard; `install` must not import this package |
 
 **Ownership rules:** Kind→impl mapping only in `targets` factory — not in `Engine`. Guard attach only via `guard.AttachCheckers` wired from `targets/builtin`. HookService ports (`Invoker`, `SnapshotSource`) in `server/invoke.go`.
 
@@ -285,6 +286,7 @@ Protobuf: `api/agentd/v1/`. Buf rules: [AGENTS.md § Protobuf](./AGENTS.md#proto
 | **DaemonService** | `Health`, `Status`, `ReloadConfig`, `Shutdown` | Liveness, ops, graceful stop |
 | **ConfigService** | `GetConfig`, `PatchConfig`, `RecordDecision` | Config views, runtime patch, Ask approvals |
 | **SessionService** | `Subscribe` | Live trajectory firehose (post-commit) |
+| **TrajectoryService** | `Statistics` | Daemon-lifetime rollup (not on hook hot path) |
 
 **InvokeRequest:** `provider`, `variant`, `raw_payload`, `invocation_mode`, `deadline`, `cwd`, `project_root`  
 **InvokeResponse:** `decision`, `config_generation`, `async_dispatched_count`  
@@ -319,10 +321,12 @@ agentd
 ├── daemon/          # lifecycle (start|stop|status|reload|enable|disable)
 ├── hook/            # agent entrypoint (run|notify|serve)
 ├── agenthooks/      # hidden install argv sentinel (same as hook *)
-├── install/         # agenthooks install wrapper
+├── doctor           # read-only discover + hook status
+├── setup            # TUI wizard (TTY; AGENTD_NO_TUI / CI bypass)
+├── install          # --provider or --all-detected (plan-only unless --yes)
 ├── config/          # validate|show|enable|disable|get|patch|record-decision
 ├── dispatch/        # routes introspection
-└── session/         # trajectory list|show|export|search|import|replay|fork|subscribe|stats
+├── session/         # trajectory list|show|export|search|import|replay|fork|subscribe|stats
 └── trajectory/      # trajectory stats (daemon rollup; requires running daemon)
 ```
 
@@ -339,6 +343,9 @@ agentd
 | `session subscribe` | Live trajectory stream from daemon; also `trajectory stats` for rollup counters |
 | Login autostart | `daemon enable` / `disable` register OS user-level autostart (systemd / launchd / schtasks); `disable` never stops running daemon; partial enable failure keeps autostart — [docs/en/operations.md](./docs/en/operations.md#autostart-at-login) |
 | Config toggles | `config enable\|disable\|get` write curated booleans to user/project YAML only; `config patch` is runtime overlay; distinct from `daemon enable` (autostart) |
+| Doctor | Read-only Discover+Plan; daemon unreachable is a report field, not an error |
+| Setup / TUI | `internal/install/tui`; `install` must not import `tui` (`cmd/` wires both). Non-TTY / `AGENTD_NO_TUI` / `CI` → `--provider` or `--all-detected` |
+| Auto-install | `--all-detected` uses high-confidence findings only; writes require `--yes` |
 | New command | Update **docs/en/cli.md + docs/ru/cli.md**; add row here only if architecturally significant |
 
 ### CLI `--out` pattern (session commands)

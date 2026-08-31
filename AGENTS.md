@@ -124,7 +124,7 @@ A plan with fewer than ~5 coarse todos for a multi-file phase is usually under-s
 | `internal/server` | Thin gRPC mapping | policy, dispatch logic |
 | `internal/transport` | Unix socket / named pipe I/O | business logic |
 | `internal/hookclient` | gRPC client to daemon | hook wire |
-| `internal/install` | Provider hook install via agenthooks | daemon logic |
+| `internal/install` | Discover, Plan, doctor, hook install via agenthooks | daemon logic, TUI (`install/tui`) |
 | `internal/provider` | Canonical coding-agent provider ids and enum mapping | wire I/O, ledger, importer logic |
 
 - `cmd/`: flags + Cobra + **CLI input validation in the same file as the subcommand** (`session_import.go`, not a separate `session_import_validate.go`); domain logic in `internal/` ([CONVENTIONS.md § CLI](./CONVENTIONS.md#cli-cmd)).
