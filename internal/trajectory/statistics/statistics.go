@@ -6,7 +6,8 @@
 // Invariants:
 //   - Gate requires trajectory.enabled && trajectory.statistics.
 //   - Daemon Observe is one increment per successful Invoke (not per ledger line).
-//   - No per-session map in daemon Collector (global + per-provider only).
+//   - Snapshot exposes global + per-provider rollups only (no per-session state in API).
+//   - Internal cursorStopLast tracks Cursor cumulative stop billing deltas until daemon restart.
 //   - Token fields increment only when extractors find values.
 //
 // Entry: Gate, NewCollector, Collector.Observe, Collector.Snapshot, Load, FromEvents, HookKind.

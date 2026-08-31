@@ -5,6 +5,7 @@
 ### Highlights
 
 - **Prometheus metrics** — opt-in loopback `/metrics` (default off; `127.0.0.1:2112`); runtime gauges, invoke/async histograms, config reload counter; `daemon status --json` field `metrics_listen`; CLI `--metrics-listen`
+- **`trajectory stats`** — Cursor `stop` billing token extract + per-session delta aggregation; CLI `--json` uses enum names and numeric counters (not proto int map keys)
 
 ## [v0.0.5] — 2026-08-29
 

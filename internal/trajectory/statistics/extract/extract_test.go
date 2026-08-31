@@ -30,6 +30,35 @@ func TestExtract(t *testing.T) {
 			},
 		},
 		{
+			name: "cursor_stop_top_level",
+			prov: agentdv1.Provider_PROVIDER_CURSOR,
+			raw:  `{"input_tokens":19582,"output_tokens":92,"cache_read_tokens":6272,"cache_write_tokens":0}`,
+			check: func(t *testing.T, got extract.TokenFields) {
+				t.Helper()
+				assert.True(t, got.HasInput)
+				assert.Equal(t, uint64(19582), got.Input)
+				assert.True(t, got.HasOutput)
+				assert.Equal(t, uint64(92), got.Output)
+				assert.True(t, got.HasCacheRead)
+				assert.Equal(t, uint64(6272), got.CacheRead)
+				assert.True(t, got.HasCacheWrite)
+				assert.Equal(t, uint64(0), got.CacheWrite)
+			},
+		},
+		{
+			name: "cursor_stop_partial",
+			prov: agentdv1.Provider_PROVIDER_CURSOR,
+			raw:  `{"input_tokens":42}`,
+			check: func(t *testing.T, got extract.TokenFields) {
+				t.Helper()
+				assert.True(t, got.HasInput)
+				assert.Equal(t, uint64(42), got.Input)
+				assert.False(t, got.HasOutput)
+				assert.False(t, got.HasCacheRead)
+				assert.False(t, got.HasCacheWrite)
+			},
+		},
+		{
 			name: "cursor_pre_compact",
 			prov: agentdv1.Provider_PROVIDER_CURSOR,
 			raw:  `{"context_tokens":120000}`,
@@ -37,6 +66,20 @@ func TestExtract(t *testing.T) {
 				t.Helper()
 				assert.True(t, got.HasContext)
 				assert.Equal(t, uint64(120000), got.Context)
+			},
+		},
+		{
+			name: "codex_cached_input_tokens",
+			prov: agentdv1.Provider_PROVIDER_CODEX,
+			raw:  `{"usage":{"input_tokens":10,"cached_input_tokens":5,"output_tokens":2}}`,
+			check: func(t *testing.T, got extract.TokenFields) {
+				t.Helper()
+				assert.True(t, got.HasInput)
+				assert.Equal(t, uint64(10), got.Input)
+				assert.True(t, got.HasCacheRead)
+				assert.Equal(t, uint64(5), got.CacheRead)
+				assert.True(t, got.HasOutput)
+				assert.Equal(t, uint64(2), got.Output)
 			},
 		},
 		{

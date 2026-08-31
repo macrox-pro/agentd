@@ -63,7 +63,7 @@ agentd config enable trajectory-statistics
 agentd trajectory stats [--provider ID] [--json]
 ```
 
-Нужен **запущенный daemon**. Счётчики сбрасываются при перезапуске; `since` — время старта демона. Опциональный `--provider` фильтрует rollup. Токены появляются только если при записи был `trajectory.include_raw`.
+Нужен **запущенный daemon**. Счётчики сбрасываются при перезапуске; `since` — время старта демона. Опциональный `--provider` фильтрует rollup. Токены daemon rollup извлекаются из `RawPayload` каждого Invoke (не зависят от `include_raw`). Billing-токены Cursor — на хуке `stop` (кумулятивные по сессии, дельта-агрегация); `context_tokens_last` — на `preCompact`. Для offline `session stats` токены в JSONL нужен `include_raw`.
 
 ## Subscribe (live-поток)
 

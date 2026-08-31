@@ -105,6 +105,36 @@ func TestFromEvents(t *testing.T) {
 				assert.Equal(t, uint64(1), s.EventsByType[trajectory.TypeAsyncDropped])
 			},
 		},
+		{
+			name: "cursor_stop_delta_from_events",
+			events: []trajectory.Event{
+				{Seq: 1, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "s1", TS: now,
+					Data: json.RawMessage(`{"kind":"agent.stop"}`),
+					Raw:  json.RawMessage(`{"input_tokens":100,"output_tokens":10}`)},
+				{Seq: 2, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "s1", TS: now,
+					Data: json.RawMessage(`{"kind":"agent.stop"}`),
+					Raw:  json.RawMessage(`{"input_tokens":250,"output_tokens":25}`)},
+			},
+			check: func(t *testing.T, s statistics.Session) {
+				assert.Equal(t, uint64(250), s.InputTokensTotal)
+				assert.Equal(t, uint64(25), s.OutputTokensTotal)
+			},
+		},
+		{
+			name: "cursor_stop_two_sessions_from_events",
+			events: []trajectory.Event{
+				{Seq: 1, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "a", TS: now,
+					Data: json.RawMessage(`{"kind":"agent.stop"}`),
+					Raw:  json.RawMessage(`{"input_tokens":10,"output_tokens":1}`)},
+				{Seq: 2, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "b", TS: now,
+					Data: json.RawMessage(`{"kind":"agent.stop"}`),
+					Raw:  json.RawMessage(`{"input_tokens":20,"output_tokens":2}`)},
+			},
+			check: func(t *testing.T, s statistics.Session) {
+				assert.Equal(t, uint64(30), s.InputTokensTotal)
+				assert.Equal(t, uint64(3), s.OutputTokensTotal)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -17,6 +17,11 @@ func (t TokenFields) Any() bool {
 	return t.HasInput || t.HasOutput || t.HasCacheRead || t.HasCacheWrite || t.HasContext
 }
 
+// HasBilling reports whether any billing counter was extracted.
+func (t TokenFields) HasBilling() bool {
+	return t.HasInput || t.HasOutput || t.HasCacheRead || t.HasCacheWrite
+}
+
 // Tokens extracts provider-specific token fields from raw hook JSON.
 func Tokens(prov agentdv1.Provider, raw []byte) TokenFields {
 	if len(raw) == 0 {
@@ -26,7 +31,7 @@ func Tokens(prov agentdv1.Provider, raw []byte) TokenFields {
 	case agentdv1.Provider_PROVIDER_CODEX:
 		return usageFromCodex(raw)
 	case agentdv1.Provider_PROVIDER_CURSOR:
-		return contextFromCursor(raw)
+		return tokensFromCursor(raw)
 	case agentdv1.Provider_PROVIDER_CLAUDE_CODE:
 		return usageFromClaude(raw)
 	default:
@@ -49,12 +54,28 @@ func usageFromCodex(raw []byte) TokenFields {
 	return TokenFields{}
 }
 
-func contextFromCursor(raw []byte) TokenFields {
+func tokensFromCursor(raw []byte) TokenFields {
 	var m map[string]any
 	if err := json.Unmarshal(raw, &m); err != nil {
 		return TokenFields{}
 	}
 	var out TokenFields
+	if v, ok := uint64Field(m, "input_tokens"); ok {
+		out.Input = v
+		out.HasInput = true
+	}
+	if v, ok := uint64Field(m, "output_tokens"); ok {
+		out.Output = v
+		out.HasOutput = true
+	}
+	if v, ok := uint64Field(m, "cache_read_tokens"); ok {
+		out.CacheRead = v
+		out.HasCacheRead = true
+	}
+	if v, ok := uint64Field(m, "cache_write_tokens"); ok {
+		out.CacheWrite = v
+		out.HasCacheWrite = true
+	}
 	if v, ok := uint64Field(m, "context_tokens"); ok {
 		out.Context = v
 		out.HasContext = true
@@ -92,6 +113,9 @@ func parseUsageObject(raw json.RawMessage) TokenFields {
 		out.HasOutput = true
 	}
 	if v, ok := uint64Field(m, "cache_read_input_tokens"); ok {
+		out.CacheRead = v
+		out.HasCacheRead = true
+	} else if v, ok := uint64Field(m, "cached_input_tokens"); ok {
 		out.CacheRead = v
 		out.HasCacheRead = true
 	}

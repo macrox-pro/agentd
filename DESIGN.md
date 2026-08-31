@@ -531,4 +531,4 @@ Two surfaces, both gated by `trajectory.enabled && trajectory.statistics`:
 | Daemon rollup | `agentd trajectory stats` | In-memory until daemon restart | gRPC `TrajectoryService.Statistics`; `since` = daemon `StartedAt` |
 | Session scan | `agentd session stats ID --provider P` | None (computed) | Offline JSONL scan after config gate |
 
-Token fields require `include_raw: true` at record time. Gemini/OpenCode/Kimi: hooks-only counters in v1 (no token extractors).
+Token fields: daemon rollup reads Invoke `RawPayload` always; offline `session stats` needs `include_raw` in JSONL. Cursor `stop` billing tokens are cumulative per session (daemon applies per-session delta). CLI `trajectory stats --json` uses enum names; gRPC wire keeps int map keys. Gemini/OpenCode/Kimi: hooks-only counters in v1 (no token extractors).

@@ -17,6 +17,7 @@ func FromEvents(events []trajectory.Event) Session {
 	}
 	out.Provider = events[0].Provider
 	out.SessionID = events[0].SessionID
+	cursorStopLast := map[string]extract.TokenFields{}
 	for _, ev := range events {
 		out.EventCount++
 		out.EventsByType[ev.Type]++
@@ -47,7 +48,9 @@ func FromEvents(events []trajectory.Event) Session {
 						prov = p
 					}
 				}
-				applySessionTokens(&out, extract.Tokens(prov, ev.Raw))
+				tokens := extract.Tokens(prov, ev.Raw)
+				applySessionTokens(&out, billingTokensForRollup(prov, ev.SessionID, cursorStopLast, tokens))
+				applySessionTokens(&out, contextTokensForRollup(tokens))
 			}
 		case trajectory.TypeHookDecided:
 			var data trajectory.HookDecidedData

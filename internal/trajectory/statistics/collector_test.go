@@ -35,6 +35,21 @@ func sampleRecordInput(snap *config.Snapshot) trajectory.RecordInput {
 	}
 }
 
+func cursorStopInput(snap *config.Snapshot, sessionID, raw string) trajectory.RecordInput {
+	return trajectory.RecordInput{
+		Provider: agentdv1.Provider_PROVIDER_CURSOR,
+		RawPayload: []byte(raw),
+		Result: dispatch.InvokeResult{
+			Meta: dispatch.InvokeMeta{
+				EventKind: "agent.stop",
+				SessionID: sessionID,
+			},
+			Decision: decision.Neutral(),
+		},
+		Snap: snap,
+	}
+}
+
 func TestObserve(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -146,6 +161,102 @@ func TestObserve(t *testing.T) {
 				r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
 				assert.Equal(t, uint64(4), r.InputTokensTotal)
 				assert.Equal(t, uint64(0), r.OutputTokensTotal)
+			},
+		},
+		{
+			name: "cursor_stop_single",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				return statistics.NewCollector(), cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":19582,"output_tokens":92,"cache_read_tokens":6272,"cache_write_tokens":0}`)
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					r := c.Snapshot(agentdv1.Provider_PROVIDER_CURSOR)
+					return r.InputTokensTotal == 19582 && r.OutputTokensTotal == 92 && r.CacheReadTokens == 6272
+				}, time.Second, 5*time.Millisecond)
+			},
+		},
+		{
+			name: "cursor_stop_two_stops_same_session",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				c := statistics.NewCollector()
+				c.Observe(cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":100,"output_tokens":10}`))
+				return c, cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":250,"output_tokens":25}`)
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
+					return r.InputTokensTotal == 250 && r.OutputTokensTotal == 25
+				}, time.Second, 5*time.Millisecond)
+			},
+		},
+		{
+			name: "cursor_stop_two_sessions",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				c := statistics.NewCollector()
+				c.Observe(cursorStopInput(enabledSnap(true), "a", `{"input_tokens":10,"output_tokens":1}`))
+				return c, cursorStopInput(enabledSnap(true), "b", `{"input_tokens":20,"output_tokens":2}`)
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
+					return r.InputTokensTotal == 30 && r.OutputTokensTotal == 3
+				}, time.Second, 5*time.Millisecond)
+			},
+		},
+		{
+			name: "cursor_stop_regression_saturates",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				c := statistics.NewCollector()
+				c.Observe(cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":250,"output_tokens":25}`))
+				return c, cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":100,"output_tokens":10}`)
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
+					return r.InputTokensTotal == 250 && r.OutputTokensTotal == 25
+				}, time.Second, 5*time.Millisecond)
+			},
+		},
+		{
+			name: "cursor_stop_no_token_fields",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				return statistics.NewCollector(), cursorStopInput(enabledSnap(true), "s1", `{"status":"completed","loop_count":0}`)
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				time.Sleep(20 * time.Millisecond)
+				r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
+				assert.Equal(t, uint64(1), r.HooksByKind[agentdv1.EventKind_EVENT_KIND_AGENT_STOP])
+				assert.Equal(t, uint64(0), r.InputTokensTotal)
+			},
+		},
+		{
+			name: "cursor_precompact_context_last",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				c := statistics.NewCollector()
+				in := cursorStopInput(enabledSnap(true), "s1", `{"context_tokens":120000}`)
+				in.Result.Meta.EventKind = "preCompact"
+				return c, in
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					return c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED).ContextTokensLast == 120000
+				}, time.Second, 5*time.Millisecond)
+				r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
+				assert.Equal(t, uint64(0), r.InputTokensTotal)
+			},
+		},
+		{
+			name: "cursor_empty_session_id",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				c := statistics.NewCollector()
+				c.Observe(cursorStopInput(enabledSnap(true), "", `{"input_tokens":10,"output_tokens":1}`))
+				return c, cursorStopInput(enabledSnap(true), "", `{"input_tokens":20,"output_tokens":2}`)
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
+					return r.InputTokensTotal == 30 && r.OutputTokensTotal == 3
+				}, time.Second, 5*time.Millisecond)
 			},
 		},
 	}

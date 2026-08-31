@@ -4,19 +4,29 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 )
 
-var protoJSON = protojson.MarshalOptions{
-	EmitUnpopulated: false,
-	Indent:          "  ",
-	UseProtoNames:   true,
+type statisticsResponseJSON struct {
+	Since  time.Time  `json:"since"`
+	Rollup rollupJSON `json:"rollup"`
+}
+
+type rollupJSON struct {
+	HooksByKind           map[string]uint64 `json:"hooks_by_kind"`
+	DecisionsByKind       map[string]uint64 `json:"decisions_by_kind"`
+	AsyncDispatchedTotal  uint64            `json:"async_dispatched_total"`
+	InputTokensTotal      uint64            `json:"input_tokens_total"`
+	OutputTokensTotal     uint64            `json:"output_tokens_total"`
+	CacheReadTokensTotal  uint64            `json:"cache_read_tokens_total"`
+	CacheWriteTokensTotal uint64            `json:"cache_write_tokens_total"`
+	ContextTokensLast     uint64            `json:"context_tokens_last"`
 }
 
 // WriteRollup formats daemon statistics RPC response for CLI output.
@@ -25,16 +35,23 @@ func WriteRollup(w io.Writer, resp *agentdv1.StatisticsResponse, jsonOut bool) e
 		return fmt.Errorf("nil statistics response")
 	}
 	if jsonOut {
-		b, err := protoJSON.Marshal(resp)
-		if err != nil {
-			return err
+		out := statisticsResponseJSON{
+			Since:  time.Time{},
+			Rollup: rollupJSON{HooksByKind: map[string]uint64{}, DecisionsByKind: map[string]uint64{}},
 		}
-		_, err = w.Write(append(b, '\n'))
-		return err
+		if ts := resp.GetSince(); ts != nil {
+			out.Since = ts.AsTime().UTC()
+		}
+		if r := resp.GetRollup(); r != nil {
+			out.Rollup = rollupToJSON(r)
+		}
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		return enc.Encode(out)
 	}
 	since := ""
 	if ts := resp.GetSince(); ts != nil {
-		since = ts.AsTime().UTC().Format(time.RFC3339)
+		since = ts.AsTime().UTC().Format(time.RFC3339Nano)
 	}
 	r := resp.GetRollup()
 	if r == nil {
@@ -48,12 +65,8 @@ func WriteRollup(w io.Writer, resp *agentdv1.StatisticsResponse, jsonOut bool) e
 	fmt.Fprintf(w, "cache_read_tokens_total=%d\n", r.GetCacheReadTokensTotal())
 	fmt.Fprintf(w, "cache_write_tokens_total=%d\n", r.GetCacheWriteTokensTotal())
 	fmt.Fprintf(w, "context_tokens_last=%d\n", r.GetContextTokensLast())
-	for k, v := range r.GetHooksByKind() {
-		fmt.Fprintf(w, "hooks_by_kind[%s]=%d\n", eventKindName(k), v)
-	}
-	for k, v := range r.GetDecisionsByKind() {
-		fmt.Fprintf(w, "decisions_by_kind[%s]=%d\n", decisionKindName(k), v)
-	}
+	writeSortedUint64Map(w, "hooks_by_kind", r.GetHooksByKind(), eventKindName)
+	writeSortedUint64Map(w, "decisions_by_kind", r.GetDecisionsByKind(), decisionKindName)
 	return nil
 }
 
@@ -73,12 +86,10 @@ func WriteSession(w io.Writer, s Session, jsonOut bool) error {
 	fmt.Fprintf(w, "input_tokens_total=%d output_tokens_total=%d\n", s.InputTokensTotal, s.OutputTokensTotal)
 	fmt.Fprintf(w, "cache_read_tokens_total=%d cache_write_tokens_total=%d context_tokens_last=%d\n",
 		s.CacheReadTokensTotal, s.CacheWriteTokensTotal, s.ContextTokensLast)
-	for k, v := range s.HooksByKind {
-		fmt.Fprintf(w, "hooks_by_kind[%s]=%d\n", k, v)
-	}
-	for k, v := range s.DecisionsByKind {
-		fmt.Fprintf(w, "decisions_by_kind[%s]=%d\n", k, v)
-	}
+	writeSortedStringMap(w, "hooks_by_kind", s.HooksByKind)
+	writeSortedStringMap(w, "decisions_by_kind", s.DecisionsByKind)
+	writeSortedStringMap(w, "events_by_type", s.EventsByType)
+	writeSortedStringMap(w, "events_by_source", s.EventsBySource)
 	return nil
 }
 
@@ -108,6 +119,56 @@ func Response(since time.Time, r StatisticsRollup) *agentdv1.StatisticsResponse 
 	return &agentdv1.StatisticsResponse{
 		Since:  timestamppb.New(since),
 		Rollup: RollupToProto(r),
+	}
+}
+
+func rollupToJSON(r *agentdv1.StatisticsRollup) rollupJSON {
+	out := rollupJSON{
+		HooksByKind:           map[string]uint64{},
+		DecisionsByKind:       map[string]uint64{},
+		AsyncDispatchedTotal:  r.GetAsyncDispatchedTotal(),
+		InputTokensTotal:      r.GetInputTokensTotal(),
+		OutputTokensTotal:     r.GetOutputTokensTotal(),
+		CacheReadTokensTotal:  r.GetCacheReadTokensTotal(),
+		CacheWriteTokensTotal: r.GetCacheWriteTokensTotal(),
+		ContextTokensLast:     r.GetContextTokensLast(),
+	}
+	for k, v := range r.GetHooksByKind() {
+		out.HooksByKind[eventKindName(k)] = v
+	}
+	for k, v := range r.GetDecisionsByKind() {
+		out.DecisionsByKind[decisionKindName(k)] = v
+	}
+	return out
+}
+
+func writeSortedUint64Map(w io.Writer, prefix string, m map[int32]uint64, name func(int32) string) {
+	if len(m) == 0 {
+		return
+	}
+	keys := make([]int32, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	slices.SortFunc(keys, func(a, b int32) int {
+		return strings.Compare(name(a), name(b))
+	})
+	for _, k := range keys {
+		fmt.Fprintf(w, "%s[%s]=%d\n", prefix, name(k), m[k])
+	}
+}
+
+func writeSortedStringMap(w io.Writer, prefix string, m map[string]uint64) {
+	if len(m) == 0 {
+		return
+	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	for _, k := range keys {
+		fmt.Fprintf(w, "%s[%s]=%d\n", prefix, k, m[k])
 	}
 }
 
