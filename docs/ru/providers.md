@@ -67,3 +67,5 @@ agentd install --provider=PROVIDER --scope=SCOPE [--dir PATH]
 | `kimi-code` | — | `$KIMI_CODE_HOME` или `~/.kimi-code` | только пользователь |
 
 Область `plugin` сама не выбирается. Явно: `agentd install --provider=… --scope=plugin --dir=…`.
+
+См. также: [Быстрый старт](./getting-started.md), [Справочник команд](./cli.md), [Глоссарий](./glossary.md).

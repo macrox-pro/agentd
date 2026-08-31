@@ -6,7 +6,7 @@
 
 ## Демон не запущен
 
-`hook run|notify|serve` пишет в stderr `daemon not running`, затем применяет `policy.offline` из локального конфига (defaults ⊕ user ⊕ project ⊕ runtime).
+`hook run|notify|serve` пишет в stderr `daemon not running`, затем применяет `policy.offline` из локального конфига (встроенные defaults, затем user, project и runtime, слой за слоем).
 
 | `policy.offline` | Поведение |
 |------------------|-----------|

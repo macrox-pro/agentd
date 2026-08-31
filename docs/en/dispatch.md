@@ -102,7 +102,7 @@ Effective sync budget:
 
 `min(provider_timeout − 10%, route.sync_timeout)` when `sync_timeout` is set; otherwise provider timeout minus 10%.
 
-- If Invoke carries a deadline → that duration is the provider timeout.
+- If the hook request carries a deadline → that duration is the provider timeout.
 - Else kind defaults: `tool.pre` / `prompt.submitted` → **30s**; other kinds → **5s** (aligned with install hook timeouts).
 
 Per-target gRPC `timeout` is clamped to remaining context budget.

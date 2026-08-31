@@ -29,20 +29,6 @@ Terms: [docs/en/glossary.md](./docs/en/glossary.md).
 
 Contributor design and conventions: [DESIGN.md](./DESIGN.md), [AGENTS.md](./AGENTS.md), [CONVENTIONS.md](./CONVENTIONS.md). How to contribute: [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-## Research
-
-Structured verbatim excerpts from primary sources — used when designing provider support, hooks, and conventions. Each tree has its own index and `SOURCES.md`.
-
-| Tree | Focus |
-|------|--------|
-| [research/best-practice](./research/best-practice/) | Go best practices (Go ≥ 1.26.7) |
-| [research/claude-code](./research/claude-code/) | Claude Code docs — agent loop, hooks, MCP, settings, skills, plugins, cloud, enterprise |
-| [research/codex](./research/codex/) | Codex / ChatGPT Learn docs — sandbox, hooks, MCP, cloud, enterprise |
-| [research/cursor](./research/cursor/) | Cursor docs — agent loop, hooks, MCP, settings, enterprise |
-| [research/gemini](./research/gemini/) | Gemini CLI docs (snapshot 2026-08-29) — agent loop, hooks, MCP, settings, skills, extensions, Managed Agents API, Antigravity migration delta |
-
-Stub dirs for other agents (`opencode`, `kimi-code`) live under [`research/`](./research/) and will fill in the same shape.
-
 ## Why agentd?
 
 Coding-agent hooks are powerful, but each agent speaks a slightly different wire format, timeout, and failure mode. Running full policy logic in a new process on every tool call adds latency. Mixing blocking guards with audit webhooks in one script couples concerns that want different lifecycles.
@@ -232,6 +218,10 @@ go test -tags=integration ./...   # optional daemon↔hook integration
 ```
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) and [AGENTS.md](./AGENTS.md).
+
+## Research
+
+Primary-source excerpts used when designing provider support — see [`research/`](./research/) (each tree has an index and `SOURCES.md`).
 
 ## Contributing
 

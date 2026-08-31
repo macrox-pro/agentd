@@ -64,7 +64,7 @@ agentd config validate --config ~/.agentd.yaml
 | `ask_fallback` | `deny` \| `no_decision` | `deny` |
 | `offline` | `fail_open` \| `fail_closed` | `fail_open` |
 
-Когда демон недоступен, внешняя часть хука читает локальный конфиг (defaults ⊕ user ⊕ project(cwd) ⊕ runtime) и применяет `policy.offline`. По умолчанию `fail_open` — нейтральное решение (или код 0 для notify), агент продолжает работу; `fail_closed` — выход с кодом **1**. В обоих режимах в stderr пишется `daemon not running`.
+Когда демон недоступен, внешняя часть хука читает локальный конфиг (встроенные defaults, затем user, project(cwd) и runtime, слой за слоем) и применяет `policy.offline`. По умолчанию `fail_open` — нейтральное решение (или код 0 для notify), агент продолжает работу; `fail_closed` — выход с кодом **1**. В обоих режимах в stderr пишется `daemon not running`.
 
 ### async
 
@@ -134,7 +134,7 @@ agentd config validate --config ~/.agentd.yaml
 | Временный слой | **Не** меняется — временные правки через `config patch` |
 | Нет файла пользователя | `config enable` создаёт тот же файл, что и `daemon start` |
 | Перезагрузка | Слежение за файлами user/project; или `agentd daemon reload` |
-| `config get` | встроенные ⊕ user ⊕ project; **без** временного слоя |
+| `config get` | встроенные, user и project, слой за слоем; **без** временного слоя |
 | Повтор | Повторный enable/disable при том же значении → код 0, без записи |
 | YAML | Сохранение может убрать ручные комментарии в изменённых файлах |
 | Проверка secrets | Не переключается этой командой — правьте `guards.secrets` в YAML |

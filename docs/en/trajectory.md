@@ -61,7 +61,7 @@ agentd trajectory stats [--provider ID] [--json]
 
 Requires a **running daemon**. Counters reset when the daemon process restarts; `since` reflects daemon start time. Optional `--provider` filters the session rollup.
 
-Daemon token totals are extracted from each Invoke `RawPayload` (not gated by `include_raw`):
+Daemon token totals are extracted from each hook event payload (not gated by `include_raw`):
 
 - **Cursor** — billing tokens on `stop` hooks (cumulative per session, delta-aggregated); `context_tokens_last` on `preCompact`.
 - **Codex** — billing tokens from the rollout transcript tail on `Stop` when hook raw carries no usage (`transcript_path` in raw).

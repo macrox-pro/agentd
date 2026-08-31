@@ -20,7 +20,7 @@ agentd install --provider=opencode --scope=project --dir /path/to/repo
 
 1. `agentd daemon start`
 2. OpenCode загружает плагин; shim держит дочерний `serve`.
-3. Каждый кадр NDJSON → gRPC `Invoke`.
+3. Каждая строка NDJSON на stdin/stdout — один обмен событием с демоном.
 
 ```bash
 agentd hook serve --provider=opencode

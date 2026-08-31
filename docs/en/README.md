@@ -25,4 +25,8 @@ New here? [Why agentd](./why.md), then [Getting started](./getting-started.md).
 | [Glossary](./glossary.md) | Terms used across the user guide |
 | [Maintaining docs](./maintaining.md) | When to update EN+RU (contributors) |
 
-Architecture: [DESIGN.md](../../DESIGN.md).
+## See also
+
+- [Glossary](./glossary.md)
+- [Getting started](./getting-started.md)
+- Architecture: [DESIGN.md](../../DESIGN.md)

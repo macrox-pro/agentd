@@ -124,7 +124,7 @@ echo '{"session_id":"s","cwd":"/tmp","hook_event_name":"PreToolUse","tool_name":
 
 A clean “before tool” event with defaults usually returns a no-op the agent understands (Claude: `{}`).
 
-## Next
+## See also
 
 - [Configuration](./configuration.md) — layers and YAML keys
 - [Guards](./guards.md) / [Dispatch](./dispatch.md) — checks and routing

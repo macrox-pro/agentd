@@ -52,3 +52,9 @@
 - [ ] Зеркало в `docs/ru/` (или новая страница в обоих языках)
 - [ ] DESIGN §6 / §7 при смене архитектурных заметок CLI или слоёв схемы
 - [ ] `make docs-check` проходит
+
+## См. также
+
+- [Глоссарий](./glossary.md) — термины в пользовательской документации
+- [CONVENTIONS.md § Documentation style](../../CONVENTIONS.md#documentation-style)
+- [DESIGN.md](../../DESIGN.md) — справочник по устройству

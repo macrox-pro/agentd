@@ -305,7 +305,7 @@ Protobuf: `api/agentd/v1/`. Buf rules: [AGENTS.md § Protobuf](./AGENTS.md#proto
 
 State: socket path in `$XDG_RUNTIME_DIR/agentd/state.json`, PID + lock files. Optional dev: loopback TCP. Implementation: `internal/transport` (`listen_*.go` / `dial_*.go` / `path_*.go`).
 
-**Prometheus metrics HTTP** (opt-in, separate from gRPC IPC): when `metrics.enabled` or `--metrics-listen` is set at daemon start, a loopback TCP server exposes `/metrics` on the compiled listen address (default `127.0.0.1:2112`). Not hot-reloaded — changing `metrics.listen` requires `daemon restart`. Status `metrics_listen` reports the bound address after `Listen`. Implementation: `internal/daemon` + `internal/metrics`; Status field `metrics_listen` when running.
+**Prometheus metrics HTTP** (opt-in, separate from gRPC IPC): when `metrics.enabled` or `--metrics-listen` is set at daemon start, a loopback TCP server exposes `/metrics` on the compiled listen address (default `127.0.0.1:2112`). Not hot-reloaded — changing `metrics.listen` requires `daemon stop` then `daemon start` (`daemon reload` does not rebind the metrics listener). Status `metrics_listen` reports the bound address after `Listen`. Implementation: `internal/daemon` + `internal/metrics`; Status field `metrics_listen` when running.
 
 **Sync grpc target timeout/cancel:** when the sync budget expires or the request context is canceled (`context.DeadlineExceeded` / `context.Canceled`), `GRPCSync` returns the dial/invoke error to `Engine.Invoke` (metrics `outcome=timeout` or `error`) instead of mapping to Deny. Other grpc errors with `fail_closed` still map to Deny without failing Invoke.
 
@@ -540,7 +540,7 @@ Two surfaces, both gated by `trajectory.enabled && trajectory.statistics`:
 
 | Surface | Command | Storage | Notes |
 |---------|---------|---------|-------|
-| Daemon rollup | `agentd trajectory stats` | In-memory until daemon restart | gRPC `TrajectoryService.Statistics`; `since` = daemon `StartedAt` |
+| Daemon rollup | `agentd trajectory stats` | In-memory for the daemon process lifetime (resets on stop+start) | gRPC `TrajectoryService.Statistics`; `since` = daemon `StartedAt` |
 | Session scan | `agentd session stats ID --provider P` | None (computed) | Offline JSONL scan after config gate |
 
 Token fields: daemon rollup reads Invoke `RawPayload` always; offline `session stats` needs `include_raw` in JSONL. Cursor `stop` billing tokens are cumulative per session (daemon applies per-session delta). Codex `Stop` falls back to tail-read of rollout transcript (`last_token_usage` from last `token_count` line) when hook raw has no usage. CLI `trajectory stats --json` uses enum names; gRPC wire keeps int map keys. Gemini/OpenCode/Kimi: hooks-only counters in v1 (no token extractors).

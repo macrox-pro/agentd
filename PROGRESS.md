@@ -11,6 +11,7 @@
 - EN+RU page rewrites: dispatch kind table, trajectory readability, provider uniformity, de-duplicated tables
 - `scripts/check-docs-terms.sh` + `scripts/check-docs-links.sh` wired into `make docs-check`
 - [README.md](./README.md) and [DESIGN.md](./DESIGN.md) updated (glossary link, IPC/TUI/NDJSON/TTL, hook edge naming)
+- Tail pass: RU «пять шагов», ⊕→«слой за слоем», Invoke/RawPayload plain language, See also footers, Research trimmed in README
 
 ```bash
 make docs-check && make lint && make intent-check

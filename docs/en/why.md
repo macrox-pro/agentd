@@ -43,4 +43,8 @@ People who already use coding agents at work and want **one** place to:
 
 Typical uses: audit of “what the agent tried,” alerts on hooks, one policy for Claude + Cursor + others.
 
-Next: [Getting started](./getting-started.md) · architecture: [DESIGN.md](../../DESIGN.md).
+## See also
+
+- [Getting started](./getting-started.md)
+- [Glossary](./glossary.md)
+- Architecture: [DESIGN.md](../../DESIGN.md)

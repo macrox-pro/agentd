@@ -52,3 +52,9 @@ If code and DESIGN disagree, **document code** and fix DESIGN in the same change
 - [ ] Matching `docs/ru/` page(s) updated (or new page added in both)
 - [ ] DESIGN §6 / §7 if CLI architecture notes or schema layer docs change
 - [ ] `make docs-check` passes
+
+## See also
+
+- [Glossary](./glossary.md) — terms used in user docs
+- [CONVENTIONS.md § Documentation style](../../CONVENTIONS.md#documentation-style)
+- [DESIGN.md](../../DESIGN.md) — architecture reference
