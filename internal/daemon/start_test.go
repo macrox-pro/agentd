@@ -6,13 +6,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
+	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/daemon"
 	"github.com/macrox-pro/agentd/internal/hookclient"
 	"github.com/macrox-pro/agentd/internal/transport"
@@ -26,12 +30,36 @@ func (healthStub) Health(context.Context, *agentdv1.HealthRequest) (*agentdv1.He
 	return &agentdv1.HealthResponse{Status: "ok"}, nil
 }
 
+func testEnv(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	state := filepath.Join(root, "state")
+	require.NoError(t, os.MkdirAll(filepath.Join(state, "agentd"), 0o700))
+	if runtime.GOOS == "windows" {
+		t.Setenv("LOCALAPPDATA", state)
+		return root
+	}
+	t.Setenv("XDG_STATE_HOME", state)
+	run := filepath.Join(root, "run")
+	require.NoError(t, os.MkdirAll(filepath.Join(run, "agentd"), 0o700))
+	t.Setenv("XDG_RUNTIME_DIR", run)
+	return root
+}
+
+func skipUnlessDefaultSocketIsolated(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("default socket env isolation requires darwin or linux")
+	}
+}
+
 func testSocket(t *testing.T) (socket, cfg string) {
 	t.Helper()
+	root := testEnv(t)
 	dir, err := os.MkdirTemp("", "agentd-daemon-")
 	require.NoError(t, err, "MkdirTemp")
 	t.Cleanup(func() { _ = os.RemoveAll(dir) })
-	return filepath.Join(dir, "s.sock"), filepath.Join(dir, "missing.yaml")
+	return filepath.Join(dir, "s.sock"), filepath.Join(root, "missing.yaml")
 }
 
 func launchForegroundDaemon(t *testing.T, socket, cfg string) <-chan error {
@@ -161,9 +189,9 @@ func TestStartStopTable(t *testing.T) {
 		{
 			name: "listen error",
 			run: func(t *testing.T) {
-				dir, err := os.MkdirTemp("", "agentd-daemon-")
-				require.NoError(t, err, "MkdirTemp")
-				t.Cleanup(func() { _ = os.RemoveAll(dir) })
+				root := testEnv(t)
+				dir := filepath.Join(root, "listen")
+				require.NoError(t, os.MkdirAll(dir, 0o700))
 				block := filepath.Join(dir, "block")
 				require.NoError(t, os.WriteFile(block, []byte("x"), 0o600), "WriteFile(%q)", block)
 				socket := filepath.Join(block, "s.sock")
@@ -171,7 +199,7 @@ func TestStartStopTable(t *testing.T) {
 
 				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 				defer cancel()
-				err = daemon.Start(ctx, daemon.StartOptions{
+				err := daemon.Start(ctx, daemon.StartOptions{
 					Socket:     socket,
 					ConfigPath: cfg,
 					Foreground: true,
@@ -242,6 +270,35 @@ func TestStartBootstrapsMissingConfig(t *testing.T) {
 	_, err = os.Stat(cfg)
 	require.NoError(t, err, "Stat(%q)", cfg)
 	require.NoError(t, stopForegroundDaemon(t, socket, errCh), "Start(%q)", socket)
+}
+
+func TestTestEnv(t *testing.T) {
+	tests := []struct {
+		name string
+		run  func(t *testing.T, root string)
+	}{
+		{
+			name: "default socket under env dir",
+			run: func(t *testing.T, root string) {
+				skipUnlessDefaultSocketIsolated(t)
+				got := transport.DefaultSocketPath()
+				assert.True(t, strings.HasPrefix(got, root), "DefaultSocketPath()")
+			},
+		},
+		{
+			name: "default log under env dir",
+			run: func(t *testing.T, root string) {
+				got := config.DefaultLogPath()
+				assert.True(t, strings.HasPrefix(got, root), "DefaultLogPath()")
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := testEnv(t)
+			tt.run(t, root)
+		})
+	}
 }
 
 func TestStartInvalidUserConfig(t *testing.T) {

@@ -133,6 +133,8 @@ func TestStopTable(t *testing.T) {
 		{
 			name: "default socket not running",
 			run: func(t *testing.T) {
+				skipUnlessDefaultSocketIsolated(t)
+				testEnv(t)
 				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 				defer cancel()
 				err := daemon.Stop(ctx, "", time.Second)

@@ -121,6 +121,8 @@ func TestReloadRPC(t *testing.T) {
 		{
 			name: "default socket not running",
 			run: func(t *testing.T) {
+				skipUnlessDefaultSocketIsolated(t)
+				testEnv(t)
 				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 				defer cancel()
 				_, err := daemon.Reload(ctx, "")

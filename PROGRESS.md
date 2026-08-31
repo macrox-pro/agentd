@@ -4,22 +4,24 @@
 
 ## Current
 
-**Prometheus metrics** — implemented (opt-in loopback `/metrics`).
+**Daemon test isolation** — done.
 
-- `internal/metrics` leaf: registry, runtime gauges, invoke/async histograms, reload counter
-- Config `metrics.enabled` / `metrics.listen`; CLI `--metrics-listen`
-- Daemon HTTP lifecycle; Status `metrics_listen`; docs EN+RU; DESIGN §1.5/§5/§7 + AGENTS row
+- `internal/daemon/start_test.go`: `testEnv` (XDG_STATE_HOME / XDG_RUNTIME_DIR / LOCALAPPDATA), `skipUnlessDefaultSocketIsolated`, `TestTestEnv` table test
+- `testSocket` calls `testEnv` for state/log/runtime isolation; socket dir stays short `MkdirTemp` (macOS unix path length)
+- `default socket not running` subtests in stop/reload/status use isolated env + skip off darwin/linux
+- `listen error` subtest uses `testEnv` for runtime overlay isolation
 
 ```bash
-make lint && make intent-check && make docs-check
-go test ./internal/metrics/... ./internal/config/... ./internal/dispatch/... ./internal/daemon/... ./internal/server/... ./cmd/... -race -count=1
-go fix ./internal/metrics/... ./internal/config/... ./internal/dispatch/... ./internal/daemon/... ./internal/server/... ./cmd/...
+make lint && make test
+go test ./internal/daemon/... -race -count=1
+# acceptance: with `agentd daemon start` running, tests must not stop it or append version=test to ~/.local/state/agentd/agentd.log
 ```
 
 ## Recent (done)
 
 | When | Phase | One-liner |
 |------|-------|-----------|
+| 2026-08-31 | daemon tests | Isolate unit tests from production socket, agentd.log, runtime.yaml |
 | 2026-08-31 | metrics | Prometheus scrape HTTP + Observer histograms + reload hook |
 | 2026-08-29 | v0.0.5 | Trajectory counters + session import `--out`; CHANGELOG + docs version bump |
 
