@@ -7,7 +7,7 @@
 //   - Gate requires trajectory.enabled && trajectory.statistics.
 //   - Daemon Observe is one increment per successful Invoke (not per ledger line).
 //   - Snapshot exposes global + per-provider rollups only (no per-session state in API).
-//   - Internal cursorStopLast tracks Cursor cumulative stop billing deltas until daemon restart.
+//   - Cursor stop billing tokens are summed per stop (per generation), not session-delta aggregated.
 //   - Token fields increment only when extractors find values.
 //   - Token extraction falls back to provider transcript tail-scan when hook raw carries no usage (Codex Stop).
 //

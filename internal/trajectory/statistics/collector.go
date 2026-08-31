@@ -11,18 +11,16 @@ import (
 
 // Collector holds daemon-lifetime trajectory statistics counters.
 type Collector struct {
-	mu             sync.Mutex
-	global         StatisticsRollup
-	byProvider     map[agentdv1.Provider]StatisticsRollup
-	cursorStopLast map[string]extract.TokenFields
+	mu         sync.Mutex
+	global     StatisticsRollup
+	byProvider map[agentdv1.Provider]StatisticsRollup
 }
 
 // NewCollector returns an empty statistics collector.
 func NewCollector() *Collector {
 	return &Collector{
-		global:         newStatisticsRollup(),
-		byProvider:     map[agentdv1.Provider]StatisticsRollup{},
-		cursorStopLast: map[string]extract.TokenFields{},
+		global:     newStatisticsRollup(),
+		byProvider: map[agentdv1.Provider]StatisticsRollup{},
 	}
 }
 
@@ -56,8 +54,7 @@ func (c *Collector) Observe(in trajectory.RecordInput) {
 
 	raw := append([]byte(nil), in.RawPayload...)
 	prov := in.Provider
-	sessionID := meta.SessionID
-	go c.extractAsync(prov, raw, sessionID)
+	go c.extractAsync(prov, raw)
 }
 
 func applyObserve(r *StatisticsRollup, hook agentdv1.EventKind, decision agentdv1.DecisionKind, asyncN uint64) {
@@ -66,7 +63,7 @@ func applyObserve(r *StatisticsRollup, hook agentdv1.EventKind, decision agentdv
 	r.AsyncDispatched += asyncN
 }
 
-func (c *Collector) extractAsync(prov agentdv1.Provider, raw []byte, sessionID string) {
+func (c *Collector) extractAsync(prov agentdv1.Provider, raw []byte) {
 	if c == nil || len(raw) == 0 {
 		return
 	}
@@ -79,7 +76,7 @@ func (c *Collector) extractAsync(prov agentdv1.Provider, raw []byte, sessionID s
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	billing := billingTokensForRollup(prov, sessionID, c.cursorStopLast, tokens)
+	billing := billingTokensForRollup(tokens)
 	contextTokens := contextTokensForRollup(tokens)
 	applyTokens(&c.global, billing)
 	applyTokens(&c.global, contextTokens)
@@ -94,10 +91,7 @@ func (c *Collector) extractAsync(prov agentdv1.Provider, raw []byte, sessionID s
 	}
 }
 
-func billingTokensForRollup(prov agentdv1.Provider, sessionID string, cursorLast map[string]extract.TokenFields, tokens extract.TokenFields) extract.TokenFields {
-	if prov == agentdv1.Provider_PROVIDER_CURSOR && tokens.HasBilling() {
-		return computeCursorBillingDelta(cursorLast, sessionID, tokens)
-	}
+func billingTokensForRollup(tokens extract.TokenFields) extract.TokenFields {
 	out := tokens
 	out.Context = 0
 	out.HasContext = false

@@ -23,6 +23,7 @@ make docs-check && make lint && make intent-check
 
 | When | Phase | One-liner |
 |------|-------|-----------|
+| 2026-09-01 | Cursor stats tokens | Sum each Cursor stop (per generation); drop session delta; DESIGN §14.6 + docs |
 | 2026-09-01 | Docs refactor | Glossary, EN/RU rewrite, docs-check linters, README/DESIGN/CONVENTIONS style |
 | 2026-08-31 | v0.0.7 | Setup wizard, doctor, `--all-detected`, trajectory default-on; CHANGELOG + docs version bump |
 

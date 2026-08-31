@@ -55,7 +55,7 @@ agentd trajectory stats [--provider ID] [--json]
 
 Счётчики токенов демона берутся из сырой полезной нагрузки каждого вызова (не зависят от `include_raw`):
 
-- **Cursor** — токены биллинга на хуке `stop` (кумулятивно по сессии, с дельтой); `context_tokens_last` на `preCompact`.
+- **Cursor** — токены биллинга на хуке `stop` (за generation, сумма каждого stop); `context_tokens_last` на `preCompact`.
 - **Codex** — токены из хвоста rollout-транскрипта на `Stop`, если в raw хука нет usage (`transcript_path` в raw).
 
 Для офлайн `session stats` поля токенов в JSONL требуют `include_raw` (запасной путь Codex — `transcript_path` в сохранённом raw).

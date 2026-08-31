@@ -111,7 +111,7 @@ func TestFromEvents(t *testing.T) {
 			},
 		},
 		{
-			name: "cursor_stop_delta_from_events",
+			name: "cursor_stop_two_stops_from_events",
 			events: []trajectory.Event{
 				{Seq: 1, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "s1", TS: now,
 					Data: json.RawMessage(`{"kind":"agent.stop"}`),
@@ -121,8 +121,8 @@ func TestFromEvents(t *testing.T) {
 					Raw:  json.RawMessage(`{"input_tokens":250,"output_tokens":25}`)},
 			},
 			check: func(t *testing.T, s statistics.Session) {
-				assert.Equal(t, uint64(250), s.InputTokensTotal)
-				assert.Equal(t, uint64(25), s.OutputTokensTotal)
+				assert.Equal(t, uint64(350), s.InputTokensTotal)
+				assert.Equal(t, uint64(35), s.OutputTokensTotal)
 			},
 		},
 		{
@@ -138,6 +138,70 @@ func TestFromEvents(t *testing.T) {
 			check: func(t *testing.T, s statistics.Session) {
 				assert.Equal(t, uint64(30), s.InputTokensTotal)
 				assert.Equal(t, uint64(3), s.OutputTokensTotal)
+			},
+		},
+		{
+			name: "cursor_stop_regression_from_events",
+			events: []trajectory.Event{
+				{Seq: 1, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "s1", TS: now,
+					Data: json.RawMessage(`{"kind":"agent.stop"}`),
+					Raw:  json.RawMessage(`{"input_tokens":250,"output_tokens":25}`)},
+				{Seq: 2, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "s1", TS: now,
+					Data: json.RawMessage(`{"kind":"agent.stop"}`),
+					Raw:  json.RawMessage(`{"input_tokens":100,"output_tokens":10}`)},
+			},
+			check: func(t *testing.T, s statistics.Session) {
+				assert.Equal(t, uint64(350), s.InputTokensTotal)
+				assert.Equal(t, uint64(35), s.OutputTokensTotal)
+			},
+		},
+		{
+			name: "cursor_stop_identical_from_events",
+			events: []trajectory.Event{
+				{Seq: 1, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "s1", TS: now,
+					Data: json.RawMessage(`{"kind":"agent.stop"}`),
+					Raw:  json.RawMessage(`{"input_tokens":100,"output_tokens":10}`)},
+				{Seq: 2, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "s1", TS: now,
+					Data: json.RawMessage(`{"kind":"agent.stop"}`),
+					Raw:  json.RawMessage(`{"input_tokens":100,"output_tokens":10}`)},
+			},
+			check: func(t *testing.T, s statistics.Session) {
+				assert.Equal(t, uint64(200), s.InputTokensTotal)
+				assert.Equal(t, uint64(20), s.OutputTokensTotal)
+			},
+		},
+		{
+			name: "cursor_stop_partial_from_events",
+			events: []trajectory.Event{
+				{Seq: 1, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "s1", TS: now,
+					Data: json.RawMessage(`{"kind":"agent.stop"}`),
+					Raw:  json.RawMessage(`{"input_tokens":100,"output_tokens":10}`)},
+				{Seq: 2, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "s1", TS: now,
+					Data: json.RawMessage(`{"kind":"agent.stop"}`),
+					Raw:  json.RawMessage(`{"input_tokens":42}`)},
+			},
+			check: func(t *testing.T, s statistics.Session) {
+				assert.Equal(t, uint64(142), s.InputTokensTotal)
+				assert.Equal(t, uint64(10), s.OutputTokensTotal)
+			},
+		},
+		{
+			name: "cursor_stop_precompact_from_events",
+			events: []trajectory.Event{
+				{Seq: 1, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "s1", TS: now,
+					Data: json.RawMessage(`{"kind":"agent.stop"}`),
+					Raw:  json.RawMessage(`{"input_tokens":100,"output_tokens":10}`)},
+				{Seq: 2, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "s1", TS: now,
+					Data: json.RawMessage(`{"kind":"preCompact"}`),
+					Raw:  json.RawMessage(`{"context_tokens":120000}`)},
+				{Seq: 3, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "cursor", SessionID: "s1", TS: now,
+					Data: json.RawMessage(`{"kind":"agent.stop"}`),
+					Raw:  json.RawMessage(`{"input_tokens":250,"output_tokens":25}`)},
+			},
+			check: func(t *testing.T, s statistics.Session) {
+				assert.Equal(t, uint64(350), s.InputTokensTotal)
+				assert.Equal(t, uint64(35), s.OutputTokensTotal)
+				assert.Equal(t, uint64(120000), s.ContextTokensLast)
 			},
 		},
 		{

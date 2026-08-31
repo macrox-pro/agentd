@@ -215,7 +215,7 @@ func TestObserve(t *testing.T) {
 			check: func(t *testing.T, c *statistics.Collector) {
 				assert.Eventually(t, func() bool {
 					r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
-					return r.InputTokensTotal == 250 && r.OutputTokensTotal == 25
+					return r.InputTokensTotal == 350 && r.OutputTokensTotal == 35
 				}, time.Second, 5*time.Millisecond)
 			},
 		},
@@ -234,7 +234,7 @@ func TestObserve(t *testing.T) {
 			},
 		},
 		{
-			name: "cursor_stop_regression_saturates",
+			name: "cursor_stop_regression_same_session",
 			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
 				c := statistics.NewCollector()
 				c.Observe(cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":250,"output_tokens":25}`))
@@ -243,7 +243,7 @@ func TestObserve(t *testing.T) {
 			check: func(t *testing.T, c *statistics.Collector) {
 				assert.Eventually(t, func() bool {
 					r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
-					return r.InputTokensTotal == 250 && r.OutputTokensTotal == 25
+					return r.InputTokensTotal == 350 && r.OutputTokensTotal == 35
 				}, time.Second, 5*time.Millisecond)
 			},
 		},
@@ -327,16 +327,79 @@ func TestObserve(t *testing.T) {
 			},
 		},
 		{
-			name: "cursor_stop_delta_unchanged",
+			name: "cursor_stop_two_generations",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				c := statistics.NewCollector()
+				c.Observe(cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":280027,"output_tokens":1523,"cache_read_tokens":270592}`))
+				return c, cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":461839,"output_tokens":2813,"cache_read_tokens":439680}`)
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					global := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
+					byCursor := c.Snapshot(agentdv1.Provider_PROVIDER_CURSOR)
+					return global.InputTokensTotal == 741866 && global.OutputTokensTotal == 4336 && global.CacheReadTokens == 710272 &&
+						byCursor.InputTokensTotal == 741866 && byCursor.OutputTokensTotal == 4336 && byCursor.CacheReadTokens == 710272
+				}, time.Second, 5*time.Millisecond)
+			},
+		},
+		{
+			name: "cursor_stop_identical_payloads",
 			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
 				c := statistics.NewCollector()
 				c.Observe(cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":100,"output_tokens":10}`))
+				return c, cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":100,"output_tokens":10}`)
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
+					return r.InputTokensTotal == 200 && r.OutputTokensTotal == 20
+				}, time.Second, 5*time.Millisecond)
+			},
+		},
+		{
+			name: "cursor_stop_partial_second",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				c := statistics.NewCollector()
+				c.Observe(cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":100,"output_tokens":10}`))
+				return c, cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":42}`)
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
+					return r.InputTokensTotal == 142 && r.OutputTokensTotal == 10
+				}, time.Second, 5*time.Millisecond)
+			},
+		},
+		{
+			name: "cursor_stop_precompact_interleaved",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				c := statistics.NewCollector()
+				c.Observe(cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":100,"output_tokens":10}`))
+				preCompact := cursorStopInput(enabledSnap(true), "s1", `{"context_tokens":120000}`)
+				preCompact.Result.Meta.EventKind = "preCompact"
+				c.Observe(preCompact)
 				return c, cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":250,"output_tokens":25}`)
 			},
 			check: func(t *testing.T, c *statistics.Collector) {
 				assert.Eventually(t, func() bool {
-					r := c.Snapshot(agentdv1.Provider_PROVIDER_CURSOR)
-					return r.InputTokensTotal == 250 && r.OutputTokensTotal == 25
+					r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
+					return r.InputTokensTotal == 350 && r.OutputTokensTotal == 35 && r.ContextTokensLast == 120000
+				}, time.Second, 5*time.Millisecond)
+			},
+		},
+		{
+			name: "codex_two_stops_same_session",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				c := statistics.NewCollector()
+				pathA := writeCodexRollout(t, 10, 0, 0, 1)
+				c.Observe(codexStopInput(t, enabledSnap(true), "s1", pathA))
+				pathB := writeCodexRollout(t, 20, 0, 0, 2)
+				return c, codexStopInput(t, enabledSnap(true), "s1", pathB)
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					r := c.Snapshot(agentdv1.Provider_PROVIDER_CODEX)
+					return r.InputTokensTotal == 30 && r.OutputTokensTotal == 3
 				}, time.Second, 5*time.Millisecond)
 			},
 		},

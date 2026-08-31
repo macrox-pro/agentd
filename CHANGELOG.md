@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-(nothing yet)
+### Fixed
+
+- **Cursor trajectory stats** — `trajectory stats` and offline `session stats` now sum billing tokens from each Cursor `stop` hook (per generation). Multi-stop sessions report higher totals than the previous per-session delta aggregation.
 
 ## [v0.0.7] — 2026-08-31
 
