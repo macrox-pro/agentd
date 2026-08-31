@@ -47,3 +47,18 @@ agentd install --provider=PROVIDER --scope=SCOPE [--dir PATH]
 В argv агента — `agentd agenthooks …`. Таймауты HookSpec: ToolPre / PromptSubmitted **30 s**; короткие виды **5 s**.
 
 Дизайн: [DESIGN.md §1–§2](../../DESIGN.md) · кодеки: [agenthooks](https://github.com/speakeasy-api/agenthooks).
+
+## Автообнаружение
+
+`agentd doctor` и `agentd install --all-detected` сканируют рабочий каталог, home и PATH. **High confidence** (есть каталог конфигурации) попадает в `--all-detected --yes`. **Medium confidence** (только бинарник в PATH) показывается в `doctor`, но не устанавливается автоматически.
+
+| Провайдер | Маркер проекта | User dir | Автоустановка |
+|-----------|----------------|----------|---------------|
+| `claude-code` | `.claude/` | `~/.claude/` | project + user при наличии обоих |
+| `cursor` | `.cursor/` | `~/.cursor/` | project + user при наличии обоих |
+| `codex` | `.codex/` | `$CODEX_HOME` или `~/.codex` | project + user при наличии обоих |
+| `gemini` | `.gemini/` | `~/.gemini/` | project + user при наличии обоих |
+| `opencode` | `.opencode/` | — | только project (`user` требует `--dir`) |
+| `kimi-code` | — | `$KIMI_CODE_HOME` или `~/.kimi-code` | только user scope |
+
+Plugin scope никогда не выбирается автоматически. Явно: `agentd install --provider=… --scope=plugin --dir=…`.

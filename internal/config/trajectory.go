@@ -30,9 +30,9 @@ type TrajectoryConfig struct {
 
 func defaultTrajectory() TrajectoryConfig {
 	return TrajectoryConfig{
-		Enabled:           false,
-		Statistics:        false,
-		IncludeRaw:        false,
+		Enabled:           true,
+		Statistics:        true,
+		IncludeRaw:        true,
 		RedactSecretRules: true,
 		MaxEventBytes:     defaultMaxEventBytes,
 		QueueCapacity:     defaultTrajectoryQueueCap,

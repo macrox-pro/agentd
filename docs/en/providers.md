@@ -47,3 +47,18 @@ On success, `agentd install` prints a summary with absolute paths for each creat
 Generated argv uses `agentd agenthooks …` (same as `hook …`). HookSpec timeouts: ToolPre / PromptSubmitted **30s**; shorter kinds **5s**.
 
 Deep design: [DESIGN.md §1–§2](../../DESIGN.md) · codecs: [agenthooks](https://github.com/speakeasy-api/agenthooks).
+
+## Auto-detection
+
+`agentd doctor` and `agentd install --all-detected` scan the working directory, home, and PATH. **High confidence** (config dir exists) targets are eligible for `--all-detected --yes`. **Medium confidence** (binary in PATH only) is shown in `doctor` but never auto-installed.
+
+| Provider | Project marker | User dir | Auto-install notes |
+|----------|----------------|----------|-------------------|
+| `claude-code` | `.claude/` | `~/.claude/` | project + user when both present |
+| `cursor` | `.cursor/` | `~/.cursor/` | project + user when both present |
+| `codex` | `.codex/` | `$CODEX_HOME` or `~/.codex` | project + user when both present |
+| `gemini` | `.gemini/` | `~/.gemini/` | project + user when both present |
+| `opencode` | `.opencode/` | — | project scope only (`user` needs `--dir`) |
+| `kimi-code` | — | `$KIMI_CODE_HOME` or `~/.kimi-code` | user scope only |
+
+Plugin scope is never auto-selected. Use explicit `agentd install --provider=… --scope=plugin --dir=…`.

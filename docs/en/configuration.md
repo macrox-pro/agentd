@@ -90,13 +90,13 @@ Daemon operational logging (not the async dispatch `target: log`).
 
 ### trajectory
 
-Opt-in session ledger ([Trajectory](./trajectory.md)). Default **off**.
+Session ledger ([Trajectory](./trajectory.md)). Default **on**.
 
 | Key | Default |
 |-----|---------|
-| `enabled` | `false` |
-| `statistics` | `false` (requires `enabled`; gates daemon rollup + `session stats`) |
-| `include_raw` | `false` |
+| `enabled` | `true` |
+| `statistics` | `true` (requires `enabled`; gates daemon rollup + `session stats`) |
+| `include_raw` | `true` |
 | `redact_secret_rules` | `true` |
 | `max_event_bytes` | `262144` |
 | `queue_capacity` | `1024` |

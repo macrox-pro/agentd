@@ -53,16 +53,32 @@ guards:
 
 After edit, fsnotify reloads the user file; `agentd daemon reload` forces a re-merge.
 
-Enable trajectory ledger without editing YAML:
+Trajectory ledger is on by default. Verify without editing YAML:
 
 ```bash
-agentd config enable trajectory
-agentd config get trajectory
+agentd config get trajectory    # trajectory: on (default)
 ```
+
+To disable: `agentd config disable trajectory`.
 
 ## 4. Install hooks for an agent
 
-From a project directory (example: Claude Code, project scope):
+**Discover** what agentd sees on this machine (read-only):
+
+```bash
+agentd doctor
+```
+
+**Plan or install** all high-confidence agents (config dirs present — see [Providers → Detection](./providers.md#auto-detection)):
+
+```bash
+agentd install --all-detected          # plan only
+agentd install --all-detected --yes    # write hooks.json
+```
+
+On a TTY you can also run `agentd setup` (full wizard) or bare `agentd install` (short wizard). Set `AGENTD_NO_TUI=1` in CI.
+
+**Single provider** from a project directory (example: Claude Code, project scope):
 
 ```bash
 agentd install --provider=claude-code --scope=project

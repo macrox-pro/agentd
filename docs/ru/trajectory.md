@@ -2,26 +2,28 @@
 
 > **Language:** [English](../en/trajectory.md) · [Русский](./trajectory.md)
 
-Опциональный append-only журнал вызовов хуков (`hook/invoked`, `hook/decided`, async meta). **По умолчанию выключен** — в payload могут быть секреты.
+Append-only журнал вызовов хуков (`hook/invoked`, `hook/decided`, async meta). **По умолчанию включён** — в payload могут быть секреты; `redact_secret_rules` по умолчанию true.
 
 ## Включение
 
-Без правки YAML ([Переключатели features](./configuration.md#переключатели-features)):
+Trajectory включён по умолчанию (compile defaults). Проверка или отключение без правки YAML ([Переключатели features](./configuration.md#переключатели-features)):
 
 ```bash
-agentd config enable trajectory
-agentd config get trajectory          # trajectory: on (user)
+agentd config get trajectory          # trajectory: on (default)
 
-# Raw для session replay --policy (можно до или после trajectory)
-agentd config enable trajectory-raw
+# Отключить, если журнал сессий не нужен
+agentd config disable trajectory
+
+# Raw включён по умолчанию; отключите, если не нужен session replay --policy
+agentd config disable trajectory-raw
 ```
 
 Или через YAML:
 
 ```yaml
 trajectory:
-  enabled: true
-  include_raw: false          # true нужен для session replay --policy
+  enabled: true               # по умолчанию on; false — выключить
+  include_raw: true           # по умолчанию on; false — без raw payload
   redact_secret_rules: true
   max_event_bytes: 262144
   queue_capacity: 1024
@@ -58,8 +60,8 @@ trajectory:
 ## Статистика демона
 
 ```bash
-agentd config enable trajectory
-agentd config enable trajectory-statistics
+agentd config get trajectory
+agentd config get trajectory-statistics
 agentd trajectory stats [--provider ID] [--json]
 ```
 

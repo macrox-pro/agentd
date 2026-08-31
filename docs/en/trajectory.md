@@ -2,27 +2,29 @@
 
 > **Language:** [English](./trajectory.md) · [Русский](../ru/trajectory.md)
 
-Opt-in append-only ledger of hook Invokes (`hook/invoked`, `hook/decided`, async meta). **Default off** — payloads may contain secrets.
+Append-only ledger of hook Invokes (`hook/invoked`, `hook/decided`, async meta). **Default on** — payloads may contain secrets; `redact_secret_rules` defaults to true.
 
 ## Enable
 
-Without hand-editing YAML ([Feature toggles](./configuration.md#feature-toggles)):
+Trajectory is on by default (compile defaults). Verify or disable without hand-editing YAML ([Feature toggles](./configuration.md#feature-toggles)):
 
 ```bash
-agentd config enable trajectory
-agentd config get trajectory          # trajectory: on (user)
+agentd config get trajectory          # trajectory: on (default)
 
-# Raw payloads for session replay --policy (can enable before or after trajectory)
-agentd config enable trajectory-raw
+# Disable when you do not want a session ledger
+agentd config disable trajectory
+
+# Raw is on by default; disable if you do not need session replay --policy
+agentd config disable trajectory-raw
 ```
 
 Or edit YAML:
 
 ```yaml
 trajectory:
-  enabled: true
-  include_raw: false          # default; set true to enable session replay --policy
-  redact_secret_rules: true   # when include_raw: true
+  enabled: true               # default on; set false to disable
+  include_raw: true           # default on; set false to omit raw payloads
+  redact_secret_rules: true   # default on when include_raw is true
   max_event_bytes: 262144
   queue_capacity: 1024
   import:
@@ -58,8 +60,8 @@ Recording happens on the daemon async path — sync hook latency is unchanged.
 ## Daemon statistics
 
 ```bash
-agentd config enable trajectory
-agentd config enable trajectory-statistics
+agentd config get trajectory
+agentd config get trajectory-statistics
 agentd trajectory stats [--provider ID] [--json]
 ```
 

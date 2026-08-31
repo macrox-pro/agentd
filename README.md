@@ -193,7 +193,7 @@ Full schema: [docs/en/configuration.md](./docs/en/configuration.md) · layer/run
 | `agentd dispatch routes` | Show compiled dispatch routes |
 | `agentd session subscribe` | Live trajectory stream (daemon required) |
 
-**Trajectory (opt-in):** every supported agent’s hooks are traceable on one stream; transcript/thinking depth varies by provider — not “everything the model sees everywhere.”
+**Trajectory (default on):** every supported agent’s hooks are traceable on one stream; transcript/thinking depth varies by provider — not “everything the model sees everywhere.”
 
 | Provider | L2 import |
 |----------|-----------|

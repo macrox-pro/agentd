@@ -96,16 +96,62 @@ agentd config enable guard-shell
 
 **Не через CLI:** `guards.secrets` и прочие не-boolean поля — правка YAML или `config show` / `config patch`. Curated toggles — только пять features выше.
 
+## doctor (диагностика)
+
+Только чтение: обнаруженные агенты и статус установки хуков. Конфиг агента не меняется.
+
+| Флаг | По умолчанию | Смысл |
+|------|--------------|--------|
+| `--json` | выкл. | JSON-отчёт (`DoctorReport`) |
+| `--cwd` | текущий каталог | Рабочий каталог для discovery |
+
+Если сокет демона доступен (`--socket`), в отчёте `daemon: reachable` (текст) или `"DaemonReachable": true` (JSON). Недоступный демон — не ошибка, exit 0.
+
+```bash
+agentd doctor
+agentd doctor --json
+agentd doctor --cwd /path/to/repo
+```
+
 ## install (установка хуков в агент)
 
 | Флаг | По умолчанию |
 |------|--------------|
-| `--provider` | обязателен |
+| `--provider` | обязателен, если нет `--all-detected` |
 | `--scope` | `project` (также `user`, `plugin`) |
 | `--global` | false — то же, что `--scope=user` |
 | `--dir` | `scope=project`: cwd (codex: `./.codex`); `scope=user`: home агента (напр. `~/.cursor`); `scope=plugin`: обязателен |
+| `--all-detected` | выкл. — high-confidence агенты; только план без `--yes` |
+| `--yes` | выкл. — применить `--all-detected` (обязателен для записи) |
+| `--dry-run` | выкл. — план без записи (один `--provider` или с `--all-detected --yes`) |
 
 `--global` конфликтует с явным `--scope`, отличным от `user`. При успехе печатает provider, scope, корень установки и по каждому файлу `create` / `update` / `unchanged` с абсолютными путями.
+
+```bash
+agentd install --provider=claude-code --scope=project
+agentd install --all-detected              # только план
+agentd install --all-detected --yes        # установка high-confidence
+agentd install --provider=cursor --dry-run
+```
+
+На TTY голый `agentd install` (без флагов) открывает интерактивный мастер ([`setup`](#setup-мастер-настройки)). В non-TTY нужны `--provider` или `--all-detected`.
+
+## setup (мастер настройки)
+
+Интерактивный мастер (TTY): discovery, выбор целей, превью плана, установка.
+
+| Флаг | По умолчанию | Смысл |
+|------|--------------|--------|
+| `--yes` | выкл. | Без подтверждения, сразу применить |
+| `--dry-run` | выкл. | Только превью |
+| `--cwd` | текущий каталог | Каталог для discovery |
+
+`AGENTD_NO_TUI=1` или `CI=true` отключают TUI (подсказка для non-interactive).
+
+```bash
+agentd setup
+agentd setup --yes
+```
 
 ## dispatch (маршруты)
 

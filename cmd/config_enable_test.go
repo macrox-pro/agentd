@@ -49,7 +49,7 @@ func TestConfigEnable(t *testing.T) {
 		{
 			name: "enable_trajectory_happy_path",
 			args: []string{"config", "enable", "trajectory"},
-			wantSubstr: []string{"trajectory: enabled", "user"},
+			wantSubstr: []string{"trajectory: already enabled"},
 		},
 		{
 			name:    "enable_guard_shell_project_cwd",
@@ -93,9 +93,8 @@ func TestConfigEnable(t *testing.T) {
 				require.NoError(t, statErr, "Stat project config")
 			}
 			if tt.name == "enable_trajectory_happy_path" {
-				raw, readErr := os.ReadFile(configPath)
-				require.NoError(t, readErr, "ReadFile(%q)", configPath)
-				assert.Contains(t, string(raw), "trajectory:", "user config written")
+				_, statErr := os.Stat(configPath)
+				require.Error(t, statErr, "user config not written when already at default")
 			}
 		})
 	}

@@ -117,9 +117,11 @@ agentd daemon stop --timeout 10s
 
 ## Статистика trajectory
 
+Trajectory и statistics включены по умолчанию. Явное включение (запись в user-слой) опционально:
+
 ```bash
-agentd config enable trajectory
-agentd config enable trajectory-statistics
+agentd config get trajectory
+agentd config get trajectory-statistics
 agentd trajectory stats [--provider ID] [--json]
 agentd session stats SESSION_ID --provider ID [--json]
 ```

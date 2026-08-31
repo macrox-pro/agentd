@@ -119,9 +119,11 @@ Stop drains sync then async (up to timeout), then removes socket/PID.
 
 ## Trajectory statistics
 
+Trajectory and statistics are on by default. Optional explicit enable (writes user layer):
+
 ```bash
-agentd config enable trajectory
-agentd config enable trajectory-statistics
+agentd config get trajectory
+agentd config get trajectory-statistics
 agentd trajectory stats [--provider ID] [--json]
 agentd session stats SESSION_ID --provider ID [--json]
 ```

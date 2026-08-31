@@ -96,16 +96,62 @@ agentd config enable guard-shell
 
 **Not toggleable via CLI:** `guards.secrets` (and other non-boolean knobs) — edit YAML or use `config show` / `config patch`. Only the five features above are curated toggles.
 
+## doctor
+
+Read-only report of detected coding agents and hook install status. Does not modify agent configuration.
+
+| Flag | Default | Meaning |
+|------|---------|---------|
+| `--json` | off | Emit JSON (`DoctorReport`) |
+| `--cwd` | current directory | Working directory for discovery |
+
+When the daemon socket is reachable (`--socket`), the report includes `daemon: reachable` (human) or `"DaemonReachable": true` (JSON). Unreachable daemon is not an error — exit 0.
+
+```bash
+agentd doctor
+agentd doctor --json
+agentd doctor --cwd /path/to/repo
+```
+
 ## install
 
 | Flag | Default |
 |------|---------|
-| `--provider` | required |
+| `--provider` | required unless `--all-detected` |
 | `--scope` | `project` (`user`, `plugin`) |
 | `--global` | false — same as `--scope=user` |
 | `--dir` | `scope=project`: CWD (codex: `./.codex`); `scope=user`: agent home (e.g. `~/.cursor`); `scope=plugin`: required |
+| `--all-detected` | off — discover high-confidence agents; plan only unless `--yes` |
+| `--yes` | off — apply `--all-detected` installs (required to write) |
+| `--dry-run` | off — show planned changes without writing (single `--provider` or with `--all-detected --yes`) |
 
 `--global` conflicts with an explicit `--scope` other than `user`. On success, prints provider, scope, install root, and per-file `create` / `update` / `unchanged` with absolute paths.
+
+```bash
+agentd install --provider=claude-code --scope=project
+agentd install --all-detected              # plan only
+agentd install --all-detected --yes      # apply high-confidence targets
+agentd install --provider=cursor --dry-run
+```
+
+On a TTY, bare `agentd install` (no flags) launches the interactive wizard ([`setup`](#setup)). Non-interactive shells must pass `--provider` or `--all-detected`.
+
+## setup
+
+Interactive onboarding wizard (TTY). Discovers agents, lets you pick targets, previews the plan, and applies installs.
+
+| Flag | Default | Meaning |
+|------|---------|---------|
+| `--yes` | off | Skip confirmation and apply |
+| `--dry-run` | off | Preview only; no writes |
+| `--cwd` | current directory | Discovery working directory |
+
+Set `AGENTD_NO_TUI=1` or `CI=true` to disable the TUI (command exits with a non-interactive hint).
+
+```bash
+agentd setup
+agentd setup --yes
+```
 
 ## dispatch
 

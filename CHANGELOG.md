@@ -4,7 +4,10 @@
 
 ### Highlights
 
+- **Setup wizard** — `agentd setup` and interactive bare `agentd install` on TTY; `AGENTD_NO_TUI` / `CI` bypass
+- **Doctor + auto-install** — `agentd doctor` (read-only); `agentd install --all-detected` (plan-only default, `--yes` to apply)
 - **Codex trajectory stats** — billing token extraction via transcript tail-read on `Stop` when hook raw carries no usage
+- **Trajectory defaults on** — compile defaults set `trajectory.enabled`, `include_raw`, and `trajectory.statistics` to true; `redact_secret_rules` stays true. Disable with `agentd config disable trajectory` or YAML `trajectory.enabled: false`.
 
 ## [v0.0.6] — 2026-08-31
 

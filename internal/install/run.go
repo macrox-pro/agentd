@@ -29,12 +29,14 @@ type Options struct {
 	Dir        string
 	DirFlagSet bool
 	Command    []string // required: abs path to agentd binary
+	DryRun     bool
 }
 
 // Run writes provider hook configs via agenthooks/install.
 func Run(ctx context.Context, opts Options) (Result, error) {
-	if len(opts.Command) == 0 {
-		return Result{}, fmt.Errorf("command is required")
+	m, err := Manifest(opts.Command)
+	if err != nil {
+		return Result{}, err
 	}
 	id, err := provider.Parse(opts.Provider)
 	if err != nil {
@@ -61,16 +63,6 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		return Result{}, err
 	}
 
-	m := ahinstall.Manifest{
-		Command: append([]string(nil), opts.Command...),
-		Hooks:   defaultHooks(),
-		Identity: ahinstall.Identity{
-			Name:        identityName,
-			Version:     identityVersion,
-			Description: identityDescription,
-		},
-		Fail: agenthooks.FailClosed,
-	}
 	target := ahinstall.Target{
 		Provider: ahProv,
 		Scope:    scope,
@@ -80,7 +72,11 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	if err := ahinstall.Install(ctx, m, target); err != nil {
+	var installOpts []ahinstall.InstallOption
+	if opts.DryRun {
+		installOpts = append(installOpts, ahinstall.WithDryRun())
+	}
+	if err := ahinstall.Install(ctx, m, target, installOpts...); err != nil {
 		return Result{}, err
 	}
 	return Result{

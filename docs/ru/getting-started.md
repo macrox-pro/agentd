@@ -53,16 +53,32 @@ guards:
 
 После правки пользовательский файл обычно подхватывается наблюдателем файловой системы (fsnotify); `agentd daemon reload` принудительно заново сливает слои конфига.
 
-Включить trajectory ledger без правки YAML:
+Журнал trajectory включён по умолчанию. Проверка без правки YAML:
 
 ```bash
-agentd config enable trajectory
-agentd config get trajectory
+agentd config get trajectory    # trajectory: on (default)
 ```
+
+Отключить: `agentd config disable trajectory`.
 
 ## 4. Установить хуки в агент
 
-Из каталога проекта (пример: Claude Code, область `project`):
+**Проверка** обнаружения (только чтение):
+
+```bash
+agentd doctor
+```
+
+**План или установка** всех high-confidence агентов (каталоги конфигурации — [Провайдеры → Автообнаружение](./providers.md#автообнаружение)):
+
+```bash
+agentd install --all-detected          # только план
+agentd install --all-detected --yes    # запись hooks.json
+```
+
+На TTY также доступны `agentd setup` (полный мастер) или голый `agentd install` (короткий мастер). В CI задайте `AGENTD_NO_TUI=1`.
+
+**Один провайдер** из каталога проекта (пример: Claude Code, область `project`):
 
 ```bash
 agentd install --provider=claude-code --scope=project

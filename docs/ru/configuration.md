@@ -90,13 +90,13 @@ agentd config validate --config ~/.agentd.yaml
 
 ### trajectory (журнал сессий)
 
-Опциональный ledger ([Trajectory](./trajectory.md)). По умолчанию **выключен**.
+Журнал сессий ([Trajectory](./trajectory.md)). По умолчанию **включён**.
 
 | Ключ | По умолчанию |
 |------|--------------|
-| `enabled` | `false` |
-| `statistics` | `false` (нужен `enabled`; для rollup демона и `session stats`) |
-| `include_raw` | `false` |
+| `enabled` | `true` |
+| `statistics` | `true` (нужен `enabled`; для rollup демона и `session stats`) |
+| `include_raw` | `true` |
 | `redact_secret_rules` | `true` |
 | `max_event_bytes` | `262144` |
 | `queue_capacity` | `1024` |

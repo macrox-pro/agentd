@@ -3,7 +3,6 @@ package cmd_test
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,12 +20,13 @@ func TestConfigGet(t *testing.T) {
 
 	off := executeRoot(t, execOpts{args: []string{"config", "get", "trajectory"}, configPath: configPath})
 	require.NoError(t, off.err, "config get default")
-	assert.Contains(t, off.out, "trajectory: off (default)", "get_default_off")
+	assert.Contains(t, off.out, "trajectory: on (default)", "get_default_on")
 
 	on := executeRoot(t, execOpts{args: []string{"config", "enable", "trajectory"}, configPath: configPath})
 	require.NoError(t, on.err, "config enable")
+	assert.Contains(t, on.out, "already enabled", "enable_idempotent_default_on")
 
 	got := executeRoot(t, execOpts{args: []string{"config", "get", "trajectory"}, configPath: configPath})
 	require.NoError(t, got.err, "config get after enable")
-	assert.True(t, strings.Contains(got.out, "trajectory: on (user)"), "get_after_enable: %q", got.out)
+	assert.Contains(t, got.out, "trajectory: on (default)", "get_after_enable: %q", got.out)
 }

@@ -74,13 +74,13 @@ func TestSetToggle(t *testing.T) {
 			},
 			toggle:  "trajectory",
 			scope:   config.ToggleScopeUser,
-			enabled: true,
+			enabled: false,
 			after: func(t *testing.T, userPath, _ string) {
 				raw, err := os.ReadFile(userPath)
 				require.NoError(t, err, "ReadFile(%q)", userPath)
 				body := string(raw)
 				assert.Contains(t, body, "trajectory:", "user config")
-				assert.Contains(t, body, "enabled: true", "trajectory enabled")
+				assert.Contains(t, body, "enabled: false", "trajectory disabled")
 				assert.Contains(t, body, "fail_closed", "bootstrap policy")
 			},
 		},
@@ -107,11 +107,11 @@ func TestSetToggle(t *testing.T) {
 			},
 			toggle:  "trajectory-statistics",
 			scope:   config.ToggleScopeUser,
-			enabled: true,
+			enabled: false,
 			after: func(t *testing.T, userPath, _ string) {
 				raw, err := os.ReadFile(userPath)
 				require.NoError(t, err, "ReadFile(%q)", userPath)
-				assert.Contains(t, string(raw), "statistics: true", "trajectory statistics")
+				assert.Contains(t, string(raw), "statistics: false", "trajectory statistics")
 			},
 		},
 		{
@@ -192,13 +192,17 @@ func TestSetToggle(t *testing.T) {
 				for _, name := range config.ListToggleNames() {
 					scope := config.ToggleScopeUser
 					dir := projectDir
+					enabled := true
 					if strings.HasPrefix(name, "guard-") {
 						scope = config.ToggleScopeProject
 						dir = filepath.Join(projectDir, name)
 						require.NoError(t, os.MkdirAll(dir, 0o700))
 					}
+					if name == "trajectory" || name == "trajectory-raw" || name == "trajectory-statistics" {
+						enabled = false
+					}
 					_, err := config.SetToggle(config.SetToggleOptions{
-						Name: name, Scope: scope, Enabled: true,
+						Name: name, Scope: scope, Enabled: enabled,
 						UserPath: userPath, ProjectDir: dir,
 					})
 					require.NoError(t, err, "SetToggle(%q)", name)
@@ -209,16 +213,18 @@ func TestSetToggle(t *testing.T) {
 			name: "disable_effective_off_idempotent",
 			setup: func(t *testing.T) (string, string) {
 				dir := t.TempDir()
-				return filepath.Join(dir, "missing.yaml"), dir
+				userPath := filepath.Join(dir, "user.yaml")
+				_, err := config.SetToggle(config.SetToggleOptions{
+					Name: "trajectory", Scope: config.ToggleScopeUser, Enabled: false,
+					UserPath: userPath, ProjectDir: dir,
+				})
+				require.NoError(t, err, "SetToggle(trajectory off)")
+				return userPath, dir
 			},
 			toggle:  "trajectory",
 			scope:   config.ToggleScopeUser,
 			enabled: false,
 			wantErr: config.ErrToggleAlreadySet,
-			after: func(t *testing.T, userPath, _ string) {
-				_, err := os.Stat(userPath)
-				assert.True(t, os.IsNotExist(err), "Stat(%q)", userPath)
-			},
 		},
 		{
 			name: "user_path_is_directory",
@@ -278,7 +284,7 @@ func TestSetToggle(t *testing.T) {
 			},
 			toggle:  "trajectory",
 			scope:   config.ToggleScopeUser,
-			enabled: true,
+			enabled: false,
 			after: func(t *testing.T, userPath, _ string) {
 				_, err := config.Load(t.Context(), userPath)
 				require.NoError(t, err, "Load(%q)", userPath)
@@ -292,18 +298,18 @@ func TestSetToggle(t *testing.T) {
 			},
 			toggle:  "trajectory",
 			scope:   config.ToggleScopeUser,
-			enabled: true,
+			enabled: false,
 			after: func(t *testing.T, userPath, projectDir string) {
 				_, err := config.SetToggle(config.SetToggleOptions{
-					Name: "trajectory-raw", Scope: config.ToggleScopeUser, Enabled: true,
+					Name: "trajectory-raw", Scope: config.ToggleScopeUser, Enabled: false,
 					UserPath: userPath, ProjectDir: projectDir,
 				})
 				require.NoError(t, err, "SetToggle(trajectory-raw)")
 				raw, err := os.ReadFile(userPath)
 				require.NoError(t, err, "ReadFile(%q)", userPath)
 				body := string(raw)
-				assert.Contains(t, body, "enabled: true", "trajectory enabled")
-				assert.Contains(t, body, "include_raw: true", "trajectory-raw")
+				assert.Contains(t, body, "enabled: false", "trajectory disabled")
+				assert.Contains(t, body, "include_raw: false", "trajectory-raw disabled")
 			},
 		},
 		{
@@ -317,7 +323,7 @@ func TestSetToggle(t *testing.T) {
 			},
 			toggle:  "trajectory",
 			scope:   config.ToggleScopeUser,
-			enabled: true,
+			enabled: false,
 			after: func(t *testing.T, userPath, _ string) {
 				raw, err := os.ReadFile(userPath)
 				require.NoError(t, err, "ReadFile(%q)", userPath)
@@ -332,7 +338,7 @@ func TestSetToggle(t *testing.T) {
 			},
 			toggle:  "trajectory-raw",
 			scope:   config.ToggleScopeUser,
-			enabled: true,
+			enabled: false,
 			after: func(t *testing.T, userPath, _ string) {
 				_, err := config.Load(t.Context(), userPath)
 				require.NoError(t, err, "Load(%q)", userPath)
@@ -346,7 +352,7 @@ func TestSetToggle(t *testing.T) {
 			},
 			toggle:  "trajectory",
 			scope:   config.ToggleScopeProject,
-			enabled: true,
+			enabled: false,
 			after: func(t *testing.T, _, projectDir string) {
 				raw, err := os.ReadFile(filepath.Join(projectDir, ".agentd.yaml"))
 				require.NoError(t, err, "ReadFile project")
@@ -371,7 +377,7 @@ func TestSetToggle(t *testing.T) {
 			},
 			toggle:  "trajectory",
 			scope:   config.ToggleScopeUser,
-			enabled: true,
+			enabled: false,
 			after: func(t *testing.T, userPath, _ string) {
 				_, err := os.Stat(userPath)
 				require.NoError(t, err, "Stat(%q)", userPath)
@@ -402,7 +408,7 @@ func TestSetToggle(t *testing.T) {
 			},
 			toggle:  "trajectory",
 			scope:   config.ToggleScopeUser,
-			enabled: true,
+			enabled: false,
 		},
 		{
 			name: "enable_effective_on_idempotent",
@@ -429,7 +435,7 @@ func TestSetToggle(t *testing.T) {
 			},
 			toggle:  "trajectory",
 			scope:   config.ToggleScopeUser,
-			enabled: true,
+			enabled: false,
 			after: func(t *testing.T, userPath, _ string) {
 				raw, err := os.ReadFile(userPath)
 				require.NoError(t, err, "ReadFile(%q)", userPath)
@@ -484,24 +490,24 @@ func TestGetToggle(t *testing.T) {
 				dir := t.TempDir()
 				userPath := filepath.Join(dir, "user.yaml")
 				_, err := config.SetToggle(config.SetToggleOptions{
-					Name: "trajectory-statistics", Scope: config.ToggleScopeUser, Enabled: true,
+					Name: "trajectory-statistics", Scope: config.ToggleScopeUser, Enabled: false,
 					UserPath: userPath, ProjectDir: dir,
 				})
-				require.NoError(t, err, "SetToggle(trajectory-statistics)")
+				require.NoError(t, err, "SetToggle(trajectory-statistics off)")
 				return userPath, dir
 			},
 			toggle:     "trajectory-statistics",
-			wantOn:     true,
+			wantOn:     false,
 			wantSource: config.ToggleSourceUser,
 		},
 		{
-			name: "get_shows_default_off",
+			name: "get_shows_default_on",
 			setup: func(t *testing.T) (string, string) {
 				dir := t.TempDir()
 				return filepath.Join(dir, "missing.yaml"), dir
 			},
 			toggle:     "trajectory",
-			wantOn:     false,
+			wantOn:     true,
 			wantSource: config.ToggleSourceDefault,
 		},
 		{
@@ -510,14 +516,14 @@ func TestGetToggle(t *testing.T) {
 				dir := t.TempDir()
 				userPath := filepath.Join(dir, "user.yaml")
 				_, err := config.SetToggle(config.SetToggleOptions{
-					Name: "trajectory", Scope: config.ToggleScopeUser, Enabled: true,
+					Name: "trajectory", Scope: config.ToggleScopeUser, Enabled: false,
 					UserPath: userPath, ProjectDir: dir,
 				})
-				require.NoError(t, err, "SetToggle(trajectory)")
+				require.NoError(t, err, "SetToggle(trajectory off)")
 				return userPath, dir
 			},
 			toggle:     "trajectory",
-			wantOn:     true,
+			wantOn:     false,
 			wantSource: config.ToggleSourceUser,
 		},
 		{
@@ -538,11 +544,11 @@ func TestGetToggle(t *testing.T) {
 			setup: func(t *testing.T) (string, string) {
 				dir := t.TempDir()
 				userPath := filepath.Join(dir, "user.yaml")
-				require.NoError(t, os.WriteFile(filepath.Join(dir, ".agentd.yaml"), []byte("version: 1\ntrajectory:\n  enabled: true\n"), 0o600))
+				require.NoError(t, os.WriteFile(filepath.Join(dir, ".agentd.yaml"), []byte("version: 1\ntrajectory:\n  enabled: false\n"), 0o600))
 				return userPath, dir
 			},
 			toggle:     "trajectory",
-			wantOn:     true,
+			wantOn:     false,
 			wantSource: config.ToggleSourceProject,
 		},
 		{
@@ -556,7 +562,7 @@ func TestGetToggle(t *testing.T) {
 				return userPath, dir
 			},
 			toggle:     "trajectory",
-			wantOn:     false,
+			wantOn:     true,
 			wantSource: config.ToggleSourceDefault,
 		},
 		{
@@ -566,11 +572,11 @@ func TestGetToggle(t *testing.T) {
 				root := filepath.Join(base, "repo")
 				nested := filepath.Join(root, "pkg", "sub")
 				require.NoError(t, os.MkdirAll(nested, 0o700))
-				require.NoError(t, os.WriteFile(filepath.Join(root, ".agentd.yaml"), []byte("version: 1\ntrajectory:\n  enabled: true\n"), 0o600))
+				require.NoError(t, os.WriteFile(filepath.Join(root, ".agentd.yaml"), []byte("version: 1\ntrajectory:\n  enabled: false\n"), 0o600))
 				return filepath.Join(base, "user.yaml"), nested
 			},
 			toggle:     "trajectory",
-			wantOn:     true,
+			wantOn:     false,
 			wantSource: config.ToggleSourceProject,
 		},
 	}

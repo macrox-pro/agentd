@@ -12,15 +12,89 @@ import (
 	"github.com/macrox-pro/agentd/internal/config"
 )
 
-func TestCompileTrajectoryDefaultsOff(t *testing.T) {
+func TestCompileTrajectoryDefaultsOn(t *testing.T) {
 	t.Parallel()
-	res, err := config.CompileMerged(nil, nil, nil)
-	require.NoError(t, err)
-	assert.False(t, res.Trajectory.Enabled, "default off")
-	assert.False(t, res.Trajectory.Statistics, "default statistics off")
-	assert.False(t, res.Trajectory.IncludeRaw)
-	assert.True(t, res.Trajectory.RedactSecretRules)
-	assert.Equal(t, 262144, res.Trajectory.MaxEventBytes)
+
+	tests := []struct {
+		name string
+		yaml string
+		want config.TrajectoryConfig
+	}{
+		{
+			name: "defaults_on",
+			yaml: "",
+			want: config.TrajectoryConfig{
+				Enabled:           true,
+				Statistics:        true,
+				IncludeRaw:        true,
+				RedactSecretRules: true,
+				MaxEventBytes:     262144,
+			},
+		},
+		{
+			name: "explicit_enabled_false",
+			yaml: `version: 1
+trajectory:
+  enabled: false`,
+			want: config.TrajectoryConfig{
+				Enabled:           false,
+				Statistics:        true,
+				IncludeRaw:        true,
+				RedactSecretRules: true,
+				MaxEventBytes:     262144,
+			},
+		},
+		{
+			name: "statistics_false_only",
+			yaml: `version: 1
+trajectory:
+  statistics: false`,
+			want: config.TrajectoryConfig{
+				Enabled:           true,
+				Statistics:        false,
+				IncludeRaw:        true,
+				RedactSecretRules: true,
+				MaxEventBytes:     262144,
+			},
+		},
+		{
+			name: "include_raw_false_only",
+			yaml: `version: 1
+trajectory:
+  include_raw: false`,
+			want: config.TrajectoryConfig{
+				Enabled:           true,
+				Statistics:        true,
+				IncludeRaw:        false,
+				RedactSecretRules: true,
+				MaxEventBytes:     262144,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var snap *config.Snapshot
+			if tt.yaml == "" {
+				res, err := config.CompileMerged(nil, nil, nil)
+				require.NoError(t, err, "CompileMerged(%q)", tt.name)
+				snap = &config.Snapshot{Trajectory: res.Trajectory}
+			} else {
+				dir := t.TempDir()
+				path := filepath.Join(dir, "agentd.yaml")
+				require.NoError(t, os.WriteFile(path, []byte(tt.yaml), 0o600))
+				store, err := config.Load(context.Background(), path)
+				require.NoError(t, err, "Load(%q)", tt.name)
+				snap = store.Current()
+			}
+			assert.Equal(t, tt.want.Enabled, snap.Trajectory.Enabled, "Enabled")
+			assert.Equal(t, tt.want.Statistics, snap.Trajectory.Statistics, "Statistics")
+			assert.Equal(t, tt.want.IncludeRaw, snap.Trajectory.IncludeRaw, "IncludeRaw")
+			assert.Equal(t, tt.want.RedactSecretRules, snap.Trajectory.RedactSecretRules, "RedactSecretRules")
+			assert.Equal(t, tt.want.MaxEventBytes, snap.Trajectory.MaxEventBytes, "MaxEventBytes")
+		})
+	}
 }
 
 func TestCompileTrajectoryFromYAML(t *testing.T) {
@@ -80,11 +154,11 @@ func TestParseTrajectory_statistics(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "default_false",
+			name: "omitted_uses_compile_default",
 			yaml: `version: 1
 trajectory:
   enabled: true`,
-			want: false,
+			want: true,
 		},
 		{
 			name: "enabled_and_statistics",

@@ -168,3 +168,28 @@ func TestWriteReport_allUnchangedStillPrintsReport(t *testing.T) {
 	assert.Contains(t, report, "unchanged")
 	assert.Contains(t, report, "/home/me/.cursor/hooks.json")
 }
+
+func TestRun_dryRunNoWrite(t *testing.T) {
+	root := t.TempDir()
+	workDir := filepath.Join(root, "repo")
+	cursorDir := filepath.Join(workDir, ".cursor")
+	require.NoError(t, os.MkdirAll(cursorDir, 0o755))
+	homeDir := filepath.Join(root, "home")
+	require.NoError(t, os.MkdirAll(homeDir, 0o755))
+	t.Setenv("HOME", homeDir)
+
+	bin := filepath.Join(root, "agentd")
+	require.NoError(t, os.WriteFile(bin, []byte("#!/bin/sh\n"), 0o755))
+
+	_, err := install.Run(context.Background(), install.Options{
+		Provider:   "cursor",
+		Scope:      "project",
+		Dir:        workDir,
+		DirFlagSet: true,
+		Command:    []string{bin},
+		DryRun:     true,
+	})
+	require.NoError(t, err, "Run(dry-run)")
+	_, err = os.Stat(filepath.Join(cursorDir, "hooks.json"))
+	assert.True(t, os.IsNotExist(err), "dry-run must not write hooks.json")
+}

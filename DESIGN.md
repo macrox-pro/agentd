@@ -35,9 +35,9 @@ Contributor rules: [AGENTS.md](./AGENTS.md) · Code style: [CONVENTIONS.md](./CO
 | Sync + async hooks | Dispatch Engine with hybrid modes |
 | Safe defaults | Declarative guards; fail-closed policy option |
 | Cross-platform | gRPC over Unix socket / Windows named pipe |
-| Cross-agent trajectory | Opt-in append-only session ledger — §14 |
+| Cross-agent trajectory | Append-only session ledger (default on) — §14 |
 
-**Decisions:** one daemon per user; declarative YAML guards/dispatch; daemon writes runtime overlay only; trajectory is async side channel (default off, PII).
+**Decisions:** one daemon per user; declarative YAML guards/dispatch; daemon writes runtime overlay only; trajectory is async side channel (default on; `redact_secret_rules` default true, PII).
 
 ---
 
@@ -373,7 +373,7 @@ Four-layer merge (§3). Key top-level sections:
 | `logging` | daemon log level/file |
 | `dispatch_defaults` / `dispatch` | §2 |
 | `guards` | `secrets`, `shell`, `mcp`, `paths` |
-| `trajectory` | §14 — opt-in; default off |
+| `trajectory` | §14 — default on |
 | `metrics` | opt-in Prometheus scrape HTTP; default off; `listen` host:port |
 | `projects` | per-repo guard overrides |
 
@@ -434,6 +434,8 @@ Tests: [CONVENTIONS.md § Tests](./CONVENTIONS.md#tests) · `go test ./... -race
 | M14 / v0.0.4 | **done** | `daemon enable`/`disable` login autostart; `config enable`/`disable`/`get` toggles; `e2e-m14` |
 | M15 / v0.0.5 | **done** | Trajectory statistics: daemon rollup (`trajectory stats`) + offline `session stats` |
 | M16 / v0.0.6 | **done** | Prometheus metrics HTTP; trajectory stats token/delta rollup |
+| M17 / v0.0.7 | **done** | `doctor`; `install --all-detected` (plan-only default, `--yes` to apply); discovery + hook status; `e2e-m17` |
+| M18 / v0.0.7 | **done** | `setup` TUI wizard; interactive bare `install` on TTY; `AGENTD_NO_TUI` / `CI` bypass |
 
 **Shipped:** v0.0.6. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
 
@@ -441,7 +443,7 @@ Tests: [CONVENTIONS.md § Tests](./CONVENTIONS.md#tests) · `go test ./... -race
 
 ## 14. Trajectory hub
 
-Opt-in **cross-agent session ledger** — hooks live (L0 for all six providers); optional transcript importers (L2+) where stable on-disk formats exist. agentd stays **gate + observer outside the agent loop**.
+**Cross-agent session ledger** (default on) — hooks live (L0 for all six providers); optional transcript importers (L2+) where stable on-disk formats exist. agentd stays **gate + observer outside the agent loop**.
 
 **Product claim:** *Every supported agent's hooks are traceable on one stream; transcript/thinking depth varies by provider (§14.3).*  
 **Not claimed:** byte-identical “everything the model sees”; agent-loop resume.
@@ -501,7 +503,7 @@ Depth is tiered; **do not invent events the wire never carried.**
 
 Importer status enum: `supported` | `partial` | `none`. Per-provider hook quirks: [docs/en/providers.md](./docs/en/providers.md).
 
-**Uniform guarantees:** same event catalog/JSONL layout; opt-in config; same redaction/`include_raw` controls; missing L2/L3 → no fake `transcript/thinking`; policy replay uses stored `raw` + provider codec (test per fixture).
+**Uniform guarantees:** same event catalog/JSONL layout; compile defaults on (`enabled`, `include_raw`, `statistics`); same redaction/`include_raw` controls; missing L2/L3 → no fake `transcript/thinking`; policy replay uses stored `raw` + provider codec (test per fixture).
 
 ### 14.4 Terminology
 
@@ -515,7 +517,7 @@ Importer status enum: `supported` | `partial` | `none`. Per-provider hook quirks
 ### 14.5 Non-goals (trajectory)
 
 - Replacing the agent loop
-- Default-on full `Raw` without redaction
+- Default-on full `Raw` **without** redaction (`redact_secret_rules` stays default true)
 - Claude-only L0 (all six required)
 - Sync-path persistence / blocking wire on flush
 - Inventing PostTool results or thinking when provider never emitted them
