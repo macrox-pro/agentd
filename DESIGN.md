@@ -433,8 +433,9 @@ Tests: [CONVENTIONS.md § Tests](./CONVENTIONS.md#tests) · `go test ./... -race
 | M13 / v0.0.3 | **done** | `policy.offline` hook edge (OfflineFor, DialReady, serve offline cache); `e2e-m13` |
 | M14 / v0.0.4 | **done** | `daemon enable`/`disable` login autostart; `config enable`/`disable`/`get` toggles; `e2e-m14` |
 | M15 / v0.0.5 | **done** | Trajectory statistics: daemon rollup (`trajectory stats`) + offline `session stats` |
+| M16 / v0.0.6 | **done** | Prometheus metrics HTTP; trajectory stats token/delta rollup |
 
-**Shipped:** v0.0.5. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
+**Shipped:** v0.0.6. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
 
 ---
 

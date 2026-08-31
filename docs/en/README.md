@@ -4,7 +4,7 @@
 
 How to install, configure, and operate agentd (v1). Facts below match the shipped CLI and config schema.
 
-> **Release:** [v0.0.5](../../CHANGELOG.md#v005--2026-08-29) — daemon and session trajectory counters.
+> **Release:** [v0.0.6](../../CHANGELOG.md#v006--2026-08-31) — Prometheus metrics and trajectory token stats.
 
 Start with [Why agentd](./why.md) if you need the problem statement; otherwise [Getting started](./getting-started.md).
 

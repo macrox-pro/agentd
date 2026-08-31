@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+(nothing yet)
+
+## [v0.0.6] — 2026-08-31
+
+Prometheus observability and richer trajectory token stats.
+
 ### Highlights
 
 - **Prometheus metrics** — opt-in loopback `/metrics` (default off; `127.0.0.1:2112`); runtime gauges, invoke/async histograms, config reload counter; `daemon status --json` field `metrics_listen`; CLI `--metrics-listen`

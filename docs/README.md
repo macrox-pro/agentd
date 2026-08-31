@@ -1,6 +1,6 @@
 # agentd documentation
 
-User guide for running and configuring [agentd](../README.md). Current release: **v0.0.5** ([changelog](../CHANGELOG.md)).
+User guide for running and configuring [agentd](../README.md). Current release: **v0.0.6** ([changelog](../CHANGELOG.md)).
 
 | Language | Guide |
 |----------|--------|

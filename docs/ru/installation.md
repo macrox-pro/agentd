@@ -19,7 +19,7 @@ go install github.com/macrox-pro/agentd@latest
 Бинарники для linux / darwin / windows (amd64 / arm64) публикуются через goreleaser на [странице релизов](https://github.com/macrox-pro/agentd/releases). Зафиксировать версию:
 
 ```bash
-go install github.com/macrox-pro/agentd@v0.0.5
+go install github.com/macrox-pro/agentd@v0.0.6
 ```
 
 ## Сборка из исходников
