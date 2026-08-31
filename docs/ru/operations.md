@@ -6,7 +6,7 @@
 
 ## Один демон на пользователя
 
-Файловая блокировка и сокет не дают запустить второй экземпляр. Точку IPC можно сменить флагом `--socket`.
+Файловая блокировка и сокет не дают запустить второй экземпляр. Сокет можно сменить флагом `--socket`.
 
 ## Статус
 
@@ -23,13 +23,13 @@ agentd daemon status --json
 | `socket` | путь к сокету или имя pipe |
 | `version` | версия демона (`dev` / `dev+rev` / модульная версия — как собран процесс) |
 | `started_at` | время старта (RFC3339, UTC) |
-| `generation` | поколение конфига после слияния |
-| `fingerprint` | отпечаток слитого конфига |
-| `async_queue_depth` | сколько задач ждёт в асинхронной очереди |
-| `async_dropped_count` | сколько задач отброшено из‑за переполнения (растёт только вверх) |
-| `trajectory_dropped_count` | overflow очереди trajectory (если ledger включён) |
-| `compiled_route_count` | число скомпилированных маршрутов |
-| `metrics_listen` | адрес scrape Prometheus при включённых метриках; пусто, если выключены |
+| `generation` | Сколько раз конфиг загружался с момента старта (растёт при перезагрузке) |
+| `fingerprint` | Контрольная сумма собранного конфига — меняется, когда меняется политика |
+| `async_queue_depth` | Сколько фоновых задач ждёт очереди |
+| `async_dropped_count` | Сколько задач отброшено из‑за переполнения (до перезапуска только растёт) |
+| `trajectory_dropped_count` | Сколько записей журнала сессий отброшено (если журнал включён) |
+| `compiled_route_count` | Сколько маршрутов сейчас действует |
+| `metrics_listen` | Адрес метрик Prometheus, если они включены; иначе пусто |
 
 В `--json` всегда есть объект `autostart` (даже при `running: false`):
 
@@ -43,7 +43,7 @@ agentd daemon status --json
 
 Человекочитаемая строка: `agentd: running (version …, generation …)` — без autostart (нужен `--json`).
 
-## Prometheus metrics
+## Метрики Prometheus
 
 Включение в user config или при старте:
 
@@ -59,7 +59,7 @@ metrics:
 agentd daemon start --metrics-listen 127.0.0.1:2112
 ```
 
-При работе демона `agentd daemon status --json` содержит `metrics_listen` (пусто, если выключено). URL scrape: `http://<metrics_listen>/metrics`.
+При работе демона `agentd daemon status --json` содержит `metrics_listen` (пусто, если выключено). Адрес сбора: `http://<metrics_listen>/metrics`.
 
 Пример job Prometheus:
 
@@ -130,6 +130,6 @@ agentd session stats SESSION_ID --provider ID [--json]
 
 ## Логирование
 
-На пути хука не писать отладку в stdout. Демон дописывает операционные логи в `agentd.log` в [state directory](./configuration.md#state-directory); `agentd daemon start --foreground` также дублирует в stderr. Асинхронная цель dispatch `target: log` использует тот же slog-логгер.
+На пути хука не писать отладку в stdout. Демон дописывает операционные логи в `agentd.log` в [каталоге состояния](./configuration.md#каталог-состояния); `agentd daemon start --foreground` также дублирует в stderr. Асинхронная цель dispatch `target: log` использует тот же slog-логгер.
 
 См. также: [Маршрутизация](./dispatch.md) (переполнение очереди), [Конфигурация](./configuration.md) (перезагрузка).

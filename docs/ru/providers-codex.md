@@ -26,7 +26,7 @@ agentd daemon start
 agentd hook notify --provider=codex '{"type":"agent-turn-complete"}'
 ```
 
-## Особенности провайдера
+## Особенности агента
 
 | Тема | Поведение |
 |------|-----------|
@@ -36,4 +36,4 @@ agentd hook notify --provider=codex '{"type":"agent-turn-complete"}'
 | **Путь trust** | Ключи доверия содержат **абсолютный** путь к `hooks.json`; смена CODEX_HOME → переустановка |
 | **Смысл пустого stdout** | В отличие от Claude, пустой stdout в диалекте Codex — allow/no-op (кодирует agenthooks) |
 
-См. также: [Провайдеры](./providers.md), [Справочник CLI](./cli.md), [Диагностика](./troubleshooting.md).
+См. также: [Агенты](./providers.md), [Справочник команд](./cli.md), [Диагностика](./troubleshooting.md).

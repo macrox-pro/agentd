@@ -2,33 +2,40 @@
 
 > **Language:** [English](./why.md) · [Русский](../ru/why.md)
 
-agentd is a **user-level daemon** that sits between coding agents and your hook logic: one policy surface, provider-correct wire I/O, sync decisions and async side effects without re-implementing each agent’s hook dialect.
+**agentd** is a background service on your machine. It sits between coding agents and your rules: one policy for every agent, a reply in the format that agent expects, and side effects (logs, HTTP) that never delay that reply.
 
-Built on [agenthooks](https://github.com/speakeasy-api/agenthooks) for codecs and install targets.
+Hook formats and writing agent settings use [agenthooks](https://github.com/speakeasy-api/agenthooks).
+
+| Term | Meaning |
+|------|---------|
+| **Hook** | Callback the agent runs at an event (for example: before a tool). |
+| **Coding agent** | Product such as Claude Code or Cursor (`--provider` in commands). |
+| **Sync path** | Decides allow / ask / deny and shapes the reply to the agent. |
+| **Async path** | Audit and notifications. Must not block the reply. |
 
 ## Problems it addresses
 
 | Pain | Without agentd | With agentd |
 |------|----------------|-------------|
-| **N providers, N dialects** | Separate scripts/timeouts/exit codes for Claude, Cursor, Codex, Gemini, OpenCode, Kimi | Thin `hook run` / `serve` / `notify`; daemon owns policy |
-| **Cold start on every tool call** | Heavy logic spawned per hook process → latency and flaky timeouts | Long-lived daemon; hot path uses in-memory config snapshot (no disk I/O per Invoke) |
-| **Guards mixed with audit** | One process must both block the agent and fire webhooks/metrics | Sync pipeline (Ask/Deny) vs async queue (log/http/exec/…) — async never blocks the wire response |
-| **Policy drift across repos** | Copy-paste hook configs; hard to approve once / block temporarily | Layered YAML (user ⊕ project ⊕ runtime); approvals + temporary blocks with persist |
-| **Ops blind spot** | No single place for queue pressure or “is the gate up?” | `daemon status --json`: generation, fingerprint, `async_queue_depth`, `async_dropped_count` |
+| **Many agents, many formats** | A separate script, timeout, and exit code per product | Thin `hook run` / `serve` / `notify`; policy lives in the daemon |
+| **Cold start on every tool call** | Heavy logic in a new process → latency and flaky timeouts | One long-lived process; each call uses an in-memory config snapshot |
+| **Guards mixed with audit** | The same script must both block the agent and fire webhooks | Sync pipeline (ask / deny) separate from an async queue (`log` / `http` / `exec`) |
+| **Policy drift across repos** | Copied hook files; hard to approve once or block for a while | Layered YAML (user + project + runtime); approvals and temporary blocks |
+| **No operations picture** | Unclear whether the gate is up or the queue is full | `daemon status --json`: config generation, fingerprint, queue depth, drops |
 
 ## What it is not (v1)
 
-Not an agent auth product, transcript pipeline, plugin runtime, or general hooks DSL. Targets are declarative YAML; exec stays **async-only**. See [DESIGN.md §11](../../DESIGN.md#11-non-goals-v1).
+Not a login product for agent accounts, not a full transcript pipeline, not a plugin loader, and not a separate rules language. Routes are YAML. Running an external program (`exec`) is **async only**. See [DESIGN.md §11](../../DESIGN.md#11-non-goals-v1).
 
 ## Who it is for
 
-Engineers and teams who already run coding agents in real workflows and want **one** place to:
+People who already use coding agents at work and want **one** place to:
 
-- **Guard** — secrets / shell / MCP / paths, Ask / Deny, temporary blocks;
-- **Observe** — async sinks (`log` / `http` / `exec` / …) without blocking the agent response;
-- **Understand agent behavior** — a single hook stream across providers plus ops status (`daemon status`: queue depth, dropped async work);
-- **Respond in the provider’s native format** without re-implementing each agent’s dialect in your scripts.
+- **Guard** — secrets, shell, MCP, paths; ask or deny; temporary blocks
+- **Observe** — write events to `log` / `http` / `exec` without delaying the agent
+- **See what happened** — one hook stream across agents, plus `daemon status`
+- **Reply in the agent’s native format** — without re-implementing each dialect in your scripts
 
-Nearby cases: audit of “what the agent tried,” metrics/alerts on hooks, one policy across Claude + Cursor + … without duplicated glue.
+Typical uses: audit of “what the agent tried,” alerts on hooks, one policy for Claude + Cursor + others.
 
 Next: [Getting started](./getting-started.md) · architecture: [DESIGN.md](../../DESIGN.md).

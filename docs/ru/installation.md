@@ -19,7 +19,7 @@ go install github.com/macrox-pro/agentd@latest
 Бинарники для linux / darwin / windows (amd64 / arm64) публикуются через goreleaser на [странице релизов](https://github.com/macrox-pro/agentd/releases). Зафиксировать версию:
 
 ```bash
-go install github.com/macrox-pro/agentd@v0.0.6
+go install github.com/macrox-pro/agentd@v0.0.7
 ```
 
 ## Сборка из исходников
@@ -40,7 +40,7 @@ make build
 ## Требования
 
 - Linux, macOS или Windows
-- Поддерживаемый ИИ-агент для кода ([Провайдеры](./providers.md))
+- Поддерживаемый ИИ-агент для кода ([Агенты](./providers.md))
 
 Пересборка protobuf (для разработчиков проекта): `make generate` (нужен [buf](https://buf.build)).
 

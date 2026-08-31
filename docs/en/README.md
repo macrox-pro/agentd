@@ -2,27 +2,27 @@
 
 > **Language:** [English](./README.md) · [Русский](../ru/README.md)
 
-How to install, configure, and operate agentd (v1). Facts below match the shipped CLI and config schema.
+Install, configure, and run agentd (v1). Pages match the shipped commands and YAML schema.
 
-> **Release:** [v0.0.6](../../CHANGELOG.md#v006--2026-08-31) — Prometheus metrics and trajectory token stats.
+> **Release:** [v0.0.7](../../CHANGELOG.md#v007--2026-08-31) — setup wizard, doctor, session ledger on by default.
 
-Start with [Why agentd](./why.md) if you need the problem statement; otherwise [Getting started](./getting-started.md).
+New here? [Why agentd](./why.md), then [Getting started](./getting-started.md).
 
 ## Contents
 
-| Page | Covers |
-|------|--------|
-| [Why agentd](./why.md) | Problems, pains, what v1 is / is not |
-| [Getting started](./getting-started.md) | Daemon, minimal config, install hooks, verify |
-| [Installation](./installation.md) | `go install`, Releases, build from source |
-| [Configuration](./configuration.md) | Layers, on-disk paths (state directory), YAML keys, validate/show/patch, reload |
-| [CLI](./cli.md) | Command and flag reference |
-| [Guards](./guards.md) | secrets, shell, mcp, paths |
-| [Dispatch](./dispatch.md) | Modes, targets, timeouts, async queue |
-| [Approvals](./approvals.md) | Ask → record-decision, blocks, persist |
-| [Providers](./providers.md) | Per-agent install, entrypoints, **quirks** — [Claude](./providers-claude-code.md) · [Cursor](./providers-cursor.md) · [Codex](./providers-codex.md) · [Gemini](./providers-gemini.md) · [OpenCode](./providers-opencode.md) · [Kimi](./providers-kimi.md) |
-| [Operations](./operations.md) | Status, stop, reload, trajectory stats |
+| Page | What you will find |
+|------|--------------------|
+| [Why agentd](./why.md) | Problem, limits of v1 |
+| [Getting started](./getting-started.md) | Daemon, first config, connect an agent |
+| [Installation](./installation.md) | `go install`, GitHub Releases, build from source |
+| [Configuration](./configuration.md) | Layers, on-disk paths, YAML keys, reload |
+| [CLI](./cli.md) | Commands and flags |
+| [Guards](./guards.md) | Secrets, shell, MCP, paths |
+| [Dispatch](./dispatch.md) | How events are routed, timeouts, async queue |
+| [Approvals](./approvals.md) | Ask once, then allow; temporary blocks |
+| [Providers](./providers.md) | Per-agent install and limits — [Claude](./providers-claude-code.md) · [Cursor](./providers-cursor.md) · [Codex](./providers-codex.md) · [Gemini](./providers-gemini.md) · [OpenCode](./providers-opencode.md) · [Kimi](./providers-kimi.md) |
+| [Operations](./operations.md) | Status, stop, reload, session stats |
 | [Troubleshooting](./troubleshooting.md) | Common failures |
-| [Maintaining docs](./maintaining.md) | When/how to update EN+RU (contributors) |
+| [Maintaining docs](./maintaining.md) | When to update EN+RU (contributors) |
 
-Architecture depth: [DESIGN.md](../../DESIGN.md).
+Architecture: [DESIGN.md](../../DESIGN.md).

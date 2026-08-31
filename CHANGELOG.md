@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+(nothing yet)
+
+## [v0.0.7] — 2026-08-31
+
+Setup wizard, doctor, auto-install, and trajectory defaults on.
+
 ### Highlights
 
 - **Setup wizard** — `agentd setup` and interactive bare `agentd install` on TTY; `AGENTD_NO_TUI` / `CI` bypass

@@ -2,7 +2,7 @@
 
 > **Language:** [English](./approvals.md) · [Русский](../ru/approvals.md)
 
-Record Allow after Ask, and deny matching tools via temporary blocks. Stored in the runtime layer.
+After the agent **asks** you, record “allow” so the same action is not asked again. Temporary **blocks** deny matching tools. Both live in the runtime layer.
 
 ## Ask → fingerprint → record
 

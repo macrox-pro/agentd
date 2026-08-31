@@ -27,7 +27,7 @@ agentd install --provider=cursor --scope=plugin --dir /path/to/plugin
 agentd hook run --provider=cursor --argv-payload '<json>'
 ```
 
-## Особенности провайдера
+## Особенности агента
 
 | Тема | Поведение |
 |------|-----------|
@@ -37,4 +37,4 @@ agentd hook run --provider=cursor --argv-payload '<json>'
 | **PromptSubmitted** | На уровне kind — в основном Deny |
 | **fail-closed** | Ожидания Cursor по fail-closed учитывает agenthooks при install/runtime |
 
-См. также: [Провайдеры](./providers.md), [Маршрутизация](./dispatch.md), [Диагностика](./troubleshooting.md).
+См. также: [Агенты](./providers.md), [Маршрутизация](./dispatch.md), [Диагностика](./troubleshooting.md).

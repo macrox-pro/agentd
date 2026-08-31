@@ -28,7 +28,7 @@ agentd hook serve --provider=opencode
 
 `hook serve` принимает только `--provider=opencode`.
 
-## Особенности провайдера
+## Особенности агента
 
 | Тема | Поведение |
 |------|-----------|
@@ -38,4 +38,4 @@ agentd hook serve --provider=opencode
 | **Stop / session.idle** | Не на каждом stop есть Continue — часть событий observe-only |
 | **Permission** | Идут через канал permission OpenCode (allow/deny), не через Claude-style Ask JSON |
 
-См. также: [Провайдеры](./providers.md), [Справочник CLI](./cli.md).
+См. также: [Агенты](./providers.md), [Справочник команд](./cli.md).

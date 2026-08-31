@@ -10,11 +10,11 @@
 |-----------|-------------|
 | Новая или изменённая команда/флаг CLI (`cmd/`) | [cli.md](./cli.md) (канон), [DESIGN.md §6](../../DESIGN.md#6-cli-reference) при смене архитектурных заметок, связанные инструкции при смене сценария |
 | Ключ или перечисление YAML (`internal/config/file.go`, compile) | [configuration.md](./configuration.md) (канон); при необходимости [guards.md](./guards.md) / [dispatch.md](./dispatch.md) / [approvals.md](./approvals.md); DESIGN §7 при смене контракта слоёв / runtime overlay |
-| Пути на диске по умолчанию (state dir, лог, sessions, сокет) | [configuration.md](./configuration.md#state-directory) (канон); в DESIGN §3 / §5 / §14 — только указатели |
+| Пути на диске по умолчанию (state dir, лог, sessions, сокет) | [configuration.md](./configuration.md#каталог-состояния) (канон); в DESIGN §3 / §5 / §14 — только указатели |
 | Поведение охранника / Ask / Deny | [guards.md](./guards.md), [approvals.md](./approvals.md), [troubleshooting.md](./troubleshooting.md) |
 | Режим маршрута, цель, таймаут, переполнение async | [dispatch.md](./dispatch.md), [operations.md](./operations.md) |
 | Поля статуса / операции демона | [operations.md](./operations.md), [cli.md](./cli.md) |
-| Провайдеры install / области / точки входа / особенности | [providers.md](./providers.md) + `providers-*.md`, [getting-started.md](./getting-started.md) |
+| Установка хуков / области / точки входа / особенности | [providers.md](./providers.md) + `providers-*.md`, [getting-started.md](./getting-started.md) |
 | Установка / релизы / версия | [installation.md](./installation.md) |
 | Режимы ошибок / offline / таймауты | [troubleshooting.md](./troubleshooting.md) |
 | Формулировки позиционирования в README | [README.md](../../README.md) и [why.md](./why.md) |
@@ -37,7 +37,7 @@
 | YAML | `internal/config/file.go` |
 | Пути / сохранение runtime | `internal/config/paths.go`, `paths_unix.go`, `paths_windows.go`, `store.go`, `persist.go` |
 | Сокет по умолчанию | `internal/transport/path_*.go` |
-| Охранники | `internal/guard/` |
+| Проверки | `internal/guard/` |
 | Маршрутизация / таймауты | `internal/dispatch/`, `timeout.go` |
 | Одобрения / блокировки | `internal/config/approvals.go`, `blocks.go` |
 | JSON статуса | `internal/daemon/status_write.go`, `api/agentd/v1/daemon.proto` |

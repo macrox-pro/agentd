@@ -7,7 +7,6 @@
 <p align="center">
   <h1 align="center"><b>agentd</b></h1>
   <p align="center">A local daemon that proxies, guards, and observes coding-agent hooks — once, for every agent.</p>
-  <p align="center"></p>  
 </p>
 
 <hr />
@@ -18,12 +17,12 @@ agentd sits between your AI coding agents (Claude Code, Cursor, Codex, Gemini CL
 ![Go Version](https://img.shields.io/badge/go-1.26+-00ADD8?logo=go)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-> **Status:** v0.0.6 (Prometheus metrics, trajectory token stats). Roadmap history: [PROGRESS.md](./PROGRESS.md#milestones-archive).
+> **Status:** [v0.0.7](./CHANGELOG.md#v007--2026-08-31) (setup wizard, doctor, trajectory defaults on). Roadmap history: [PROGRESS.md](./PROGRESS.md).
 
 ## Documentation
 
-- [User guide (English)](./docs/en/) — default ([why agentd](./docs/en/why.md))
-- [Руководство (русский)](./docs/ru/) ([зачем нужен](./docs/ru/why.md))
+- [User guide (English)](./docs/en/) — default ([why agentd](./docs/en/why.md) · [getting started](./docs/en/getting-started.md))
+- [Руководство (русский)](./docs/ru/) ([зачем нужен](./docs/ru/why.md) · [быстрый старт](./docs/ru/getting-started.md))
 - Keeping docs current: [docs/en/maintaining.md](./docs/en/maintaining.md)
 
 Contributor design and conventions: [DESIGN.md](./DESIGN.md), [AGENTS.md](./AGENTS.md), [CONVENTIONS.md](./CONVENTIONS.md). How to contribute: [CONTRIBUTING.md](./CONTRIBUTING.md).
@@ -54,14 +53,16 @@ agentd centralizes hook logic in a **long-lived daemon** while keeping the **age
 
 ## Features
 
-- **Universal hook proxy** — one CLI surface (`agentd hook run`) for all supported agents
+- **Universal hook proxy** — one CLI surface (`agentd hook run` / `notify` / `serve`) for all supported agents
 - **Sync + async + hybrid dispatch** — blocking decisions for the agent, fire-and-forget observability in parallel or after sync
 - **Declarative guards** — secrets, shell, MCP, path policies via YAML
 - **Approvals & temporary blocks** — Ask once / approve with TTL; runtime overlay persisted across restarts
+- **Session ledger** — hook calls logged by default (`agentd config get trajectory`); disable with `config disable trajectory`
+- **Detect and install** — `agentd doctor` (read-only); `install --all-detected` (plan unless `--yes`); `setup` in a terminal
 - **Efficient config reload** — in-memory snapshots, fsnotify with debounce; zero config I/O on the hot path
 - **Cross-platform IPC** — gRPC over Unix domain sockets (Linux/macOS) or named pipes (Windows)
 - **Provider-faithful I/O** — stdout/stderr discipline and exit codes handled per agenthooks codecs
-- **Ops Status** — queue depth and async overflow drop counter on `daemon status`
+- **Ops Status** — queue depth, async drops, optional Prometheus listen address on `daemon status --json`
 
 ## Supported agents
 
@@ -132,20 +133,31 @@ guards:
     action: ask
 ```
 
-**3. Install hooks for your agent** (example: Claude Code, project scope):
+**3. Connect an agent.** See what agentd finds (read-only), then install:
+
+```bash
+agentd doctor
+agentd install --all-detected          # plan only
+agentd install --all-detected --yes    # write hook files
+```
+
+Or one agent, this repository:
 
 ```bash
 cd your-repo
 agentd install --provider=claude-code --scope=project
 ```
 
+In a terminal, `agentd setup` walks the same flow. CI: `AGENTD_NO_TUI=1`.
+
 **4. Verify** — trigger a tool call in your agent; check daemon status:
 
 ```bash
 agentd daemon status --json
+agentd config get trajectory    # trajectory: on (default)
 ```
 
-For OpenCode, use `agentd hook serve --provider=opencode` in generated plugin config (see [DESIGN.md §1](./DESIGN.md#1-architecture)).
+For OpenCode, generated plugin config uses `agentd hook serve --provider=opencode` (see [DESIGN.md §1](./DESIGN.md#1-architecture)).
 
 Full walkthrough: [docs/en/getting-started.md](./docs/en/getting-started.md).
 
@@ -182,7 +194,9 @@ Full schema: [docs/en/configuration.md](./docs/en/configuration.md) · layer/run
 | `agentd hook run` | **Agent entrypoint** — blocking hooks |
 | `agentd hook notify` | Codex notify path (async) |
 | `agentd hook serve` | OpenCode NDJSON bridge |
-| `agentd install` | Write agent hook configs (via agenthooks) |
+| `agentd doctor` | Detect agents and hook install status (read-only) |
+| `agentd install` | Write agent hook configs (`--provider` or `--all-detected`) |
+| `agentd setup` | Interactive install (terminal) |
 | `agentd config validate` | Validate YAML offline (CI-friendly) |
 | `agentd config enable FEATURE` | Curated toggles (trajectory, guards) — user/project YAML |
 | `agentd config disable FEATURE` | Turn off a curated toggle |
@@ -191,7 +205,9 @@ Full schema: [docs/en/configuration.md](./docs/en/configuration.md) · layer/run
 | `agentd config patch` | Patch runtime overlay (persisted) |
 | `agentd config record-decision` | Record approval after Ask |
 | `agentd dispatch routes` | Show compiled dispatch routes |
+| `agentd session list` / `show` / `export` | Inspect the session ledger (offline) |
 | `agentd session subscribe` | Live trajectory stream (daemon required) |
+| `agentd trajectory stats` | Daemon-lifetime counters (daemon required) |
 
 **Trajectory (default on):** every supported agent’s hooks are traceable on one stream; transcript/thinking depth varies by provider — not “everything the model sees everywhere.”
 
@@ -213,6 +229,7 @@ cd agentd
 make generate   # protobuf (requires buf)
 make test       # go test -race
 make lint       # golangci-lint + buf lint
+make e2e
 go test -tags=integration ./...   # optional daemon↔hook integration
 ```
 

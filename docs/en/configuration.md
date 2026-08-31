@@ -2,11 +2,11 @@
 
 > **Language:** [English](./configuration.md) · [Русский](../ru/configuration.md)
 
-Four-layer merge, YAML surface, and how reloads work. Layer/runtime overlay contract: [DESIGN.md §7](../../DESIGN.md#7-configuration-schema).
+agentd builds one effective config from **four layers**. Later layers override earlier ones. YAML keys and reload: below. Layer contract: [DESIGN.md §7](../../DESIGN.md#7-configuration-schema).
 
 ## State directory
 
-User config is the file `~/.agentd.yaml` — not a `~/.agentd/` tree. Mutable daemon data (runtime overlay, operational log, session ledger) is **state**: daemon-written, regenerable, and not meant to travel with config backups or git. [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/latest/) puts that class under `$XDG_STATE_HOME` (unset → `~/.local/state`). Windows uses `%LOCALAPPDATA%\agentd\`. IPC (socket / lock) is **runtime**, not state — `$XDG_RUNTIME_DIR` is session-scoped and cleaned on logout.
+User config is the file `~/.agentd.yaml` — not a `~/.agentd/` folder. Data the daemon writes (runtime overlay, log, session ledger) is **state**: regenerable, not for git. On Linux/macOS that lives under `$XDG_STATE_HOME` (unset → `~/.local/state`). Windows: `%LOCALAPPDATA%\agentd\`. The socket is **not** state — it lives under `$XDG_RUNTIME_DIR` and is removed on logout.
 
 | Kind | Default location |
 |------|------------------|
@@ -14,7 +14,7 @@ User config is the file `~/.agentd.yaml` — not a `~/.agentd/` tree. Mutable da
 | State directory | `$XDG_STATE_HOME/agentd/` else `~/.local/state/agentd/` (Windows: `%LOCALAPPDATA%\agentd\`) |
 | → runtime overlay | `runtime.yaml` (daemon only) |
 | → operational log | `agentd.log` |
-| → trajectory ledger | `sessions/<provider>/<session_id>.jsonl` (when enabled) |
+| → session ledger | `sessions/<provider>/<session_id>.jsonl` (when enabled) |
 | IPC socket (not state) | `$XDG_RUNTIME_DIR/agentd/agentd.sock` (Darwin fallback `~/Library/Caches/agentd/`; Linux `~/.local/run/agentd/`; else temp) — [DESIGN.md §5](../../DESIGN.md#5-transport) |
 
 ## User config bootstrap
@@ -38,16 +38,16 @@ agentd config validate --config ~/.agentd.yaml
 
 ## Layers (merge order)
 
-| Order | Layer | Location |
-|-------|--------|----------|
-| 1 | defaults | compiled into the binary |
+| Order | Layer | Where it lives |
+|-------|--------|----------------|
+| 1 | defaults | Built into the binary |
 | 2 | user | `--config` or `~/.agentd.yaml` |
-| 3 | project | `.agentd.yaml` walking up from CWD / project root |
-| 4 | runtime | daemon-managed overlay (approvals, temporary blocks) |
+| 3 | project | `.agentd.yaml` walking up from the current directory |
+| 4 | runtime | Daemon-managed file (approvals, temporary blocks) |
 
 **Runtime path:** `runtime.yaml` in the [state directory](#state-directory).
 
-Runtime writes are debounced (**500ms**), mode `0600`, atomic rename. Hot path uses `store.Current()` only — no disk I/O per Invoke.
+Runtime writes are debounced (**500ms**), mode `0600`, atomic rename. Each hook call reads the in-memory snapshot — no disk I/O per call.
 
 ## Top-level YAML keys
 

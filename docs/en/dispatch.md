@@ -2,7 +2,7 @@
 
 > **Language:** [English](./dispatch.md) · [Русский](../ru/dispatch.md)
 
-Route matching, sync/async pipelines, targets, and timeouts. Design detail: [DESIGN.md §2](../../DESIGN.md#2-hook-dispatch-engine).
+Which checks and side effects run for an event, and in what order. Detail: [DESIGN.md §2](../../DESIGN.md#2-hook-dispatch-engine).
 
 ## Modes
 

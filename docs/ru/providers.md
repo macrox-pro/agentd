@@ -1,64 +1,69 @@
-# Провайдеры
+# Агенты
 
 > **Language:** [English](../en/providers.md) · [Русский](./providers.md)
 
-Как установить хуки agentd в каждого поддерживаемого агента, какой командой он вызывает agentd и **какие особенности** (возможности протокола, формат ответа, пути install).
+Как подключить каждого поддерживаемого ИИ-агента, какой командой `agentd hook` он вызывает службу и чего этот агент не умеет.
 
-**Условие:** предпочтительно `agentd daemon start` ([Быстрый старт](./getting-started.md)). Если демон не запущен, установленные хуки применяют `policy.offline` (по умолчанию `fail_open`), чтобы агенты не блокировались.
+**Перед установкой хуков:** запустите демон ([Быстрый старт](./getting-started.md)). Если он не запущен, установленные хуки следуют `policy.offline` (по умолчанию `fail_open`) — агент не останавливается.
 
 ## Руководства по агентам
 
-| Агент | `--provider` | Точка входа | Страница |
-|-------|--------------|-------------|----------|
-| Claude Code | `claude-code` | `hook run` (stdin) | [providers-claude-code.md](./providers-claude-code.md) |
+| Агент | `--provider` | Как агент вызывает agentd | Страница |
+|-------|--------------|---------------------------|----------|
+| Claude Code | `claude-code` | `hook run` (JSON во входной поток) | [providers-claude-code.md](./providers-claude-code.md) |
 | Cursor | `cursor` | `hook run` (`--argv-payload`) | [providers-cursor.md](./providers-cursor.md) |
 | OpenAI Codex | `codex` | `hook run` + `hook notify` | [providers-codex.md](./providers-codex.md) |
-| Gemini CLI | `gemini` | `hook run` (stdin) | [providers-gemini.md](./providers-gemini.md) |
-| OpenCode | `opencode` | `hook serve` (NDJSON) | [providers-opencode.md](./providers-opencode.md) |
+| Gemini CLI | `gemini` | `hook run` (JSON во входной поток) | [providers-gemini.md](./providers-gemini.md) |
+| OpenCode | `opencode` | `hook serve` (поток NDJSON) | [providers-opencode.md](./providers-opencode.md) |
 | Kimi Code | `kimi-code` / `kimicode` | `hook run` | [providers-kimi.md](./providers-kimi.md) |
 
-## Особенности одним взглядом
+## Что умеет каждый агент
 
-| Провайдер | Ask на tool.pre | «Пустой» ответ | Важные ограничения |
-|-----------|-----------------|----------------|--------------------|
-| Claude | да | `{}` + код 0 | Полный Ask/Deny/Allow на PreToolUse |
-| Cursor | только shell/MCP | диалект Cursor | URL в команде ломает install; async не меняет sync |
-| Codex | **нет** Ask | **пустой** stdout + код 0 | Trust в `config.toml`; notify только async |
-| Gemini | да | свой диалект + дисциплина stderr | Таймауты в **мс**; не писать debug в stderr с hookedge |
-| OpenCode | **нет** Ask на tool.pre | кадры serve | Долгий `serve`; mutex сессии в демоне |
-| Kimi | **нет** Ask | **пустой** stdout + код 0 | Только user install; в JSON только deny/allow |
+| Агент | Может спросить вас перед инструментом | Ответ «ничего не менять» | Ограничения |
+|-------|----------------------------------------|--------------------------|-------------|
+| Claude | да | `{}` и код выхода 0 | Полный набор: спросить / запретить / разрешить на PreToolUse |
+| Cursor | только встроенные оболочка и MCP | свой JSON Cursor | Адрес URL в команде хука ломает установку; фон не должен менять синхронный ответ |
+| Codex | **нет** | **пустой** stdout и код 0 | Ключи доверия в `config.toml`; `notify` только наблюдение |
+| Gemini | да | JSON Gemini; stderr без отладки | Таймауты в **миллисекундах**; с хука не писать отладку в stderr |
+| OpenCode | **нет** на tool.pre | кадры `serve` | Долгий `serve`; в демоне одна сессия за раз |
+| Kimi | **нет** | **пустой** stdout и код 0 | Только область `user`; в JSON только запрет/разрешение |
 
-Матрица возможностей — из agenthooks; охранники agentd опираются на то, что провайдер умеет выразить (`policy.ask_fallback`, если Ask недоступен).
+Возможности агента задаёт agenthooks. agentd накладывает ваши проверки на эту поверхность (`policy.ask_fallback`, если агент не умеет спрашивать).
 
-## Общее поведение install
+## Общая установка хуков
 
 ```bash
 agentd install --provider=PROVIDER --scope=SCOPE [--dir PATH]
 ```
 
-| `--scope` | Смысл |
-|-----------|--------|
-| `project` (по умолчанию) | Настройки проекта в cwd (codex: `./.codex`) |
-| `user` | Home агента (напр. `~/.cursor`, `~/.claude`; codex: `$CODEX_HOME` или `~/.codex`). Алиас: `--global` |
-| `plugin` | Корень плагина — `--dir` обязателен (Claude, Cursor) |
+| `--scope` | Куда пишутся файлы |
+|-----------|-------------------|
+| `project` (по умолчанию) | Этот репозиторий (Codex: `./.codex`) |
+| `user` | Домашний каталог агента (например `~/.cursor`, `~/.claude`; Codex: `$CODEX_HOME` или `~/.codex`). То же, что `--global` |
+| `plugin` | Корень расширения — нужен `--dir` (Claude, Cursor) |
 
-При успехе `agentd install` печатает сводку с абсолютными путями для каждого созданного, обновлённого или неизменённого файла.
+При успехе `agentd install` печатает каждый созданный, обновлённый или неизменённый файл с абсолютным путём.
 
-В argv агента — `agentd agenthooks …`. Таймауты HookSpec: ToolPre / PromptSubmitted **30 s**; короткие виды **5 s**.
+В настройках агента вызывается `agentd agenthooks …` (то же, что `hook …`). Таймауты: «перед инструментом» и отправка запроса **30 с**; более короткие события **5 с**.
 
-Дизайн: [DESIGN.md §1–§2](../../DESIGN.md) · кодеки: [agenthooks](https://github.com/speakeasy-api/agenthooks).
+Устройство: [DESIGN.md §1–§2](../../DESIGN.md) · форматы: [agenthooks](https://github.com/speakeasy-api/agenthooks).
 
 ## Автообнаружение
 
-`agentd doctor` и `agentd install --all-detected` сканируют рабочий каталог, home и PATH. **High confidence** (есть каталог конфигурации) попадает в `--all-detected --yes`. **Medium confidence** (только бинарник в PATH) показывается в `doctor`, но не устанавливается автоматически.
+`agentd doctor` и `agentd install --all-detected` смотрят рабочий каталог, домашний каталог и `PATH`.
 
-| Провайдер | Маркер проекта | User dir | Автоустановка |
-|-----------|----------------|----------|---------------|
-| `claude-code` | `.claude/` | `~/.claude/` | project + user при наличии обоих |
-| `cursor` | `.cursor/` | `~/.cursor/` | project + user при наличии обоих |
-| `codex` | `.codex/` | `$CODEX_HOME` или `~/.codex` | project + user при наличии обоих |
-| `gemini` | `.gemini/` | `~/.gemini/` | project + user при наличии обоих |
-| `opencode` | `.opencode/` | — | только project (`user` требует `--dir`) |
-| `kimi-code` | — | `$KIMI_CODE_HOME` или `~/.kimi-code` | только user scope |
+| Уверенность | Признак | `--all-detected --yes` | `doctor` |
+|-------------|---------|------------------------|----------|
+| Высокая | Есть каталог настроек агента | Записывает хуки | Показывает |
+| Средняя | Есть только программа в `PATH` | **Пропускает** | Показывает с пометкой |
 
-Plugin scope никогда не выбирается автоматически. Явно: `agentd install --provider=… --scope=plugin --dir=…`.
+| Агент | Каталог в проекте | Каталог пользователя | Автоустановка |
+|-------|-------------------|----------------------|---------------|
+| `claude-code` | `.claude/` | `~/.claude/` | проект и пользователь, если есть оба |
+| `cursor` | `.cursor/` | `~/.cursor/` | проект и пользователь, если есть оба |
+| `codex` | `.codex/` | `$CODEX_HOME` или `~/.codex` | проект и пользователь, если есть оба |
+| `gemini` | `.gemini/` | `~/.gemini/` | проект и пользователь, если есть оба |
+| `opencode` | `.opencode/` | — | только проект (`user` нужен `--dir`) |
+| `kimi-code` | — | `$KIMI_CODE_HOME` или `~/.kimi-code` | только пользователь |
+
+Область `plugin` сама не выбирается. Явно: `agentd install --provider=… --scope=plugin --dir=…`.

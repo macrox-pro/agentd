@@ -30,7 +30,7 @@ echo '{"session_id":"s","cwd":"/tmp","hook_event_name":"PreToolUse","tool_name":
   | agentd hook run --provider=claude-code
 ```
 
-## Особенности провайдера
+## Особенности агента
 
 | Тема | Поведение |
 |------|-----------|
@@ -40,4 +40,4 @@ echo '{"session_id":"s","cwd":"/tmp","hook_event_name":"PreToolUse","tool_name":
 | **Таймауты** | В HookSpec — секунды; бюджет sync берёт defaults install, если у Invoke нет deadline |
 | **Блокирующие хуки** | ToolPre / PromptSubmitted / Stop в наборе install по умолчанию — blocking |
 
-См. также: [Провайдеры](./providers.md), [Одобрения](./approvals.md), [Охранники](./guards.md).
+См. также: [Агенты](./providers.md), [Одобрения](./approvals.md), [Проверки](./guards.md).

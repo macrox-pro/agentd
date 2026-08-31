@@ -1,12 +1,12 @@
-# Trajectory (журнал сессий)
+# Журнал сессий (trajectory)
 
 > **Language:** [English](../en/trajectory.md) · [Русский](./trajectory.md)
 
-Append-only журнал вызовов хуков (`hook/invoked`, `hook/decided`, async meta). **По умолчанию включён** — в payload могут быть секреты; `redact_secret_rules` по умолчанию true.
+Хронологическая запись вызовов хуков (`hook/invoked`, `hook/decided`, фоновые сведения). **Включён по умолчанию.** В данных могут быть секреты; `redact_secret_rules` по умолчанию включён.
 
 ## Включение
 
-Trajectory включён по умолчанию (compile defaults). Проверка или отключение без правки YAML ([Переключатели features](./configuration.md#переключатели-features)):
+Журнал включён по умолчанию. Проверка или отключение без правки YAML ([Переключатели](./configuration.md#переключатели)):
 
 ```bash
 agentd config get trajectory          # trajectory: on (default)
@@ -39,7 +39,7 @@ trajectory:
       path: ""
 ```
 
-Хранение: `sessions/<provider>/<session_id>.jsonl` в [state directory](./configuration.md#state-directory).
+Хранение: `sessions/<provider>/<session_id>.jsonl` в [каталоге состояния](./configuration.md#каталог-состояния).
 
 Запись идёт по async-пути демона — синхронная задержка хука не меняется.
 

@@ -2,27 +2,27 @@
 
 > **Language:** [English](../en/README.md) · [Русский](./README.md)
 
-Установка, настройка и эксплуатация agentd (v1). Содержание сверено с CLI и схемой YAML.
+Установка, настройка и работа agentd (версия 1). Страницы сверены с командами и схемой YAML.
 
-> **Релиз:** [v0.0.6](../../CHANGELOG.md#v006--2026-08-31) — метрики Prometheus и токены trajectory.
+> **Релиз:** [v0.0.7](../../CHANGELOG.md#v007--2026-08-31) — мастер установки, `doctor`, журнал сессий включён по умолчанию.
 
-Начните с [Зачем нужен agentd](./why.md), если нужна постановка задачи; иначе — с [Быстрого старта](./getting-started.md).
+Впервые здесь? [Зачем нужен agentd](./why.md), затем [Быстрый старт](./getting-started.md).
 
 ## Содержание
 
-| Страница | О чём |
-|----------|--------|
-| [Зачем нужен agentd](./why.md) | Задачи продукта, боли, границы v1 |
-| [Быстрый старт](./getting-started.md) | Демон, минимальный конфиг, установка хуков, проверка |
-| [Установка](./installation.md) | `go install`, релизы, сборка из исходников |
-| [Конфигурация](./configuration.md) | Слои, пути на диске (state directory), ключи YAML, validate/show/patch, перезагрузка |
-| [Справочник CLI](./cli.md) | Команды и флаги |
-| [Охранники (guards)](./guards.md) | `secrets`, `shell`, `mcp`, `paths` |
-| [Маршрутизация (dispatch)](./dispatch.md) | Режимы, цели, таймауты, асинхронная очередь |
-| [Одобрения (approvals)](./approvals.md) | Ask → `record-decision`, временные блокировки, сохранение |
-| [Провайдеры](./providers.md) | Install, точки входа и **особенности** — [Claude](./providers-claude-code.md) · [Cursor](./providers-cursor.md) · [Codex](./providers-codex.md) · [Gemini](./providers-gemini.md) · [OpenCode](./providers-opencode.md) · [Kimi](./providers-kimi.md) |
-| [Эксплуатация](./operations.md) | Статус, остановка, перезагрузка, статистика trajectory |
+| Страница | Что внутри |
+|----------|------------|
+| [Зачем нужен agentd](./why.md) | Задача продукта, границы версии 1 |
+| [Быстрый старт](./getting-started.md) | Демон, первый конфиг, подключение агента |
+| [Установка](./installation.md) | `go install`, сборки с GitHub, сборка из исходников |
+| [Конфигурация](./configuration.md) | Слои, пути на диске, ключи YAML, перезагрузка |
+| [Справочник команд](./cli.md) | Команды и флаги |
+| [Проверки](./guards.md) | Секреты, оболочка, MCP, пути |
+| [Маршрутизация](./dispatch.md) | Куда идёт событие, таймауты, фоновая очередь |
+| [Одобрения](./approvals.md) | Спросить один раз, потом разрешить; временные запреты |
+| [Агенты](./providers.md) | Установка хуков и ограничения — [Claude](./providers-claude-code.md) · [Cursor](./providers-cursor.md) · [Codex](./providers-codex.md) · [Gemini](./providers-gemini.md) · [OpenCode](./providers-opencode.md) · [Kimi](./providers-kimi.md) |
+| [Эксплуатация](./operations.md) | Статус, остановка, перезагрузка, статистика сессий |
 | [Диагностика](./troubleshooting.md) | Типичные сбои |
-| [Актуализация документации](./maintaining.md) | Когда и как обновлять EN+RU (для разработчиков) |
+| [Актуализация документации](./maintaining.md) | Когда обновлять EN+RU (для разработчиков) |
 
-Архитектура: [DESIGN.md](../../DESIGN.md).
+Устройство системы: [DESIGN.md](../../DESIGN.md).

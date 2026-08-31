@@ -21,7 +21,7 @@ agentd install --provider=kimi-code --scope=user
 
 На CLI предпочитайте **`kimi-code`**.
 
-## Особенности провайдера
+## Особенности агента
 
 | Тема | Поведение |
 |------|-----------|
@@ -31,4 +31,4 @@ agentd install --provider=kimi-code --scope=user
 | **Только наблюдение** | Многие виды событий (PostToolUse, PermissionRequest, …) — observe-only |
 | **Область install** | Только user; project-level hooks у Kimi нет |
 
-См. также: [Провайдеры](./providers.md), [Диагностика](./troubleshooting.md), [Охранники](./guards.md).
+См. также: [Агенты](./providers.md), [Диагностика](./troubleshooting.md), [Проверки](./guards.md).

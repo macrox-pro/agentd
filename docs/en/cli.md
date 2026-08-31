@@ -6,11 +6,13 @@ Commands and flags as implemented under `cmd/`. Architecture notes: [DESIGN.md �
 
 ## Persistent flags
 
+Flags on every command.
+
 | Flag | Default | Meaning |
 |------|---------|---------|
-| `--config` | `~/.agentd.yaml` | User config path |
-| `--socket` | OS default | Daemon IPC endpoint |
-| `-v` / `--verbose` | off | Extra stderr (never hook stdout) |
+| `--config` | `~/.agentd.yaml` | User config file |
+| `--socket` | OS default | How this command talks to the daemon |
+| `-v` / `--verbose` | off | Extra messages on stderr (never on hook stdout) |
 
 ## version
 
@@ -35,21 +37,21 @@ Daemon process version: field `version` on `agentd daemon status`.
 
 ## hook
 
-Thin edge: decode → gRPC Invoke → encode. Full Decide/guards stay in the daemon. When the daemon is unreachable, the edge applies `policy.offline` from local config.
+The process the coding agent starts. It reads the event, calls the daemon, writes the reply. Allow / ask / deny are decided **in the daemon**, not here. If the daemon is unreachable, this process applies `policy.offline` from local config.
 
 | Command | Flags | Notes |
 |---------|-------|-------|
-| `hook run` | `--provider` (required), `--argv-payload`, `--timeout` (`0` = unset) | Stdin (or argv) hooks |
-| `hook notify` | `--provider`, `--timeout` | Codex notify (argv JSON) |
-| `hook serve` | `--provider`, `--timeout` | OpenCode NDJSON; provider must be `opencode` |
+| `hook run` | `--provider` (required), `--argv-payload`, `--timeout` (`0` = unset) | Event on stdin (or argv) |
+| `hook notify` | `--provider`, `--timeout` | Codex notify (JSON in argv) |
+| `hook serve` | `--provider`, `--timeout` | OpenCode NDJSON stream; `--provider` must be `opencode` |
 
-If dial/Invoke fails: stderr `daemon not running`, then `policy.offline` (`fail_open` default → exit 0 / neutral wire; `fail_closed` → exit **1**). Do not write debug to stdout on the hook path.
+If the daemon cannot be reached: stderr `daemon not running`, then `policy.offline`. Default `fail_open` → exit 0 and a no-op reply so the agent continues. `fail_closed` → exit **1**. Do not print debug on stdout on this path.
 
 ### agenthooks (hidden)
 
-**Why:** `agentd install` uses [agenthooks/install](https://github.com/speakeasy-api/agenthooks), which writes provider hook configs with `agentd agenthooks …`, not `hook`. agentd registers matching hidden subcommands so those configs work unchanged. Prefer `hook run` / `hook serve` / `hook notify` in docs and manual hook settings — same flags, same wire path (`cmd/hook.go`).
+`agentd install` writes agent settings that call `agentd agenthooks …`, not `hook`. Hidden subcommands implement the same path so those files work. Prefer `hook run` / `hook serve` / `hook notify` in documentation and hand-written settings.
 
-Install writes `agentd agenthooks run|notify|serve --provider=…`. Same behavior as `hook …`. `agenthooks serve` defaults `--provider` to `opencode`.
+Install writes `agentd agenthooks run|notify|serve --provider=…`. Same flags as `hook …`. `agenthooks serve` defaults `--provider` to `opencode`.
 
 ## config
 
@@ -98,14 +100,14 @@ agentd config enable guard-shell
 
 ## doctor
 
-Read-only report of detected coding agents and hook install status. Does not modify agent configuration.
+Lists coding agents found on this machine and whether their hook files match agentd. **Read-only** — does not change agent settings.
 
 | Flag | Default | Meaning |
 |------|---------|---------|
-| `--json` | off | Emit JSON (`DoctorReport`) |
-| `--cwd` | current directory | Working directory for discovery |
+| `--json` | off | JSON report |
+| `--cwd` | current directory | Directory used as the project root for detection |
 
-When the daemon socket is reachable (`--socket`), the report includes `daemon: reachable` (human) or `"DaemonReachable": true` (JSON). Unreachable daemon is not an error — exit 0.
+If the daemon socket answers (`--socket`), output includes `daemon: reachable` or `"DaemonReachable": true`. An unreachable daemon is not a failure — exit 0.
 
 ```bash
 agentd doctor
@@ -115,38 +117,40 @@ agentd doctor --cwd /path/to/repo
 
 ## install
 
+Writes the agent’s settings so it calls agentd. Does not start the daemon.
+
 | Flag | Default |
 |------|---------|
 | `--provider` | required unless `--all-detected` |
 | `--scope` | `project` (`user`, `plugin`) |
 | `--global` | false — same as `--scope=user` |
-| `--dir` | `scope=project`: CWD (codex: `./.codex`); `scope=user`: agent home (e.g. `~/.cursor`); `scope=plugin`: required |
-| `--all-detected` | off — discover high-confidence agents; plan only unless `--yes` |
-| `--yes` | off — apply `--all-detected` installs (required to write) |
-| `--dry-run` | off — show planned changes without writing (single `--provider` or with `--all-detected --yes`) |
+| `--dir` | `project`: current directory (Codex: `./.codex`); `user`: agent home (for example `~/.cursor`); `plugin`: required |
+| `--all-detected` | off — agents with a config folder; prints a plan unless `--yes` |
+| `--yes` | off — actually write files for `--all-detected` |
+| `--dry-run` | off — show the plan, write nothing (one `--provider`, or with `--all-detected --yes`) |
 
-`--global` conflicts with an explicit `--scope` other than `user`. On success, prints provider, scope, install root, and per-file `create` / `update` / `unchanged` with absolute paths.
+`--global` cannot be combined with `--scope` other than `user`. On success, prints agent, scope, install root, and per-file `create` / `update` / `unchanged` with absolute paths.
 
 ```bash
 agentd install --provider=claude-code --scope=project
 agentd install --all-detected              # plan only
-agentd install --all-detected --yes      # apply high-confidence targets
+agentd install --all-detected --yes        # write files
 agentd install --provider=cursor --dry-run
 ```
 
-On a TTY, bare `agentd install` (no flags) launches the interactive wizard ([`setup`](#setup)). Non-interactive shells must pass `--provider` or `--all-detected`.
+In an interactive terminal, `agentd install` with no flags opens the short wizard ([`setup`](#setup)). Scripts and CI must pass `--provider` or `--all-detected`.
 
 ## setup
 
-Interactive onboarding wizard (TTY). Discovers agents, lets you pick targets, previews the plan, and applies installs.
+Interactive flow in a real terminal: find agents, pick where to install, show the plan, optionally write files.
 
 | Flag | Default | Meaning |
 |------|---------|---------|
-| `--yes` | off | Skip confirmation and apply |
-| `--dry-run` | off | Preview only; no writes |
-| `--cwd` | current directory | Discovery working directory |
+| `--yes` | off | Write without asking again |
+| `--dry-run` | off | Show the plan; write nothing |
+| `--cwd` | current directory | Project root for detection |
 
-Set `AGENTD_NO_TUI=1` or `CI=true` to disable the TUI (command exits with a non-interactive hint).
+`AGENTD_NO_TUI=1` or `CI=true` turns this off (the command explains how to install without a terminal).
 
 ```bash
 agentd setup

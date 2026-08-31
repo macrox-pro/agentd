@@ -19,7 +19,7 @@ agentd install --provider=gemini --scope=user
 1. `agentd daemon start`
 2. Запускайте Gemini CLI; хуки вызывают `agenthooks run --provider=gemini`.
 
-## Особенности провайдера
+## Особенности агента
 
 | Тема | Поведение |
 |------|-----------|
@@ -29,4 +29,4 @@ agentd install --provider=gemini --scope=user
 | **Ask** | На ToolPre Ask/Deny/Allow поддерживаются |
 | **Коды выхода** | Семантика блокировки отличается от Claude; кодирование — зона agenthooks, не выдумывайте коды в agentd |
 
-См. также: [Провайдеры](./providers.md), [Эксплуатация](./operations.md).
+См. также: [Агенты](./providers.md), [Эксплуатация](./operations.md).

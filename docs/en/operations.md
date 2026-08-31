@@ -2,11 +2,11 @@
 
 > **Language:** [English](./operations.md) · [Русский](../ru/operations.md)
 
-Day-2 controls for the user daemon.
+Day-to-day control of the user daemon.
 
 ## One daemon per user
 
-Lock + socket prevent a second start. Override IPC with `--socket`.
+A lock and a socket stop a second copy from starting. Override the socket with `--socket`.
 
 ## Status
 
@@ -23,13 +23,13 @@ JSON when running:
 | `socket` | path / pipe |
 | `version` | daemon version (`dev` / `dev+rev` / module version depending on how that process was built) |
 | `started_at` | RFC3339 UTC |
-| `generation` | config generation |
-| `fingerprint` | merged config fingerprint |
-| `async_queue_depth` | queued async jobs |
-| `async_dropped_count` | overflow drops (monotonic) |
-| `trajectory_dropped_count` | trajectory queue overflow (monotonic; when ledger enabled) |
-| `compiled_route_count` | routes in snapshot |
-| `metrics_listen` | Prometheus scrape address when metrics enabled; empty when disabled |
+| `generation` | How many times config was loaded since start (increments on reload) |
+| `fingerprint` | Hash of the merged config — changes when policy changes |
+| `async_queue_depth` | Side-effect jobs waiting |
+| `async_dropped_count` | Jobs dropped because the queue was full (never decreases until restart) |
+| `trajectory_dropped_count` | Session-ledger jobs dropped (when the ledger is on) |
+| `compiled_route_count` | How many dispatch routes are active |
+| `metrics_listen` | Prometheus address when metrics are on; empty when off |
 
 `--json` always includes an `autostart` object (even when `running` is false):
 

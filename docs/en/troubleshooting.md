@@ -2,7 +2,7 @@
 
 > **Language:** [English](./troubleshooting.md) · [Русский](../ru/troubleshooting.md)
 
-Failures seen in the field and how agentd behaves.
+Failures seen in production and what agentd does.
 
 ## Daemon not running
 

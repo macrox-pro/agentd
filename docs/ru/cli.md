@@ -1,16 +1,18 @@
-# Справочник CLI
+# Справочник команд
 
 > **Language:** [English](../en/cli.md) · [Русский](./cli.md)
 
-Команды и флаги, как в пакете `cmd/`. Архитектурные заметки: [§6](../../DESIGN.md#6-cli-reference).
+Команды и флаги, как в пакете `cmd/`. Заметки по устройству CLI: [§6](../../DESIGN.md#6-cli-reference).
 
 ## Общие флаги (для всех подкоманд)
 
+Флаги есть у каждой команды.
+
 | Флаг | По умолчанию | Смысл |
 |------|--------------|--------|
-| `--config` | `~/.agentd.yaml` | Путь пользовательского конфига |
-| `--socket` | зависит от ОС | Точка IPC (сокет или именованный канал) |
-| `-v` / `--verbose` | выкл. | Доп. сообщения в stderr (**не** в stdout хука) |
+| `--config` | `~/.agentd.yaml` | Файл конфига пользователя |
+| `--socket` | зависит от ОС | Как эта команда связывается с демоном |
+| `-v` / `--verbose` | выкл. | Дополнительные сообщения в stderr (**не** в stdout хука) |
 
 ## version
 
@@ -26,43 +28,43 @@
 
 | Команда | Флаги | Заметки |
 |---------|-------|---------|
-| `daemon start` | `--foreground`, `--log-level`, `--log-file`, `--metrics-listen` | По умолчанию уходит в фон; ждёт Health; логи в `agentd.log` в [state directory](./configuration.md#state-directory); `--metrics-listen host:port` включает Prometheus scrape для этого процесса |
+| `daemon start` | `--foreground`, `--log-level`, `--log-file`, `--metrics-listen` | По умолчанию уходит в фон; ждёт готовности; журнал в `agentd.log` в [каталоге состояния](./configuration.md#каталог-состояния); `--metrics-listen host:port` включает сбор метрик Prometheus для этого процесса |
 | `daemon stop` | `--timeout` (`10s`) | Корректное завершение по gRPC, иначе SIGTERM |
 | `daemon status` | `--json` | Состояние демона + блок `autostart` ([Эксплуатация](./operations.md#автозапуск-при-входе)) |
 | `daemon reload` | — | Принудительно пересобрать конфиг с диска |
 | `daemon enable` | — | Включает автозапуск при входе и стартует демон, если он не запущен. Может завершиться с ошибкой, хотя автозапуск уже включён — [Эксплуатация → Автозапуск](./operations.md#автозапуск-при-входе) |
 | `daemon disable` | — | Отключает только автозапуск; **не** останавливает работающий демон |
 
-## hook (клиент хука)
+## hook (хук)
 
-Тонкий край: разобрать вход → вызвать демону `Invoke` → закодировать ответ. Полный Decide/guards остаются в демоне. Если демон недоступен, край применяет `policy.offline` из локального конфига.
+Процесс, который запускает ИИ-агент. Читает событие, вызывает демон, пишет ответ. Разрешить / спросить / запретить решает **демон**, не эта команда. Если демон недоступен, применяется `policy.offline` из локального конфига.
 
 | Команда | Флаги | Заметки |
 |---------|-------|---------|
-| `hook run` | `--provider` (обязателен), `--argv-payload`, `--timeout` (`0` = не задан) | Хук из stdin (или argv) |
-| `hook notify` | `--provider`, `--timeout` | Путь notify у Codex (JSON в argv) |
-| `hook serve` | `--provider`, `--timeout` | Долгий мост OpenCode (NDJSON); только `opencode` |
+| `hook run` | `--provider` (обязателен), `--argv-payload`, `--timeout` (`0` = не задан) | Событие во входном потоке (или в argv) |
+| `hook notify` | `--provider`, `--timeout` | Уведомление Codex (JSON в argv) |
+| `hook serve` | `--provider`, `--timeout` | Поток OpenCode (NDJSON); `--provider` только `opencode` |
 
-Если не удалось связаться с демоном или вызвать `Invoke`: в stderr — `daemon not running`, затем `policy.offline` (по умолчанию `fail_open` → код 0 / нейтральный wire; `fail_closed` → код **1**). На пути хука не писать отладочный вывод в stdout.
+Если демон недоступен: в stderr — `daemon not running`, затем `policy.offline`. По умолчанию `fail_open` → код 0 и ответ «ничего не менять», агент продолжает работу. `fail_closed` → код **1**. На этом пути не писать отладку в stdout.
 
 ### agenthooks (скрытая команда)
 
-**Зачем:** `agentd install` вызывает [agenthooks/install](https://github.com/speakeasy-api/agenthooks), который прописывает в настройках агента `agentd agenthooks …`, а не `hook`. agentd регистрирует скрытые подкоманды с тем же поведением, чтобы сгенерированные конфиги работали без правок. В документации и при ручной настройке удобнее `hook run` / `hook serve` / `hook notify` — те же флаги и тот же путь через `hookedge` (`cmd/hook.go`).
+`agentd install` прописывает в настройках агента `agentd agenthooks …`, а не `hook`. Скрытые подкоманды делают то же самое, чтобы эти файлы работали. В документации и при ручной настройке удобнее `hook run` / `hook serve` / `hook notify`.
 
-`install` прописывает в конфиг агента `agentd agenthooks run|notify|serve --provider=…`. Поведение совпадает с `hook …`. У `agenthooks serve` значение `--provider` по умолчанию — `opencode`.
+Установка пишет `agentd agenthooks run|notify|serve --provider=…`. Флаги те же, что у `hook …`. У `agenthooks serve` значение `--provider` по умолчанию — `opencode`.
 
 ## config (конфиг)
 
-Curated-переключатели (`enable` / `disable` / `get`) пишут только в **user или project** YAML — не в runtime overlay. Для временных override — `config patch`. **`daemon enable`** — автозапуск при входе, не toggle конфига.
+Команды `enable` / `disable` / `get` пишут только в YAML **пользователя или проекта**, не во временный слой. Временные правки — `config patch`. **`daemon enable`** — автозапуск при входе, не переключатель конфига.
 
 | Команда | Флаги | Заметки |
 |---------|-------|---------|
 | `config validate` | `--cwd` | Offline parse + compile |
 | `config show` | `--merged`, `--layer user\|project\|runtime`, `--cwd` | Просмотр слоёв |
-| `config enable FEATURE` | `--scope user\|project`, `--cwd` | Записать `enabled: true` (создаёт user bootstrap при отсутствии файла) |
+| `config enable FEATURE` | `--scope user\|project`, `--cwd` | Записать `enabled: true` (создаёт файл пользователя, если его нет) |
 | `config disable FEATURE` | `--scope user\|project`, `--cwd` | Записать `enabled: false` |
-| `config get FEATURE` | `--cwd` | Эффективное on/off + слой-победитель (`default` \| `user` \| `project`); runtime не учитывается |
-| `config patch` | `--file` (обязателен) | Patch runtime overlay (нужен демон) |
+| `config get FEATURE` | `--cwd` | Фактическое on/off и слой-победитель (`default` \| `user` \| `project`); временный слой не учитывается |
+| `config patch` | `--file` (обязателен) | Правка временного слоя (нужен демон) |
 | `config record-decision` | `--fingerprint` (обязателен), `--scope` (по умолчанию `project`), `--project-root`, `--session-id`, `--expires-at` (RFC3339) | Upsert approval |
 
 **Features:** `trajectory`, `trajectory-raw`, `guard-shell`, `guard-mcp`, `guard-paths`. Scope по умолчанию: `user` для trajectory; `project` для guards. Offline; работающий демон подхватывает через fsnotify.
@@ -98,14 +100,14 @@ agentd config enable guard-shell
 
 ## doctor (диагностика)
 
-Только чтение: обнаруженные агенты и статус установки хуков. Конфиг агента не меняется.
+Список ИИ-агентов на этой машине и совпадают ли их файлы хуков с agentd. **Только чтение** — настройки агента не меняет.
 
 | Флаг | По умолчанию | Смысл |
 |------|--------------|--------|
-| `--json` | выкл. | JSON-отчёт (`DoctorReport`) |
-| `--cwd` | текущий каталог | Рабочий каталог для discovery |
+| `--json` | выкл. | Отчёт в JSON |
+| `--cwd` | текущий каталог | Корень проекта для поиска |
 
-Если сокет демона доступен (`--socket`), в отчёте `daemon: reachable` (текст) или `"DaemonReachable": true` (JSON). Недоступный демон — не ошибка, exit 0.
+Если сокет демона отвечает (`--socket`), в выводе `daemon: reachable` или `"DaemonReachable": true`. Недоступный демон — не ошибка, код выхода 0.
 
 ```bash
 agentd doctor
@@ -113,40 +115,42 @@ agentd doctor --json
 agentd doctor --cwd /path/to/repo
 ```
 
-## install (установка хуков в агент)
+## install (установка хуков)
+
+Записывает настройки агента, чтобы он вызывал agentd. Демон при этом не запускается.
 
 | Флаг | По умолчанию |
 |------|--------------|
 | `--provider` | обязателен, если нет `--all-detected` |
 | `--scope` | `project` (также `user`, `plugin`) |
-| `--global` | false — то же, что `--scope=user` |
-| `--dir` | `scope=project`: cwd (codex: `./.codex`); `scope=user`: home агента (напр. `~/.cursor`); `scope=plugin`: обязателен |
-| `--all-detected` | выкл. — high-confidence агенты; только план без `--yes` |
-| `--yes` | выкл. — применить `--all-detected` (обязателен для записи) |
-| `--dry-run` | выкл. — план без записи (один `--provider` или с `--all-detected --yes`) |
+| `--global` | выкл. — то же, что `--scope=user` |
+| `--dir` | `project`: текущий каталог (Codex: `./.codex`); `user`: домашний каталог агента (например `~/.cursor`); `plugin`: обязателен |
+| `--all-detected` | выкл. — агенты с каталогом настроек; без `--yes` только план |
+| `--yes` | выкл. — действительно записать файлы для `--all-detected` |
+| `--dry-run` | выкл. — показать план, ничего не писать (один `--provider` или вместе с `--all-detected --yes`) |
 
-`--global` конфликтует с явным `--scope`, отличным от `user`. При успехе печатает provider, scope, корень установки и по каждому файлу `create` / `update` / `unchanged` с абсолютными путями.
+`--global` нельзя сочетать с `--scope`, отличным от `user`. При успехе печатает агента, область, корень установки и по каждому файлу `create` / `update` / `unchanged` с абсолютными путями.
 
 ```bash
 agentd install --provider=claude-code --scope=project
 agentd install --all-detected              # только план
-agentd install --all-detected --yes        # установка high-confidence
+agentd install --all-detected --yes        # записать файлы
 agentd install --provider=cursor --dry-run
 ```
 
-На TTY голый `agentd install` (без флагов) открывает интерактивный мастер ([`setup`](#setup-мастер-настройки)). В non-TTY нужны `--provider` или `--all-detected`.
+В интерактивном терминале `agentd install` без флагов открывает короткий мастер ([`setup`](#setup-мастер-настройки)). В скриптах и CI нужны `--provider` или `--all-detected`.
 
 ## setup (мастер настройки)
 
-Интерактивный мастер (TTY): discovery, выбор целей, превью плана, установка.
+Сценарий в настоящем терминале: найти агентов, выбрать куда ставить, показать план, по желанию записать файлы.
 
 | Флаг | По умолчанию | Смысл |
 |------|--------------|--------|
-| `--yes` | выкл. | Без подтверждения, сразу применить |
-| `--dry-run` | выкл. | Только превью |
-| `--cwd` | текущий каталог | Каталог для discovery |
+| `--yes` | выкл. | Записать без повторного подтверждения |
+| `--dry-run` | выкл. | Показать план, ничего не писать |
+| `--cwd` | текущий каталог | Корень проекта для поиска |
 
-`AGENTD_NO_TUI=1` или `CI=true` отключают TUI (подсказка для non-interactive).
+`AGENTD_NO_TUI=1` или `CI=true` отключают мастер (команда подскажет, как поставить хуки без терминала).
 
 ```bash
 agentd setup
@@ -163,7 +167,7 @@ agentd setup --yes
 
 ## session (журнал trajectory)
 
-Просмотр и экспорт JSONL ([Trajectory](./trajectory.md)). Offline — читает `sessions/` в [state directory](./configuration.md#state-directory). **Исключения:** `session subscribe` и `trajectory stats` требуют запущенный daemon.
+Просмотр и экспорт JSONL ([журнале сессий](./trajectory.md)). Offline — читает `sessions/` в [каталоге состояния](./configuration.md#каталог-состояния). **Исключения:** `session subscribe` и `trajectory stats` требуют запущенный daemon.
 
 ## trajectory stats
 
@@ -189,7 +193,7 @@ agentd trajectory stats [--provider ID] [--json]
 
 ### session import `--out`
 
-**По умолчанию:** дописывает распарсенные transcript-события в ledger в [state directory](./configuration.md#state-directory); summary на **stdout**.
+**По умолчанию:** дописывает распарсенные transcript-события в ledger в [каталоге состояния](./configuration.md#каталог-состояния); summary на **stdout**.
 
 | | `session export` | `session import` |
 |--|------------------|------------------|
@@ -212,4 +216,4 @@ agentd trajectory stats [--provider ID] [--json]
 agentd session import --provider claude-code --path /path/to/session.jsonl --out - | jq -c 'select(.type=="transcript/message")'
 ```
 
-См. также: [Быстрый старт](./getting-started.md), [Провайдеры](./providers.md).
+См. также: [Быстрый старт](./getting-started.md), [Агенты](./providers.md).

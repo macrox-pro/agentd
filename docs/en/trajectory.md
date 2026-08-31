@@ -2,7 +2,7 @@
 
 > **Language:** [English](./trajectory.md) · [Русский](../ru/trajectory.md)
 
-Append-only ledger of hook Invokes (`hook/invoked`, `hook/decided`, async meta). **Default on** — payloads may contain secrets; `redact_secret_rules` defaults to true.
+A chronological log of hook calls (`hook/invoked`, `hook/decided`, async metadata). **On by default.** Payloads can contain secrets; `redact_secret_rules` defaults to true.
 
 ## Enable
 

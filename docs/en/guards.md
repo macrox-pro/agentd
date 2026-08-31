@@ -2,7 +2,7 @@
 
 > **Language:** [English](./guards.md) · [Русский](../ru/guards.md)
 
-Declarative sync checks on `tool.pre` (and related kinds via builtin). Config under `guards:`.
+Checks that run **before** the agent’s reply is sent (typically the “before tool” event). Configured under `guards:`.
 
 ## Names
 

@@ -2,31 +2,31 @@
 
 > **Language:** [English](../en/configuration.md) · [Русский](./configuration.md)
 
-Четыре слоя, которые **сливаются** (merge) в один эффективный конфиг; поверхность YAML; как работает перезагрузка. Контракт слоёв и runtime overlay: [DESIGN.md §7](../../DESIGN.md#7-configuration-schema).
+agentd собирает один рабочий конфиг из **четырёх слоёв**. Поздний слой перекрывает ранний. Ключи YAML и перезагрузка — ниже. Договорённость о слоях: [DESIGN.md §7](../../DESIGN.md#7-configuration-schema).
 
-## State directory (каталог состояния)
+## Каталог состояния
 
-Пользовательский конфиг — файл `~/.agentd.yaml`, не дерево `~/.agentd/`. Изменяемые данные демона (runtime overlay, операционный лог, ledger сессий) — это **state**: пишет демон, данные восстановимы и не должны ехать вместе с бэкапами конфига или в git. [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/latest/) относит этот класс к `$XDG_STATE_HOME` (если не задан → `~/.local/state`). На Windows — `%LOCALAPPDATA%\agentd\`. IPC (сокет / блокировка) — **runtime**, не state: `$XDG_RUNTIME_DIR` живёт в сессии ОС и очищается при logout.
+Конфиг пользователя — файл `~/.agentd.yaml`, не папка `~/.agentd/`. То, что пишет демон (временный слой, журнал работы, журнал сессий) — **состояние**: его можно заново создать, в git его не кладут. В Linux и macOS это `$XDG_STATE_HOME` (если не задан → `~/.local/state`). Windows: `%LOCALAPPDATA%\agentd\`. Сокет — **не** состояние: он живёт в `$XDG_RUNTIME_DIR` и исчезает при выходе из сеанса.
 
 | Что | Путь по умолчанию |
 |-----|-------------------|
 | Пользовательский конфиг | `~/.agentd.yaml` (файл) |
-| State directory | `$XDG_STATE_HOME/agentd/` иначе `~/.local/state/agentd/` (Windows: `%LOCALAPPDATA%\agentd\`) |
-| → runtime overlay | `runtime.yaml` (только демон) |
-| → операционный лог | `agentd.log` |
-| → ledger trajectory | `sessions/<provider>/<session_id>.jsonl` (если включён) |
-| IPC-сокет (не state) | `$XDG_RUNTIME_DIR/agentd/agentd.sock` (fallback Darwin: `~/Library/Caches/agentd/`; Linux: `~/.local/run/agentd/`; иначе temp) — [DESIGN.md §5](../../DESIGN.md#5-transport) |
+| Каталог состояния | `$XDG_STATE_HOME/agentd/` иначе `~/.local/state/agentd/` (Windows: `%LOCALAPPDATA%\agentd\`) |
+| → временный слой | `runtime.yaml` (только демон) |
+| → журнал работы | `agentd.log` |
+| → журнал сессий | `sessions/<provider>/<session_id>.jsonl` (если включён) |
+| Сокет (не состояние) | `$XDG_RUNTIME_DIR/agentd/agentd.sock` (запасной путь на Darwin `~/Library/Caches/agentd/`; Linux `~/.local/run/agentd/`; иначе временный каталог) — [DESIGN.md §5](../../DESIGN.md#5-transport) |
 
-## Bootstrap пользовательского конфига
+## Автосоздание пользовательского конфига
 
-Только при **`agentd daemon start`**: если файла пользовательского конфига нет, демон записывает минимальный bootstrap (те же ключи, что в [быстром старте](./getting-started.md)) и продолжает запуск. Команды только для чтения (`config show`, `config validate`, хуки) **не** создают файл.
+Только при **`agentd daemon start`**: если файла нет, демон записывает минимальный конфиг (те же ключи, что в [быстром старте](./getting-started.md)) и продолжает запуск. Команды только для чтения (`config show`, `config validate`, хуки) **не** создают файл.
 
 | Ситуация | Поведение |
 |----------|-----------|
-| Файла нет | Bootstrap пишется без сообщений; старт продолжается |
-| Файл валиден | Без изменений; старт продолжается |
-| Невалидный YAML или ошибка compile | Stderr: `agentd: invalid user config <path>: …`; старт не выполняется; файл не меняется |
-| Путь недоступен / ошибка I/O | Старт не выполняется; без сообщения «invalid user config» |
+| Файла нет | Файл создаётся без сообщений; старт продолжается |
+| Файл верный | Без изменений; старт продолжается |
+| Неверный YAML или ошибка сборки | Stderr: `agentd: invalid user config <path>: …`; старт не выполняется; файл не меняется |
+| Путь недоступен / ошибка ввода-вывода | Старт не выполняется; без сообщения «invalid user config» |
 
 Проверка и правка офлайн, затем перезапуск:
 
@@ -43,11 +43,11 @@ agentd config validate --config ~/.agentd.yaml
 | 1 | встроенные значения (`defaults`) | внутри бинарника |
 | 2 | пользовательский (`user`) | `--config` или `~/.agentd.yaml` |
 | 3 | проектный (`project`) | `.agentd.yaml`, поиск вверх от текущей директории / корня проекта |
-| 4 | runtime | наложение, которым управляет демон (одобрения, временные блокировки) |
+| 4 | время работы (`runtime`) | файл демона (одобрения, временные запреты) |
 
-**Путь runtime-файла:** `runtime.yaml` в [state directory](#state-directory).
+**Путь временного слоя:** `runtime.yaml` в [каталоге состояния](#каталог-состояния).
 
-Запись на диск откладывается на **500 ms** (debounce), права файла `0600`, запись атомарная (временный файл + rename). На горячем пути обработки запроса используется только снимок в памяти (`store.Current()`), без чтения диска на каждый `Invoke`.
+Запись на диск откладывается на **500 мс**, права файла `0600`, запись атомарная. Каждый вызов хука читает снимок в памяти — без чтения диска на вызов.
 
 ## Ключи верхнего уровня YAML
 
@@ -84,7 +84,7 @@ agentd config validate --config ~/.agentd.yaml
 | Ключ | По умолчанию |
 |------|--------------|
 | `level` | `info` (`debug` \| `info` \| `warn` \| `error`) |
-| `file` | `""` → `agentd.log` в [state directory](#state-directory) |
+| `file` | `""` → `agentd.log` в [каталоге состояния](#каталог-состояния) |
 
 `agentd daemon start --foreground` дублирует логи в stderr и в файл. Флаги CLI `--log-level` и `--log-file` переопределяют YAML только для этого процесса.
 
@@ -124,21 +124,21 @@ agentd config validate --config ~/.agentd.yaml
 
 Привязка к `0.0.0.0` допустима, но открывает метрики на всех интерфейсах — предпочитайте loopback, если не понимаете риск.
 
-## Переключатели features
+## Переключатели
 
-`agentd config enable|disable|get FEATURE` переключает curated-boolean без ручного YAML ([CLI](./cli.md#config-конфиг)).
+`agentd config enable|disable|get FEATURE` включает и выключает готовые флаги без ручного YAML ([команды](./cli.md#config-конфиг)).
 
 | Поведение | Детали |
 |-----------|--------|
-| Запись | User (`--config` / `~/.agentd.yaml`) или project (`.agentd.yaml` под `--cwd`) |
-| Runtime overlay | **Не** изменяется — временные override через `config patch` |
-| Нет user-файла | `config enable` создаёт тот же bootstrap, что и `daemon start` |
-| Reload | fsnotify на user/project; или `agentd daemon reload` |
-| `config get` | defaults ⊕ user ⊕ project; **без** runtime |
-| Idempotent | Повторный enable/disable при том же effective → exit 0, без записи |
-| YAML round-trip | Marshal может удалить ручные комментарии в изменённых файлах |
-| Охранник secrets | Не curated toggle — правьте `guards.secrets` в YAML |
-| Чтение vs запись project | `config get` ищет `.agentd.yaml` вверх; `enable`/`disable` (project) пишет только под `--cwd` |
+| Запись | Пользователь (`--config` / `~/.agentd.yaml`) или проект (`.agentd.yaml` под `--cwd`) |
+| Временный слой | **Не** меняется — временные правки через `config patch` |
+| Нет файла пользователя | `config enable` создаёт тот же файл, что и `daemon start` |
+| Перезагрузка | Слежение за файлами user/project; или `agentd daemon reload` |
+| `config get` | встроенные ⊕ user ⊕ project; **без** временного слоя |
+| Повтор | Повторный enable/disable при том же значении → код 0, без записи |
+| YAML | Сохранение может убрать ручные комментарии в изменённых файлах |
+| Проверка secrets | Не переключается этой командой — правьте `guards.secrets` в YAML |
+| Чтение vs запись проекта | `config get` ищет `.agentd.yaml` вверх; `enable`/`disable` (project) пишет только под `--cwd` |
 
 **Примеры stdout:**
 
@@ -173,4 +173,4 @@ trajectory: already enabled (user /home/you/.agentd.yaml)
 
 После успешной компиляции в статусе видны `generation` (поколение) и `fingerprint` (отпечаток слитого конфига).
 
-См. также: [Охранники](./guards.md), [Маршрутизация](./dispatch.md), [Справочник CLI](./cli.md).
+См. также: [Проверки](./guards.md), [Маршрутизация](./dispatch.md), [Справочник команд](./cli.md).
