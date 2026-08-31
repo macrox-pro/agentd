@@ -445,8 +445,9 @@ Tests: [CONVENTIONS.md § Tests](./CONVENTIONS.md#tests) · `go test ./... -race
 | M16 / v0.0.6 | **done** | Prometheus metrics HTTP; trajectory stats token/delta rollup |
 | M17 / v0.0.7 | **done** | `doctor`; `install --all-detected` (plan-only default, `--yes` to apply); discovery + hook status; `e2e-m17` |
 | M18 / v0.0.7 | **done** | `setup` TUI wizard; interactive bare `install` on TTY; `AGENTD_NO_TUI` / `CI` bypass |
+| M19 / v0.0.8-beta | **done** | Cursor trajectory stats: sum billing tokens per `stop` (per generation), not session delta |
 
-**Shipped:** v0.0.7. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
+**Shipped:** v0.0.8-beta. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
 
 ---
 

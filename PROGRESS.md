@@ -4,25 +4,24 @@
 
 ## Current
 
-**Documentation refactoring** — complete.
+**v0.0.8-beta release** — ready for tag.
 
-- Added `docs/en/glossary.md` + `docs/ru/glossary.md`; style rules in [CONVENTIONS.md § Documentation style](./CONVENTIONS.md#documentation-style)
-- Factual fixes: `daemon restart` → stop+start; six CLI toggles; anchor/link repairs; RU translation cleanup
-- EN+RU page rewrites: dispatch kind table, trajectory readability, provider uniformity, de-duplicated tables
-- `scripts/check-docs-terms.sh` + `scripts/check-docs-links.sh` wired into `make docs-check`
-- [README.md](./README.md) and [DESIGN.md](./DESIGN.md) updated (glossary link, IPC/TUI/NDJSON/TTL, hook edge naming)
-- Tail pass: RU «пять шагов», ⊕→«слой за слоем», Invoke/RawPayload plain language, See also footers, Research trimmed in README
+- Cursor trajectory stats: sum billing tokens per `stop` (per generation); drop session-delta aggregation
+- CHANGELOG + docs version bump to v0.0.8-beta
 
 ```bash
-make docs-check && make lint && make intent-check
+make lint && make intent-check && make docs-check && make test
+# tag (user): git tag -a v0.0.8-beta -m "v0.0.8-beta" && git push origin v0.0.8-beta
+# release binaries: goreleaser (GitHub Actions on tag push; prerelease auto for -beta)
 ```
 
-**Next:** tag v0.0.7 if not yet pushed; Claude transcript token investigation (separate PR).
+**Next:** Claude transcript token investigation (separate PR); stable v0.0.8 when beta validates.
 
 ## Recent (done)
 
 | When | Phase | One-liner |
 |------|-------|-----------|
+| 2026-09-01 | v0.0.8-beta | Cursor stats per-generation sum; CHANGELOG + docs version bump |
 | 2026-09-01 | Cursor stats tokens | Sum each Cursor stop (per generation); drop session delta; DESIGN §14.6 + docs |
 | 2026-09-01 | Docs refactor | Glossary, EN/RU rewrite, docs-check linters, README/DESIGN/CONVENTIONS style |
 | 2026-08-31 | v0.0.7 | Setup wizard, doctor, `--all-detected`, trajectory default-on; CHANGELOG + docs version bump |

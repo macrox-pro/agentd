@@ -19,7 +19,7 @@ Terms: [docs/en/glossary.md](./docs/en/glossary.md).
 ![Go Version](https://img.shields.io/badge/go-1.26+-00ADD8?logo=go)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-> **Status:** [v0.0.7](./CHANGELOG.md#v007--2026-08-31) (setup wizard, doctor, trajectory defaults on). Roadmap history: [PROGRESS.md](./PROGRESS.md).
+> **Status:** [v0.0.8-beta](./CHANGELOG.md#v008-beta--2026-09-01) (Cursor trajectory stats per-generation sum). Roadmap history: [PROGRESS.md](./PROGRESS.md).
 
 ## Documentation
 
