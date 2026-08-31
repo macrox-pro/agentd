@@ -9,9 +9,11 @@ import (
 )
 
 const (
-	codexHookEventStop    = "Stop"
-	codexTokenCountMarker = `"token_count"`
-	tailScanWindowBytes   = 1 << 20
+	codexHookEventStop        = "Stop"
+	codexTranscriptEventMsg   = "event_msg"
+	codexTranscriptTokenCount = "token_count"
+	codexTokenCountMarker     = `"` + codexTranscriptTokenCount + `"`
+	tailScanWindowBytes       = 1 << 20
 )
 
 func init() {
@@ -47,7 +49,7 @@ func scanCodexTranscript(hookRaw []byte) TokenFields {
 	if err := json.Unmarshal(line, &env); err != nil {
 		return TokenFields{}
 	}
-	if env.Type != "event_msg" || env.Payload.Type != "token_count" || len(env.Payload.Info.LastTokenUsage) == 0 {
+	if env.Type != codexTranscriptEventMsg || env.Payload.Type != codexTranscriptTokenCount || len(env.Payload.Info.LastTokenUsage) == 0 {
 		return TokenFields{}
 	}
 	return parseUsageObject(env.Payload.Info.LastTokenUsage)
