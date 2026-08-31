@@ -72,6 +72,9 @@ func (c *Collector) extractAsync(prov agentdv1.Provider, raw []byte, sessionID s
 	}
 	tokens := extract.Tokens(prov, raw)
 	if !tokens.Any() {
+		tokens = extract.TokensFromTranscript(prov, raw)
+	}
+	if !tokens.Any() {
 		return
 	}
 	c.mu.Lock()

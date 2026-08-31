@@ -132,7 +132,7 @@ fsnotify on user/project/runtime YAML → debounced reload in `config.Store` →
 
 `parallel` / `after_sync` / `async_only` → `Queue.Enqueue` (non-blocking; drops per `on_overflow`) → worker pool → async targets. Sync returns before workers finish; async failure does not change sync decision.
 
-When `trajectory.enabled`, `Invoke` also enqueues ledger records (separate bounded queue; JSONL persist async). Overflow → `trajectory_dropped_count` on Status.
+When `trajectory.enabled`, `Invoke` also enqueues ledger records (separate bounded queue; JSONL persist async). Overflow → `trajectory_dropped_count` on Status. When `trajectory.statistics` is on, token extraction may tail-read a provider transcript in the statistics goroutine (Codex `Stop` fallback; not on `invoke_sync`).
 
 ### Package tags
 
@@ -532,4 +532,4 @@ Two surfaces, both gated by `trajectory.enabled && trajectory.statistics`:
 | Daemon rollup | `agentd trajectory stats` | In-memory until daemon restart | gRPC `TrajectoryService.Statistics`; `since` = daemon `StartedAt` |
 | Session scan | `agentd session stats ID --provider P` | None (computed) | Offline JSONL scan after config gate |
 
-Token fields: daemon rollup reads Invoke `RawPayload` always; offline `session stats` needs `include_raw` in JSONL. Cursor `stop` billing tokens are cumulative per session (daemon applies per-session delta). CLI `trajectory stats --json` uses enum names; gRPC wire keeps int map keys. Gemini/OpenCode/Kimi: hooks-only counters in v1 (no token extractors).
+Token fields: daemon rollup reads Invoke `RawPayload` always; offline `session stats` needs `include_raw` in JSONL. Cursor `stop` billing tokens are cumulative per session (daemon applies per-session delta). Codex `Stop` falls back to tail-read of rollout transcript (`last_token_usage` from last `token_count` line) when hook raw has no usage. CLI `trajectory stats --json` uses enum names; gRPC wire keeps int map keys. Gemini/OpenCode/Kimi: hooks-only counters in v1 (no token extractors).

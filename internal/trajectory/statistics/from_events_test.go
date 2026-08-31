@@ -2,10 +2,14 @@ package statistics_test
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/macrox-pro/agentd/internal/trajectory"
 	"github.com/macrox-pro/agentd/internal/trajectory/statistics"
@@ -15,9 +19,10 @@ func TestFromEvents(t *testing.T) {
 	t.Parallel()
 	now := time.Now().UTC()
 	tests := []struct {
-		name  string
-		events []trajectory.Event
-		check func(t *testing.T, s statistics.Session)
+		name         string
+		events       []trajectory.Event
+		buildEvents  func(t *testing.T) []trajectory.Event
+		check        func(t *testing.T, s statistics.Session)
 	}{
 		{
 			name:   "empty_file",
@@ -135,11 +140,54 @@ func TestFromEvents(t *testing.T) {
 				assert.Equal(t, uint64(3), s.OutputTokensTotal)
 			},
 		},
+		{
+			name: "offline_from_events_codex_fallback",
+			buildEvents: func(t *testing.T) []trajectory.Event {
+				t.Helper()
+				dir := t.TempDir()
+				path := filepath.Join(dir, "rollout.jsonl")
+				line := `{"type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":15156,"cached_input_tokens":4352,"cache_write_input_tokens":0,"output_tokens":100}}}}`
+				require.NoError(t, os.WriteFile(path, []byte(line+"\n"), 0o600))
+				raw := fmt.Sprintf(`{"hook_event_name":"Stop","session_id":"s1","transcript_path":%q}`, path)
+				return []trajectory.Event{
+					{Seq: 1, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "codex", SessionID: "s1", TS: now,
+						Data: json.RawMessage(`{"kind":"agent.stop"}`),
+						Raw:  json.RawMessage(raw)},
+				}
+			},
+			check: func(t *testing.T, s statistics.Session) {
+				assert.Equal(t, uint64(15156), s.InputTokensTotal)
+				assert.Equal(t, uint64(100), s.OutputTokensTotal)
+				assert.Equal(t, uint64(4352), s.CacheReadTokensTotal)
+			},
+		},
+		{
+			name: "offline_no_raw_skips_transcript",
+			buildEvents: func(t *testing.T) []trajectory.Event {
+				t.Helper()
+				dir := t.TempDir()
+				path := filepath.Join(dir, "rollout.jsonl")
+				line := `{"type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":999,"output_tokens":1}}}}`
+				require.NoError(t, os.WriteFile(path, []byte(line+"\n"), 0o600))
+				return []trajectory.Event{
+					{Seq: 1, Type: trajectory.TypeHookInvoked, Source: trajectory.SourceHook, Provider: "codex", SessionID: "s1", TS: now,
+						Data: json.RawMessage(`{"kind":"agent.stop"}`)},
+				}
+			},
+			check: func(t *testing.T, s statistics.Session) {
+				assert.Equal(t, uint64(0), s.InputTokensTotal)
+				assert.Equal(t, uint64(1), s.HooksByKind["agent.stop"])
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := statistics.FromEvents(tt.events)
+			events := tt.events
+			if tt.buildEvents != nil {
+				events = tt.buildEvents(t)
+			}
+			got := statistics.FromEvents(events)
 			tt.check(t, got)
 		})
 	}

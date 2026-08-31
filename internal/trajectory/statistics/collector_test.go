@@ -1,6 +1,9 @@
 package statistics_test
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -48,6 +51,33 @@ func cursorStopInput(snap *config.Snapshot, sessionID, raw string) trajectory.Re
 		},
 		Snap: snap,
 	}
+}
+
+func codexStopInput(t *testing.T, snap *config.Snapshot, sessionID, transcriptPath string) trajectory.RecordInput {
+	t.Helper()
+	raw := fmt.Sprintf(`{"hook_event_name":"Stop","session_id":%q,"transcript_path":%q}`, sessionID, transcriptPath)
+	return trajectory.RecordInput{
+		Provider:   agentdv1.Provider_PROVIDER_CODEX,
+		RawPayload: []byte(raw),
+		Result: dispatch.InvokeResult{
+			Meta: dispatch.InvokeMeta{
+				EventKind: "agent.stop",
+				SessionID: sessionID,
+			},
+			Decision: decision.Neutral(),
+		},
+		Snap: snap,
+	}
+}
+
+func writeCodexRollout(t *testing.T, input, cached, cacheWrite, output uint64) string {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "rollout.jsonl")
+	line := fmt.Sprintf(`{"type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":%d,"cached_input_tokens":%d,"cache_write_input_tokens":%d,"output_tokens":%d}}}}`,
+		input, cached, cacheWrite, output)
+	require.NoError(t, os.WriteFile(path, []byte(line+"\n"), 0o600))
+	return path
 }
 
 func TestObserve(t *testing.T) {
@@ -257,6 +287,93 @@ func TestObserve(t *testing.T) {
 					r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
 					return r.InputTokensTotal == 30 && r.OutputTokensTotal == 3
 				}, time.Second, 5*time.Millisecond)
+			},
+		},
+		{
+			name: "codex_stop_transcript_fallback",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				path := writeCodexRollout(t, 15156, 4352, 0, 100)
+				return statistics.NewCollector(), codexStopInput(t, enabledSnap(true), "s1", path)
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					global := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
+					byCodex := c.Snapshot(agentdv1.Provider_PROVIDER_CODEX)
+					return global.InputTokensTotal == 15156 && global.OutputTokensTotal == 100 &&
+						byCodex.InputTokensTotal == 15156 && byCodex.CacheReadTokens == 4352
+				}, time.Second, 5*time.Millisecond)
+			},
+		},
+		{
+			name: "codex_stop_hook_raw_wins",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				path := writeCodexRollout(t, 999, 0, 0, 999)
+				raw := fmt.Sprintf(`{"hook_event_name":"Stop","session_id":"s1","transcript_path":%q,"usage":{"input_tokens":7,"output_tokens":3}}`, path)
+				return statistics.NewCollector(), trajectory.RecordInput{
+					Provider:   agentdv1.Provider_PROVIDER_CODEX,
+					RawPayload: []byte(raw),
+					Result: dispatch.InvokeResult{
+						Meta:     dispatch.InvokeMeta{EventKind: "agent.stop", SessionID: "s1"},
+						Decision: decision.Neutral(),
+					},
+					Snap: enabledSnap(true),
+				}
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					r := c.Snapshot(agentdv1.Provider_PROVIDER_CODEX)
+					return r.InputTokensTotal == 7 && r.OutputTokensTotal == 3
+				}, time.Second, 5*time.Millisecond)
+			},
+		},
+		{
+			name: "cursor_stop_delta_unchanged",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				c := statistics.NewCollector()
+				c.Observe(cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":100,"output_tokens":10}`))
+				return c, cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":250,"output_tokens":25}`)
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					r := c.Snapshot(agentdv1.Provider_PROVIDER_CURSOR)
+					return r.InputTokensTotal == 250 && r.OutputTokensTotal == 25
+				}, time.Second, 5*time.Millisecond)
+			},
+		},
+		{
+			name: "codex_two_sessions",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				c := statistics.NewCollector()
+				pathA := writeCodexRollout(t, 10, 0, 0, 1)
+				c.Observe(codexStopInput(t, enabledSnap(true), "a", pathA))
+				pathB := writeCodexRollout(t, 20, 0, 0, 2)
+				return c, codexStopInput(t, enabledSnap(true), "b", pathB)
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				assert.Eventually(t, func() bool {
+					r := c.Snapshot(agentdv1.Provider_PROVIDER_CODEX)
+					return r.InputTokensTotal == 30 && r.OutputTokensTotal == 3
+				}, time.Second, 5*time.Millisecond)
+			},
+		},
+		{
+			name: "codex_stop_no_transcript_path",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				return statistics.NewCollector(), trajectory.RecordInput{
+					Provider:   agentdv1.Provider_PROVIDER_CODEX,
+					RawPayload: []byte(`{"hook_event_name":"Stop","session_id":"s1"}`),
+					Result: dispatch.InvokeResult{
+						Meta:     dispatch.InvokeMeta{EventKind: "agent.stop", SessionID: "s1"},
+						Decision: decision.Neutral(),
+					},
+					Snap: enabledSnap(true),
+				}
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				time.Sleep(20 * time.Millisecond)
+				r := c.Snapshot(agentdv1.Provider_PROVIDER_CODEX)
+				assert.Equal(t, uint64(1), r.HooksByKind[agentdv1.EventKind_EVENT_KIND_AGENT_STOP])
+				assert.Equal(t, uint64(0), r.InputTokensTotal)
 			},
 		},
 	}

@@ -63,7 +63,7 @@ agentd config enable trajectory-statistics
 agentd trajectory stats [--provider ID] [--json]
 ```
 
-Requires a **running daemon**. Counters reset on daemon restart; `since` reflects daemon start time. Optional `--provider` filters the rollup. Daemon token totals are extracted from each Invoke `RawPayload` (not gated by `include_raw`). Cursor billing tokens appear on `stop` hooks (cumulative per session, delta-aggregated); `context_tokens_last` on `preCompact`. Offline `session stats` token fields require `include_raw` in the JSONL ledger.
+Requires a **running daemon**. Counters reset on daemon restart; `since` reflects daemon start time. Optional `--provider` filters the rollup. Daemon token totals are extracted from each Invoke `RawPayload` (not gated by `include_raw`). Cursor billing tokens appear on `stop` hooks (cumulative per session, delta-aggregated); `context_tokens_last` on `preCompact`. Codex billing tokens are read from the rollout transcript tail on `Stop` when hook raw carries no usage (`transcript_path` in raw). Offline `session stats` token fields require `include_raw` in the JSONL ledger (Codex transcript fallback needs `transcript_path` in stored raw).
 
 ## Subscribe (live stream)
 

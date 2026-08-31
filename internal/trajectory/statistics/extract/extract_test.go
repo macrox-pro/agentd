@@ -103,11 +103,66 @@ func TestExtract(t *testing.T) {
 				assert.False(t, got.Any())
 			},
 		},
+		{
+			name: "cache_write_input_tokens",
+			prov: agentdv1.Provider_PROVIDER_CODEX,
+			raw:  `{"usage":{"cache_write_input_tokens":9}}`,
+			check: func(t *testing.T, got extract.TokenFields) {
+				t.Helper()
+				assert.True(t, got.HasCacheWrite)
+				assert.Equal(t, uint64(9), got.CacheWrite)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			got := extract.Tokens(tt.prov, []byte(tt.raw))
+			tt.check(t, got)
+		})
+	}
+}
+
+func TestTokensFromTranscript(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		prov agentdv1.Provider
+		raw  string
+		check func(t *testing.T, got extract.TokenFields)
+	}{
+		{
+			name: "codex_no_scanner_provider",
+			prov: agentdv1.Provider_PROVIDER_GEMINI,
+			raw:  `{"hook_event_name":"Stop","transcript_path":"/tmp/x.jsonl"}`,
+			check: func(t *testing.T, got extract.TokenFields) {
+				t.Helper()
+				assert.False(t, got.Any())
+			},
+		},
+		{
+			name: "codex_empty_raw",
+			prov: agentdv1.Provider_PROVIDER_CODEX,
+			raw:  "",
+			check: func(t *testing.T, got extract.TokenFields) {
+				t.Helper()
+				assert.False(t, got.Any())
+			},
+		},
+		{
+			name: "codex_unregistered_prov_zero",
+			prov: agentdv1.Provider_PROVIDER_UNSPECIFIED,
+			raw:  `{"hook_event_name":"Stop","transcript_path":"/tmp/x.jsonl"}`,
+			check: func(t *testing.T, got extract.TokenFields) {
+				t.Helper()
+				assert.False(t, got.Any())
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := extract.TokensFromTranscript(tt.prov, []byte(tt.raw))
 			tt.check(t, got)
 		})
 	}

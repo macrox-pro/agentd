@@ -49,6 +49,9 @@ func FromEvents(events []trajectory.Event) Session {
 					}
 				}
 				tokens := extract.Tokens(prov, ev.Raw)
+				if !tokens.Any() {
+					tokens = extract.TokensFromTranscript(prov, ev.Raw)
+				}
 				applySessionTokens(&out, billingTokensForRollup(prov, ev.SessionID, cursorStopLast, tokens))
 				applySessionTokens(&out, contextTokensForRollup(tokens))
 			}

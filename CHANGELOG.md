@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-(nothing yet)
+### Highlights
+
+- **Codex trajectory stats** — billing token extraction via transcript tail-read on `Stop` when hook raw carries no usage
 
 ## [v0.0.6] — 2026-08-31
 

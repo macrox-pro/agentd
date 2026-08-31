@@ -9,6 +9,7 @@
 //   - Snapshot exposes global + per-provider rollups only (no per-session state in API).
 //   - Internal cursorStopLast tracks Cursor cumulative stop billing deltas until daemon restart.
 //   - Token fields increment only when extractors find values.
+//   - Token extraction falls back to provider transcript tail-scan when hook raw carries no usage (Codex Stop).
 //
 // Entry: Gate, NewCollector, Collector.Observe, Collector.Snapshot, Load, FromEvents, HookKind.
 // See DESIGN.md §14.6 (async_side statistics).

@@ -22,6 +22,23 @@ func (t TokenFields) HasBilling() bool {
 	return t.HasInput || t.HasOutput || t.HasCacheRead || t.HasCacheWrite
 }
 
+// TranscriptScanner extracts billing tokens from a provider transcript when hook raw lacks usage.
+type TranscriptScanner func(hookRaw []byte) TokenFields
+
+var transcriptScanners = map[agentdv1.Provider]TranscriptScanner{}
+
+// TokensFromTranscript runs the provider transcript scanner registered for hook raw.
+func TokensFromTranscript(prov agentdv1.Provider, hookRaw []byte) TokenFields {
+	if len(hookRaw) == 0 {
+		return TokenFields{}
+	}
+	scan := transcriptScanners[prov]
+	if scan == nil {
+		return TokenFields{}
+	}
+	return scan(hookRaw)
+}
+
 // Tokens extracts provider-specific token fields from raw hook JSON.
 func Tokens(prov agentdv1.Provider, raw []byte) TokenFields {
 	if len(raw) == 0 {
@@ -120,6 +137,9 @@ func parseUsageObject(raw json.RawMessage) TokenFields {
 		out.HasCacheRead = true
 	}
 	if v, ok := uint64Field(m, "cache_creation_input_tokens"); ok {
+		out.CacheWrite = v
+		out.HasCacheWrite = true
+	} else if v, ok := uint64Field(m, "cache_write_input_tokens"); ok {
 		out.CacheWrite = v
 		out.HasCacheWrite = true
 	}
