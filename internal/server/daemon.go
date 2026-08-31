@@ -41,6 +41,9 @@ func (d *daemonService) Status(context.Context, *agentdv1.StatusRequest) (*agent
 		}
 	}
 	resp.ConfigLayers = layerInfos(d.opts.Store, snap)
+	if d.opts.MetricsListen != nil {
+		resp.MetricsListen = *d.opts.MetricsListen
+	}
 	return resp, nil
 }
 

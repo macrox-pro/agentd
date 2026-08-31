@@ -55,7 +55,7 @@ func TestDaemonService(t *testing.T) {
 
 	q := dispatch.NewQueue(store.Current().Async, nil)
 	t.Cleanup(func() { q.Close(2 * time.Second) })
-	eng := dispatch.NewEngine(q, nil)
+	eng := dispatch.NewEngine(q, nil, nil)
 
 	shutdownCh := make(chan struct{}, 1)
 	srv := server.New(server.Options{
@@ -161,7 +161,7 @@ func TestDaemonServiceAsyncDropped(t *testing.T) {
 
 	srv := server.New(server.Options{
 		Store:     store,
-		Engine:    dispatch.NewEngine(q, nil),
+		Engine:    dispatch.NewEngine(q, nil, nil),
 		StartedAt: time.Now().UTC(),
 		Version:   "test",
 	})

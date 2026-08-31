@@ -47,7 +47,7 @@ func TestRun(t *testing.T) {
 
 	q := dispatch.NewQueue(store.Current().Async, nil)
 	t.Cleanup(func() { q.Close(2 * time.Second) })
-	eng := dispatch.NewEngine(q, nil)
+	eng := dispatch.NewEngine(q, nil, nil)
 
 	ln, err := transport.Listen(socket)
 	require.NoError(t, err, "Listen(%q)", socket)

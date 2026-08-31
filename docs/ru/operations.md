@@ -29,6 +29,7 @@ agentd daemon status --json
 | `async_dropped_count` | сколько задач отброшено из‑за переполнения (растёт только вверх) |
 | `trajectory_dropped_count` | overflow очереди trajectory (если ledger включён) |
 | `compiled_route_count` | число скомпилированных маршрутов |
+| `metrics_listen` | адрес scrape Prometheus при включённых метриках; пусто, если выключены |
 
 В `--json` всегда есть объект `autostart` (даже при `running: false`):
 
@@ -41,6 +42,37 @@ agentd daemon status --json
 | `autostart.stale` | `true`, если `registered_exe` не совпадает с этим CLI (после обновления снова выполните `daemon enable`) |
 
 Человекочитаемая строка: `agentd: running (version …, generation …)` — без autostart (нужен `--json`).
+
+## Prometheus metrics
+
+Включение в user config или при старте:
+
+```yaml
+metrics:
+  enabled: true
+  listen: "127.0.0.1:2112"
+```
+
+Или разовый override:
+
+```bash
+agentd daemon start --metrics-listen 127.0.0.1:2112
+```
+
+При работе демона `agentd daemon status --json` содержит `metrics_listen` (пусто, если выключено). URL scrape: `http://<metrics_listen>/metrics`.
+
+Пример job Prometheus:
+
+```yaml
+scrape_configs:
+  - job_name: agentd
+    static_configs:
+      - targets: ["127.0.0.1:2112"]
+```
+
+Адрес metrics фиксируется при **старте демона**. После изменения `metrics` в YAML выполните `agentd daemon restart` — `daemon reload` обновляет snapshot конфига, но не перепривязывает HTTP listener.
+
+По умолчанию bind — loopback (`127.0.0.1`). Публикация на `0.0.0.0` возможна, но не рекомендуется на общих машинах.
 
 ## Автозапуск при входе
 

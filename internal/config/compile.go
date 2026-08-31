@@ -51,6 +51,7 @@ type CompileResult struct {
 	TemporaryBlocks []TemporaryBlock
 	Trajectory      TrajectoryConfig
 	Logging         LoggingConfig
+	Metrics         MetricsConfig
 	Routes          []CompiledRoute
 	Merged          *fileConfig
 }
@@ -100,6 +101,10 @@ func CompileMerged(user, project, runtime *fileConfig) (CompileResult, error) {
 	if err != nil {
 		return CompileResult{}, err
 	}
+	metricsCfg, err := parseMetrics(merged.Metrics, defaultMetrics())
+	if err != nil {
+		return CompileResult{}, err
+	}
 	return CompileResult{
 		Policy:          pol,
 		Async:           async,
@@ -108,6 +113,7 @@ func CompileMerged(user, project, runtime *fileConfig) (CompileResult, error) {
 		TemporaryBlocks: blocks,
 		Trajectory:      traj,
 		Logging:         logging,
+		Metrics:         metricsCfg,
 		Routes:          routes,
 		Merged:          merged,
 	}, nil

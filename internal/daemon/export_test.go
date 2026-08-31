@@ -1,8 +1,20 @@
 package daemon
 
-import "os"
+import (
+	"context"
+	"net/http"
+	"os"
+)
 
 func ServiceStartArgsForTest(opts StartOptions) []string { return serviceStartArgs(opts) }
+
+func StartMetricsServerForTest(ctx context.Context, listen string, handler http.Handler) (addr string, shutdown func(context.Context), err error) {
+	ms, err := startMetricsServer(ctx, listen, handler)
+	if err != nil {
+		return "", nil, err
+	}
+	return ms.addr(), ms.shutdown, nil
+}
 
 func AutostartSpecForTest(exe string, args []string) AutostartSpec {
 	return AutostartSpec{Exe: exe, Args: args}

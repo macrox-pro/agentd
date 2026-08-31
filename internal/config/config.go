@@ -2,7 +2,7 @@
 //
 // Owns: four-layer merge, CompileMerged, Store hot-path snapshot, debounced reload, persist,
 // PrepareUserConfig (daemon-start user bootstrap), SetToggle/GetToggle (CLI feature toggles),
-// OfflineFor (edge unreachable path).
+// OfflineFor (edge unreachable path), metrics YAML compile.
 // Must not: dispatch routing (dispatch), hook wire (hookedge).
 //
 // Invariants:

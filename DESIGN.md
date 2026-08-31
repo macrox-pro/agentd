@@ -144,6 +144,7 @@ When `trajectory.enabled`, `Invoke` also enqueues ledger records (separate bound
 | `internal/dispatch/targets` | `invoke_sync`, `async_side` | Sync/Async target adapters via factory |
 | `internal/decision` | `invoke_sync` | proto↔agenthooks Decision |
 | `internal/guard` | `invoke_sync` | secrets/shell/mcp/paths checks |
+| `internal/metrics` | `other` | Prometheus registry, runtime gauges, invoke/async histograms (leaf; no dispatch import) |
 | `internal/config` | `config_reload` | Merge/compile; hot path reads Snapshot only |
 | `internal/trajectory` | `async_side` | Session ledger append, persist, Hub, replay/fork |
 | `internal/provider` | `other` | Canonical ids; Invoke uses `FromProto`, CLI uses `Parse` |
@@ -300,6 +301,10 @@ Protobuf: `api/agentd/v1/`. Buf rules: [AGENTS.md § Protobuf](./AGENTS.md#proto
 
 State: socket path in `$XDG_RUNTIME_DIR/agentd/state.json`, PID + lock files. Optional dev: loopback TCP. Implementation: `internal/transport` (`listen_*.go` / `dial_*.go` / `path_*.go`).
 
+**Prometheus metrics HTTP** (opt-in, separate from gRPC IPC): when `metrics.enabled` or `--metrics-listen` is set at daemon start, a loopback TCP server exposes `/metrics` on the compiled listen address (default `127.0.0.1:2112`). Not hot-reloaded — changing `metrics.listen` requires `daemon restart`. Status `metrics_listen` reports the bound address after `Listen`. Implementation: `internal/daemon` + `internal/metrics`; Status field `metrics_listen` when running.
+
+**Sync grpc target timeout/cancel:** when the sync budget expires or the request context is canceled (`context.DeadlineExceeded` / `context.Canceled`), `GRPCSync` returns the dial/invoke error to `Engine.Invoke` (metrics `outcome=timeout` or `error`) instead of mapping to Deny. Other grpc errors with `fail_closed` still map to Deny without failing Invoke.
+
 ---
 
 ## 6. CLI Reference
@@ -369,6 +374,7 @@ Four-layer merge (§3). Key top-level sections:
 | `dispatch_defaults` / `dispatch` | §2 |
 | `guards` | `secrets`, `shell`, `mcp`, `paths` |
 | `trajectory` | §14 — opt-in; default off |
+| `metrics` | opt-in Prometheus scrape HTTP; default off; `listen` host:port |
 | `projects` | per-repo guard overrides |
 
 **Runtime overlay** (`runtime.yaml`, daemon-only):
@@ -411,6 +417,7 @@ Persist: debounced atomic flush (`runtime.yaml.tmp` → `runtime.yaml`).
 - Standalone hooks DSL
 - Async retry storms (default `retry: 0`)
 - Sync `exec` JSON decision (exec async-only in v1)
+- OpenTelemetry / Pushgateway / remote-write metrics (Prometheus pull via opt-in loopback `/metrics` only; see §5)
 
 Tests: [CONVENTIONS.md § Tests](./CONVENTIONS.md#tests) · `go test ./... -race` · e2e: `make e2e`
 

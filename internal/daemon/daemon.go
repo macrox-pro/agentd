@@ -2,7 +2,8 @@
 // and login autostart registration.
 //
 // Owns: process lifecycle, single-instance lock, status JSON, SIGHUP reload signal,
-// operational slog setup (SetupLog), login autostart (Enable, Disable, AutostartStatus).
+// operational slog setup (SetupLog), login autostart (Enable, Disable, AutostartStatus),
+// opt-in Prometheus metrics HTTP listen lifecycle.
 // Must not: hook dispatch (dispatch), config compile (config), gRPC handlers (server).
 //
 // Invariants:

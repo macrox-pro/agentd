@@ -34,7 +34,7 @@ trajectory:
 	t.Cleanup(func() { q.Close(2 * time.Second) })
 	srv := server.New(server.Options{
 		Store:     store,
-		Engine:    dispatch.NewEngine(q, nil),
+		Engine:    dispatch.NewEngine(q, nil, nil),
 		Collector: collector,
 	})
 	conn := dialBuf(t, srv)

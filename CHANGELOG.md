@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Highlights
+
+- **Prometheus metrics** — opt-in loopback `/metrics` (default off; `127.0.0.1:2112`); runtime gauges, invoke/async histograms, config reload counter; `daemon status --json` field `metrics_listen`; CLI `--metrics-listen`
+
 ## [v0.0.5] — 2026-08-29
 
 Daemon-lifetime trajectory counters and offline session stats.

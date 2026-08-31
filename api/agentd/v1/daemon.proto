@@ -40,6 +40,7 @@ message StatusResponse {
   repeated LayerInfo config_layers = 7;
   uint64 async_dropped_count = 8;         // dispatch async queue overflow (monotonic)
   uint64 trajectory_dropped_count = 9;    // trajectory ledger queue overflow (monotonic)
+  string metrics_listen = 10;             // Prometheus scrape address; empty when disabled
 }
 
 message ReloadConfigRequest {}

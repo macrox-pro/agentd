@@ -1,22 +1,27 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
+	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/daemon"
 	"github.com/macrox-pro/agentd/internal/version"
 )
 
 var (
-	daemonForeground bool
-	daemonLogLevel   string
-	daemonLogFile    string
+	daemonForeground    bool
+	daemonLogLevel      string
+	daemonLogFile       string
+	daemonMetricsListen string
 )
 
 func init() {
 	daemonStartCmd.Flags().BoolVar(&daemonForeground, "foreground", false, "keep the service attached to this terminal")
 	daemonStartCmd.Flags().StringVar(&daemonLogLevel, "log-level", "", "daemon log level (debug, info, warn, error); overrides config for this process")
 	daemonStartCmd.Flags().StringVar(&daemonLogFile, "log-file", "", "daemon log file path; overrides config for this process")
+	daemonStartCmd.Flags().StringVar(&daemonMetricsListen, "metrics-listen", "", "Prometheus scrape listen address (host:port); enables metrics and overrides config for this process")
 }
 
 var daemonStartCmd = &cobra.Command{
@@ -37,16 +42,24 @@ Only one instance should run per user. If a service is already running, start
 reports an error instead of replacing it.`,
 	Example: `  agentd daemon start
   agentd daemon start --foreground
-  agentd daemon start --log-level debug`,
+  agentd daemon start --log-level debug
+  agentd daemon start --metrics-listen 127.0.0.1:2112`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_ = args
+		if daemonMetricsListen != "" {
+			var metricsCfg config.MetricsConfig
+			if _, _, err := metricsCfg.EffectiveListen(daemonMetricsListen); err != nil {
+				return fmt.Errorf("--metrics-listen: %w", err)
+			}
+		}
 		return daemon.Start(cmd.Context(), daemon.StartOptions{
-			Socket:     resolveSocket(),
-			ConfigPath: resolveConfigPath(),
-			Foreground: daemonForeground,
-			Version:    version.String(),
-			LogLevel:   daemonLogLevel,
-			LogFile:    daemonLogFile,
+			Socket:        resolveSocket(),
+			ConfigPath:    resolveConfigPath(),
+			Foreground:    daemonForeground,
+			Version:       version.String(),
+			LogLevel:      daemonLogLevel,
+			LogFile:       daemonLogFile,
+			MetricsListen: daemonMetricsListen,
 		})
 	},
 }

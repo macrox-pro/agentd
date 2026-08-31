@@ -56,7 +56,7 @@ func TestEngineInvokeClean(t *testing.T) {
 		TargetTimeout: time.Second,
 	}, nil)
 	t.Cleanup(func() { q.Close(2 * time.Second) })
-	eng := dispatch.NewEngine(q, nil)
+	eng := dispatch.NewEngine(q, nil, nil)
 	snap := testSnap(t)
 
 	res, err := eng.Invoke(context.Background(), dispatch.InvokeInput{
@@ -78,7 +78,7 @@ func TestEngineInvokeSecretAsk(t *testing.T) {
 		TargetTimeout: time.Second,
 	}, nil)
 	t.Cleanup(func() { q.Close(2 * time.Second) })
-	eng := dispatch.NewEngine(q, nil)
+	eng := dispatch.NewEngine(q, nil, nil)
 	snap := testSnap(t)
 
 	res, err := eng.Invoke(context.Background(), dispatch.InvokeInput{
@@ -105,7 +105,7 @@ func TestEngineParallelAsyncDoesNotBlock(t *testing.T) {
 	block := make(chan struct{})
 	require.True(t, q.Enqueue(dispatch.Job{Run: func(context.Context) { <-block }}))
 
-	eng := dispatch.NewEngine(q, nil)
+	eng := dispatch.NewEngine(q, nil, nil)
 	snap := testSnap(t)
 	start := time.Now()
 	_, err := eng.Invoke(context.Background(), dispatch.InvokeInput{
@@ -126,7 +126,7 @@ func TestEngineInvokeCursorArgv(t *testing.T) {
 		TargetTimeout: time.Second,
 	}, nil)
 	t.Cleanup(func() { q.Close(2 * time.Second) })
-	eng := dispatch.NewEngine(q, nil)
+	eng := dispatch.NewEngine(q, nil, nil)
 	snap := testSnap(t)
 
 	_, err := eng.Invoke(context.Background(), dispatch.InvokeInput{
@@ -162,7 +162,7 @@ func TestEngineFileAsync(t *testing.T) {
 
 	q := dispatch.NewQueue(config.AsyncConfig{QueueCapacity: 8, WorkerLimit: 2, TargetTimeout: time.Second}, nil)
 	t.Cleanup(func() { q.Close(2 * time.Second) })
-	eng := dispatch.NewEngine(q, nil)
+	eng := dispatch.NewEngine(q, nil, nil)
 
 	_, err = eng.Invoke(context.Background(), dispatch.InvokeInput{
 		Provider:   agentdv1.Provider_PROVIDER_CLAUDE_CODE,
@@ -280,7 +280,7 @@ func TestEngine_RunSyncParity(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			eng := dispatch.NewEngine(nil, nil)
+			eng := dispatch.NewEngine(nil, nil, nil)
 			snap := paritySnap(t, tt.sync, nil, config.ModeSyncOnly)
 			res, err := eng.Invoke(context.Background(), dispatch.InvokeInput{
 				Provider:   agentdv1.Provider_PROVIDER_CLAUDE_CODE,
@@ -304,7 +304,7 @@ func TestEngineHybrid(t *testing.T) {
 		TargetTimeout: time.Second,
 	}, nil)
 	t.Cleanup(func() { q.Close(2 * time.Second) })
-	eng := dispatch.NewEngine(q, nil)
+	eng := dispatch.NewEngine(q, nil, nil)
 	snap := paritySnap(t,
 		[]config.CompiledTarget{{Kind: config.TargetBuiltin, Guards: []string{"secrets"}}},
 		[]config.CompiledTarget{{Kind: config.TargetFile, Path: audit}},

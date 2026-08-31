@@ -43,7 +43,7 @@ func startStatsServer(t *testing.T, cfgPath string, gateFail bool) string {
 	t.Cleanup(func() { q.Close(2 * time.Second) })
 	gs := server.New(server.Options{
 		Store:     store,
-		Engine:    dispatch.NewEngine(q, nil),
+		Engine:    dispatch.NewEngine(q, nil, nil),
 		Collector: collector,
 		StartedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 		Version:   "test",

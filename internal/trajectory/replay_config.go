@@ -29,7 +29,7 @@ func ReplayPolicyFromConfig(ctx context.Context, opts ReplayPolicyConfigOptions)
 	snap := store.Current()
 	q := dispatch.NewQueue(snap.Async, nil)
 	defer q.Close(replayQueueCloseTimeout)
-	eng := dispatch.NewEngine(q, nil)
+	eng := dispatch.NewEngine(q, nil, nil)
 
 	return ReplayPolicy(ctx, ReplayOptions{
 		SessionsRoot: opts.SessionsRoot,

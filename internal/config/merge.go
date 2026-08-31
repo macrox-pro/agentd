@@ -52,6 +52,9 @@ func mergeFile(base *fileConfig, user *fileConfig) *fileConfig {
 	if user.Logging != nil {
 		out.Logging = mergeLoggingPtr(out.Logging, user.Logging)
 	}
+	if user.Metrics != nil {
+		out.Metrics = mergeMetricsPtr(out.Metrics, user.Metrics)
+	}
 	return &out
 }
 

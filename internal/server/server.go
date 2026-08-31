@@ -30,14 +30,15 @@ const defaultVersion = "dev"
 
 // Options configures the gRPC services.
 type Options struct {
-	Store      *config.Store
-	Engine     *dispatch.Engine
-	Recorder   *trajectory.Recorder
-	Collector  *statistics.Collector
-	Logger     *slog.Logger
-	StartedAt  time.Time
-	Version    string
-	OnShutdown func()
+	Store         *config.Store
+	Engine        *dispatch.Engine
+	Recorder      *trajectory.Recorder
+	Collector     *statistics.Collector
+	Logger        *slog.Logger
+	StartedAt     time.Time
+	Version       string
+	MetricsListen *string
+	OnShutdown    func()
 }
 
 type daemonService struct {

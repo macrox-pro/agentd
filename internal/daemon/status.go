@@ -20,6 +20,7 @@ type StatusReport struct {
 	AsyncDroppedCount      uint64
 	TrajectoryDroppedCount uint64
 	CompiledRouteCount     uint32
+	MetricsListen          string
 	Autostart              AutostartReport
 }
 
@@ -59,6 +60,7 @@ func Status(ctx context.Context, socket string) (StatusReport, error) {
 	rep.AsyncDroppedCount = resp.GetAsyncDroppedCount()
 	rep.TrajectoryDroppedCount = resp.GetTrajectoryDroppedCount()
 	rep.CompiledRouteCount = resp.GetCompiledRouteCount()
+	rep.MetricsListen = resp.GetMetricsListen()
 	rep.Autostart, _ = AutostartStatus()
 	return rep, nil
 }

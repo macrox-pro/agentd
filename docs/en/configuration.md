@@ -51,7 +51,7 @@ Runtime writes are debounced (**500ms**), mode `0600`, atomic rename. Hot path u
 
 ## Top-level YAML keys
 
-From the file schema: `version`, `policy`, `async`, `logging`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`, `trajectory`.
+From the file schema: `version`, `policy`, `async`, `logging`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`, `trajectory`, `metrics`.
 
 Project files typically carry `guards` / `dispatch`. `approvals` and `blocks` usually land in runtime via CLI/gRPC.
 
@@ -110,6 +110,19 @@ Opt-in session ledger ([Trajectory](./trajectory.md)). Default **off**.
 When `import.claude-code.enabled` is true, the daemon watches the projects directory and appends new transcript lines asynchronously. CLI `session import` works offline without this flag. Set `include_raw: true` if you need `session replay --policy`.
 
 Overflow increments `trajectory_dropped_count` on Status.
+
+### metrics
+
+Opt-in Prometheus scrape endpoint ([Operations → Metrics](./operations.md#prometheus-metrics)). Default **off**.
+
+| Key | Default |
+|-----|---------|
+| `enabled` | `false` |
+| `listen` | `127.0.0.1:2112` (`host:port`; required when enabled) |
+
+When enabled, the daemon serves `/metrics` on loopback TCP at start time only. Changing `metrics.listen` or toggling `enabled` requires **`agentd daemon restart`** (not reload). CLI `--metrics-listen` enables metrics for that process and overrides `listen`.
+
+Binding `0.0.0.0` is allowed but exposes metrics on all interfaces — prefer loopback unless you understand the risk.
 
 ## Feature toggles
 

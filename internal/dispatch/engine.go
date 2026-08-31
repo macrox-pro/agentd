@@ -2,6 +2,7 @@ package dispatch
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -15,16 +16,23 @@ import (
 	"github.com/macrox-pro/agentd/internal/provider"
 )
 
+// Observer records invoke_sync and async_side histogram samples.
+type Observer interface {
+	ObserveInvoke(provider, eventKind, decision, outcome string, seconds float64)
+	ObserveAsync(targetKind, result string, seconds float64)
+}
+
 // Engine routes hook invocations through sync and async pipelines.
 type Engine struct {
 	queue    *Queue
 	log      *slog.Logger
 	sessions *Sessions
+	observer Observer
 }
 
 // NewEngine returns a dispatch engine backed by queue.
-func NewEngine(queue *Queue, log *slog.Logger) *Engine {
-	return &Engine{queue: queue, log: log, sessions: &Sessions{}}
+func NewEngine(queue *Queue, log *slog.Logger, observer Observer) *Engine {
+	return &Engine{queue: queue, log: log, sessions: &Sessions{}, observer: observer}
 }
 
 // Queue returns the async queue (may be nil in tests).
@@ -68,25 +76,57 @@ type InvokeResult struct {
 	Meta                 InvokeMeta
 }
 
+func decisionLabel(d *agentdv1.Decision) string {
+	if d == nil {
+		return agentdv1.DecisionKind_DECISION_KIND_UNSPECIFIED.String()
+	}
+	return d.GetKind().String()
+}
+
+func invokeOutcome(ctx context.Context, err error) string {
+	if err == nil {
+		return "ok"
+	}
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return "timeout"
+	}
+	return "error"
+}
+
 // Invoke decodes, matches a route, runs sync/async pipelines per mode.
 func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, error) {
+	start := time.Now()
+	id, _ := provider.FromProto(in.Provider)
+	providerName := string(id)
+	eventKind := ""
+	decisionStr := agentdv1.DecisionKind_DECISION_KIND_UNSPECIFIED.String()
+	outcome := "ok"
+	defer func() {
+		if e != nil && e.observer != nil {
+			e.observer.ObserveInvoke(providerName, eventKind, decisionStr, outcome, time.Since(start).Seconds())
+		}
+	}()
+
 	if in.Snap == nil {
+		outcome = "error"
 		return InvokeResult{}, fmt.Errorf("dispatch: nil snapshot")
 	}
 	typed, err := DecodeTyped(ctx, in.Provider, in.InvocationMode, in.RawPayload)
 	if err != nil {
+		outcome = invokeOutcome(ctx, err)
 		return InvokeResult{}, err
 	}
-	id, _ := provider.FromProto(in.Provider)
-	providerName := string(id)
+	eventKind = targets.EventKindOf(typed)
 	route := MatchRoute(in.Snap.Routes, typed)
 	if route == nil {
 		meta := MetaFromTyped(providerName, typed, false)
-		e.logInvokeDebug(providerName, meta.EventKind, "", decision.Neutral())
-		return InvokeResult{
+		res := InvokeResult{
 			Decision: decision.Neutral(),
 			Meta:     meta,
-		}, nil
+		}
+		decisionStr = decisionLabel(res.Decision)
+		e.logInvokeDebug(providerName, meta.EventKind, "", res.Decision)
+		return res, nil
 	}
 
 	mode := config.NormalizeMode(route.Mode)
@@ -98,7 +138,6 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		ProjectRoot:     targets.ProjectRootOf(in.Snap),
 		Log:             e.log,
 	}
-	eventKind := targets.EventKindOf(typed)
 
 	unlock := e.sessions.Lock(SessionIDOf(typed))
 	defer unlock()
@@ -116,6 +155,7 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 	case config.ModeAsyncOnly:
 		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
 		res := InvokeResult{Decision: decision.Neutral(), AsyncDispatchedCount: n, Meta: meta}
+		decisionStr = decisionLabel(res.Decision)
 		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
 		return res, nil
 
@@ -123,30 +163,36 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
 		d, err := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
 		if err != nil {
+			outcome = invokeOutcome(ctx, err)
 			return InvokeResult{}, err
 		}
 		res := InvokeResult{Decision: decision.ToProto(d), AsyncDispatchedCount: n, Meta: meta}
+		decisionStr = decisionLabel(res.Decision)
 		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
 		return res, nil
 
 	case config.ModeAfterSync:
 		d, err := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
 		if err != nil {
+			outcome = invokeOutcome(ctx, err)
 			return InvokeResult{}, err
 		}
 		proto := decision.ToProto(d)
-		outcome := &targets.SyncOutcome{Kind: proto.GetKind(), Reason: proto.GetReason()}
-		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, outcome)
+		syncOutcome := &targets.SyncOutcome{Kind: proto.GetKind(), Reason: proto.GetReason()}
+		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, syncOutcome)
 		res := InvokeResult{Decision: proto, AsyncDispatchedCount: n, Meta: meta}
+		decisionStr = decisionLabel(res.Decision)
 		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
 		return res, nil
 
 	default: // sync_only
 		d, err := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
 		if err != nil {
+			outcome = invokeOutcome(ctx, err)
 			return InvokeResult{}, err
 		}
 		res := InvokeResult{Decision: decision.ToProto(d), AsyncDispatchedCount: 0, Meta: meta}
+		decisionStr = decisionLabel(res.Decision)
 		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
 		return res, nil
 	}
@@ -220,9 +266,19 @@ func (e *Engine) enqueueAsync(
 			Target:      t,
 			SyncOutcome: outcome,
 		}
+		targetKind := string(t.Kind)
 		ok := e.queue.Enqueue(Job{Run: func(ctx context.Context) {
-			if err := inv.InvokeAsync(ctx, req); err != nil && e.log != nil {
-				e.log.Warn("async target failed", "target", string(t.Kind), "error", err)
+			start := time.Now()
+			runErr := inv.InvokeAsync(ctx, req)
+			result := "ok"
+			if runErr != nil {
+				result = "error"
+				if e.log != nil {
+					e.log.Warn("async target failed", "target", targetKind, "error", runErr)
+				}
+			}
+			if e.observer != nil {
+				e.observer.ObserveAsync(targetKind, result, time.Since(start).Seconds())
 			}
 		}})
 		if ok {

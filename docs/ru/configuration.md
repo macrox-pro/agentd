@@ -51,7 +51,7 @@ agentd config validate --config ~/.agentd.yaml
 
 ## Ключи верхнего уровня YAML
 
-Из схемы файла: `version`, `policy`, `async`, `logging`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`, `trajectory`.
+Из схемы файла: `version`, `policy`, `async`, `logging`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`, `trajectory`, `metrics`.
 
 В проектном файле обычно `guards` / `dispatch`. Блоки `approvals` и `blocks` чаще попадают в runtime через CLI или gRPC.
 
@@ -110,6 +110,19 @@ agentd config validate --config ~/.agentd.yaml
 При `import.claude-code.enabled: true` демон асинхронно следит за каталогом projects. CLI `session import` работает offline без этого флага. Для `session replay --policy` нужен `include_raw: true` при записи.
 
 Переполнение очереди увеличивает `trajectory_dropped_count` в Status.
+
+### metrics
+
+Опциональный endpoint Prometheus ([Эксплуатация → Метрики Prometheus](./operations.md#prometheus-metrics)). По умолчанию **выключен**.
+
+| Ключ | По умолчанию |
+|------|--------------|
+| `enabled` | `false` |
+| `listen` | `127.0.0.1:2112` (`host:port`; обязателен при `enabled: true`) |
+
+При включении демон отдаёт `/metrics` по loopback TCP только на старте. Смена `metrics.listen` или `enabled` требует **`agentd daemon restart`** (не reload). CLI `--metrics-listen` включает метрики для этого процесса и переопределяет `listen`.
+
+Привязка к `0.0.0.0` допустима, но открывает метрики на всех интерфейсах — предпочитайте loopback, если не понимаете риск.
 
 ## Переключатели features
 

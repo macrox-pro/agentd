@@ -48,6 +48,7 @@ func (statusOKStub) Status(context.Context, *agentdv1.StatusRequest) (*agentdv1.
 		AsyncDroppedCount:      4,
 		TrajectoryDroppedCount: 5,
 		CompiledRouteCount:     6,
+		MetricsListen:          "127.0.0.1:2112",
 	}, nil
 }
 
@@ -95,6 +96,7 @@ func TestStatusTable(t *testing.T) {
 				assert.Equal(t, uint64(4), rep.AsyncDroppedCount, "AsyncDroppedCount")
 				assert.Equal(t, uint64(5), rep.TrajectoryDroppedCount, "TrajectoryDroppedCount")
 				assert.Equal(t, uint32(6), rep.CompiledRouteCount, "CompiledRouteCount")
+				assert.Equal(t, "127.0.0.1:2112", rep.MetricsListen, "MetricsListen")
 			},
 		},
 		{

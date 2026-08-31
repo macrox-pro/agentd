@@ -26,6 +26,7 @@ type Snapshot struct {
 	TemporaryBlocks []TemporaryBlock
 	Trajectory      TrajectoryConfig
 	Logging         LoggingConfig
+	Metrics         MetricsConfig
 	Routes          []CompiledRoute
 }
 
@@ -46,6 +47,7 @@ type Store struct {
 	runtimePath string
 	gen         atomic.Uint64
 	reloadMu    sync.Mutex
+	onReload    func(result string)
 
 	userFC     *fileConfig
 	runtimeRaw []byte
@@ -179,12 +181,29 @@ func (s *Store) EnsureProject(cwd, projectRoot string) (*Snapshot, error) {
 	return ps.snap, nil
 }
 
+// SetOnReload registers a callback invoked after Store.Reload completes.
+// result is "ok" or "error". Not called from PatchRuntime.
+func (s *Store) SetOnReload(fn func(result string)) {
+	if s == nil {
+		return
+	}
+	s.onReload = fn
+}
+
 // Reload re-reads user and runtime files and recompiles base + known projects.
 func (s *Store) Reload(ctx context.Context) error {
 	_ = ctx
 	s.reloadMu.Lock()
 	defer s.reloadMu.Unlock()
-	return s.reloadAllLocked()
+	err := s.reloadAllLocked()
+	if s.onReload != nil {
+		if err != nil {
+			s.onReload("error")
+		} else {
+			s.onReload("ok")
+		}
+	}
+	return err
 }
 
 // PatchRuntime merges yamlPatch into the in-memory runtime layer and recompiles.
@@ -433,6 +452,7 @@ func snapshotFrom(res CompileResult, gen uint64, fp, userPath, runtimePath, proj
 		TemporaryBlocks: res.TemporaryBlocks,
 		Trajectory:      res.Trajectory,
 		Logging:         res.Logging,
+		Metrics:         res.Metrics,
 		Routes:          res.Routes,
 	}
 }

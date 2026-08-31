@@ -29,6 +29,7 @@ JSON when running:
 | `async_dropped_count` | overflow drops (monotonic) |
 | `trajectory_dropped_count` | trajectory queue overflow (monotonic; when ledger enabled) |
 | `compiled_route_count` | routes in snapshot |
+| `metrics_listen` | Prometheus scrape address when metrics enabled; empty when disabled |
 
 `--json` always includes an `autostart` object (even when `running` is false):
 
@@ -41,6 +42,37 @@ JSON when running:
 | `autostart.stale` | `true` when `registered_exe` differs from this CLI binary (re-run `daemon enable` after upgrade) |
 
 Human line: `agentd: running (version …, generation …)` — does not print depth/drops or autostart (use `--json`).
+
+## Prometheus metrics
+
+Enable in user config or at start:
+
+```yaml
+metrics:
+  enabled: true
+  listen: "127.0.0.1:2112"
+```
+
+Or one-shot override:
+
+```bash
+agentd daemon start --metrics-listen 127.0.0.1:2112
+```
+
+When running, `agentd daemon status --json` includes `metrics_listen` (empty when disabled). Scrape URL: `http://<metrics_listen>/metrics`.
+
+Example Prometheus job:
+
+```yaml
+scrape_configs:
+  - job_name: agentd
+    static_configs:
+      - targets: ["127.0.0.1:2112"]
+```
+
+Metrics listen address is fixed at **daemon start**. After changing `metrics` in YAML, run `agentd daemon restart` — `daemon reload` updates config snapshots but does not rebind the HTTP listener.
+
+Default bind is loopback (`127.0.0.1`). Exposing metrics on `0.0.0.0` is possible but not recommended on shared machines.
 
 ## Autostart at login
 

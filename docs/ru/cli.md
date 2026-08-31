@@ -26,7 +26,7 @@
 
 | Команда | Флаги | Заметки |
 |---------|-------|---------|
-| `daemon start` | `--foreground`, `--log-level`, `--log-file` | По умолчанию уходит в фон; ждёт Health; логи в `agentd.log` в [state directory](./configuration.md#state-directory) |
+| `daemon start` | `--foreground`, `--log-level`, `--log-file`, `--metrics-listen` | По умолчанию уходит в фон; ждёт Health; логи в `agentd.log` в [state directory](./configuration.md#state-directory); `--metrics-listen host:port` включает Prometheus scrape для этого процесса |
 | `daemon stop` | `--timeout` (`10s`) | Корректное завершение по gRPC, иначе SIGTERM |
 | `daemon status` | `--json` | Состояние демона + блок `autostart` ([Эксплуатация](./operations.md#автозапуск-при-входе)) |
 | `daemon reload` | — | Принудительно пересобрать конфиг с диска |

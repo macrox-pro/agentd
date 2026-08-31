@@ -119,7 +119,8 @@ A plan with fewer than ~5 coarse todos for a multi-file phase is usually under-s
 | `internal/decision` | proto↔agenthooks Decision mapping (ToProto/FromProto/Neutral) | routing, wire I/O, guards |
 | `internal/trajectory` | Session ledger append, persist, list/export ([§1.5 async_side](./DESIGN.md#15-hot-paths), §14) | wire decode, route match, config compile |
 | `internal/guard` | secrets/shell/mcp/paths checks | routing, encode |
-| `internal/daemon` | start/stop, lock, status, reload signal, login autostart (Enable/Disable) | dispatch, config compile |
+| `internal/metrics` | Registry, promhttp handler, runtime gauges, invoke/async histograms | daemon lifecycle, YAML, dispatch import |
+| `internal/daemon` | start/stop, lock, status, reload signal, login autostart (Enable/Disable), metrics HTTP | dispatch, config compile |
 | `internal/server` | Thin gRPC mapping | policy, dispatch logic |
 | `internal/transport` | Unix socket / named pipe I/O | business logic |
 | `internal/hookclient` | gRPC client to daemon | hook wire |

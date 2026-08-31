@@ -53,7 +53,7 @@ func TestReplayPolicy(t *testing.T) {
 			}
 			q := dispatch.NewQueue(res.Async, nil)
 			t.Cleanup(func() { q.Close(2 * time.Second) })
-			eng := dispatch.NewEngine(q, nil)
+			eng := dispatch.NewEngine(q, nil, nil)
 
 			result, err := trajectory.ReplayPolicy(context.Background(), trajectory.ReplayOptions{
 				SessionsRoot: root,
@@ -85,7 +85,7 @@ func TestReplayMissingRaw(t *testing.T) {
 	snap := &config.Snapshot{Generation: 1, Async: res.Async, Guards: res.Guards, Routes: res.Routes}
 	q := dispatch.NewQueue(res.Async, nil)
 	t.Cleanup(func() { q.Close(2 * time.Second) })
-	eng := dispatch.NewEngine(q, nil)
+	eng := dispatch.NewEngine(q, nil, nil)
 
 	_, err = trajectory.ReplayPolicy(context.Background(), trajectory.ReplayOptions{
 		SessionsRoot: root,

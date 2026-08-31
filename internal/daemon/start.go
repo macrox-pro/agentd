@@ -13,6 +13,7 @@ import (
 	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/dispatch"
 	"github.com/macrox-pro/agentd/internal/hookclient"
+	"github.com/macrox-pro/agentd/internal/metrics"
 	"github.com/macrox-pro/agentd/internal/server"
 	"github.com/macrox-pro/agentd/internal/transport"
 	"github.com/macrox-pro/agentd/internal/trajectory"
@@ -26,12 +27,13 @@ const (
 
 // StartOptions configures daemon Start.
 type StartOptions struct {
-	Socket     string
-	ConfigPath string
-	Foreground bool
-	Version    string
-	LogLevel   string
-	LogFile    string
+	Socket        string
+	ConfigPath    string
+	Foreground    bool
+	Version       string
+	LogLevel      string
+	LogFile       string
+	MetricsListen string
 }
 
 // Start runs the daemon. In foreground mode it blocks until shutdown.
@@ -143,12 +145,76 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 
 	store.SetLogger(log)
 	queue := dispatch.NewQueue(snap.Async, log)
-	engine := dispatch.NewEngine(queue, log)
+
+	metricsEnabled, metricsListen, err := snap.Metrics.EffectiveListen(opts.MetricsListen)
+	if err != nil {
+		return err
+	}
+	metricsListenReport := ""
+	var metricsListenPtr *string
+	if metricsEnabled {
+		metricsListenReport = metricsListen
+		metricsListenPtr = &metricsListenReport
+	}
+
+	reg := metrics.NewRegistry()
+	metrics.RegisterGoAndProcess(reg)
+	asyncCap := float64(snap.Async.QueueCapacity)
+	reloadTotal := metrics.RegisterReloadCounter(reg)
+	store.SetOnReload(func(result string) {
+		reloadTotal.WithLabelValues(result).Inc()
+	})
+
+	metricsRec := metrics.NewRecorder(reg)
+	engine := dispatch.NewEngine(queue, log, metricsRec)
 	defer queue.Close(5 * time.Second)
 
 	trajCfg := snap.Trajectory
 	recorder := trajectory.NewRecorder(trajectory.DefaultSessionsDir(), trajCfg.QueueCapacity, log)
 	defer recorder.Close(5 * time.Second)
+
+	metrics.RegisterRuntime(reg, metrics.RuntimeStats{
+		AsyncQueueDepth: func() float64 {
+			if q := engine.Queue(); q != nil {
+				return float64(q.Depth())
+			}
+			return 0
+		},
+		AsyncQueueCapacity: func() float64 { return asyncCap },
+		AsyncQueueDropped: func() float64 {
+			if q := engine.Queue(); q != nil {
+				return float64(q.Dropped())
+			}
+			return 0
+		},
+		TrajectoryQueueDropped: func() float64 {
+			if q := recorder.Queue(); q != nil {
+				return float64(q.Dropped())
+			}
+			return 0
+		},
+		SessionsActive: func() float64 {
+			if s := engine.Sessions(); s != nil {
+				return float64(s.Active())
+			}
+			return 0
+		},
+		ConfigGeneration: func() float64 {
+			cur := store.Current()
+			if cur == nil {
+				return 0
+			}
+			return float64(cur.Generation)
+		},
+		CompiledRouteCount: func() float64 {
+			cur := store.Current()
+			if cur == nil {
+				return 0
+			}
+			return float64(len(cur.Routes))
+		},
+	})
+
 	collector := statistics.NewCollector()
 
 	watcher, err := store.Watch(config.WatchOptions{Log: log})
@@ -162,14 +228,15 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 	defer importWatcher.Stop()
 
 	gs := server.New(server.Options{
-		Store:      store,
-		Engine:     engine,
-		Recorder:   recorder,
-		Collector:  collector,
-		Logger:     log,
-		StartedAt:  time.Now().UTC(),
-		Version:    opts.Version,
-		OnShutdown: cancel,
+		Store:         store,
+		Engine:        engine,
+		Recorder:      recorder,
+		Collector:     collector,
+		Logger:        log,
+		StartedAt:     time.Now().UTC(),
+		Version:       opts.Version,
+		MetricsListen: metricsListenPtr,
+		OnShutdown:    cancel,
 	})
 
 	errCh := make(chan error, 1)
@@ -185,7 +252,20 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 		return fmt.Errorf("daemon failed to become ready: %w", err)
 	}
 
+	var metricsHTTP *metricsServer
+	if metricsEnabled {
+		metricsHTTP, err = startMetricsServer(runCtx, metricsListen, metrics.Handler(reg))
+		if err != nil {
+			gs.GracefulStop()
+			return err
+		}
+		metricsListenReport = metricsHTTP.addr()
+	}
+
 	if err := paths.WritePID(os.Getpid()); err != nil {
+		if metricsHTTP != nil {
+			metricsHTTP.shutdown(context.Background())
+		}
 		gs.GracefulStop()
 		return fmt.Errorf("write pid: %w", err)
 	}
@@ -207,10 +287,13 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 
 	shutdown := func() {
 		log.Info("daemon shutdown started")
-		// Drop PID before signal.Stop / queue drain so Stop does not fall through
-		// to SIGTERM against this process (foreground PID == os.Getpid()).
 		paths.ClearPID()
 		_ = store.FlushRuntime()
+		if metricsHTTP != nil {
+			shutCtx, shutCancel := context.WithTimeout(context.Background(), metricsShutdownTimeout)
+			metricsHTTP.shutdown(shutCtx)
+			shutCancel()
+		}
 		gs.GracefulStop()
 	}
 
@@ -249,6 +332,11 @@ func runForeground(ctx context.Context, opts StartOptions) error {
 		case err := <-errCh:
 			paths.ClearPID()
 			_ = store.FlushRuntime()
+			if metricsHTTP != nil {
+				shutCtx, shutCancel := context.WithTimeout(context.Background(), metricsShutdownTimeout)
+				metricsHTTP.shutdown(shutCtx)
+				shutCancel()
+			}
 			if err != nil && err != grpc.ErrServerStopped {
 				return err
 			}

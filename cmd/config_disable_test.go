@@ -14,12 +14,14 @@ func TestConfigDisable(t *testing.T) {
 		name       string
 		args       []string
 		preEnable  bool
+		bootstrap  string
 		wantSubstr []string
 	}{
 		{
 			name:       "disable_idempotent_exit_0",
 			args:       []string{"config", "disable", "trajectory"},
 			wantSubstr: []string{"already disabled"},
+			bootstrap:  "version: 1\ntrajectory:\n  enabled: false\n",
 		},
 		{
 			name:       "disable_trajectory_writes_false",
@@ -33,8 +35,11 @@ func TestConfigDisable(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
 			configPath := filepath.Join(dir, "user.yaml")
-			if tt.preEnable {
+			switch {
+			case tt.preEnable:
 				require.NoError(t, os.WriteFile(configPath, []byte("version: 1\npolicy:\n  fail: fail_closed\ntrajectory:\n  enabled: true\n"), 0o600))
+			case tt.bootstrap != "":
+				require.NoError(t, os.WriteFile(configPath, []byte(tt.bootstrap), 0o600))
 			}
 			res := executeRoot(t, execOpts{args: tt.args, configPath: configPath})
 			require.NoError(t, res.err, "Execute(%q)", tt.name)

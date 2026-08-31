@@ -15,5 +15,8 @@ func serviceStartArgs(opts StartOptions) []string {
 	if opts.LogFile != "" {
 		args = append(args, "--log-file", opts.LogFile)
 	}
+	if opts.MetricsListen != "" {
+		args = append(args, "--metrics-listen", opts.MetricsListen)
+	}
 	return args
 }

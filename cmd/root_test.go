@@ -251,7 +251,7 @@ func startSubscribeServer(t *testing.T) (socket string, hub *trajectory.Hub) {
 	snap := store.Current()
 	q := dispatch.NewQueue(snap.Async, nil)
 	t.Cleanup(func() { q.Close(2 * time.Second) })
-	eng := dispatch.NewEngine(q, nil)
+	eng := dispatch.NewEngine(q, nil, nil)
 	gs := server.New(server.Options{
 		Store:     store,
 		Engine:    eng,

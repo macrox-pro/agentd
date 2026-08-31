@@ -134,6 +134,56 @@ func TestWriteStatus(t *testing.T) {
 			},
 		},
 		{
+			name:   "json running metrics disabled",
+			asJSON: true,
+			rep: daemon.StatusReport{
+				Running:    true,
+				Version:    "dev",
+				Autostart:  daemon.AutostartReport{Enabled: false},
+				MetricsListen: "",
+			},
+			check: func(t *testing.T, raw []byte) {
+				t.Helper()
+				var got map[string]any
+				require.NoError(t, json.Unmarshal(raw, &got), "json")
+				assert.Equal(t, "", got["metrics_listen"])
+			},
+		},
+		{
+			name:   "json running metrics enabled",
+			asJSON: true,
+			rep: daemon.StatusReport{
+				Running:       true,
+				Version:       "dev",
+				MetricsListen: "127.0.0.1:2112",
+				Autostart:     daemon.AutostartReport{Enabled: false},
+			},
+			check: func(t *testing.T, raw []byte) {
+				t.Helper()
+				var got map[string]any
+				require.NoError(t, json.Unmarshal(raw, &got), "json")
+				assert.Equal(t, "127.0.0.1:2112", got["metrics_listen"])
+			},
+		},
+		{
+			name:   "json not running omits metrics_listen",
+			asJSON: true,
+			rep: daemon.StatusReport{
+				Running: false,
+				Socket:  "/tmp/agentd.sock",
+				Autostart: daemon.AutostartReport{
+					Enabled: false,
+					Backend: daemon.BackendLaunchd,
+				},
+			},
+			check: func(t *testing.T, raw []byte) {
+				t.Helper()
+				var got map[string]any
+				require.NoError(t, json.Unmarshal(raw, &got), "json")
+				assert.NotContains(t, got, "metrics_listen")
+			},
+		},
+		{
 			name:   "json running",
 			asJSON: true,
 			rep: daemon.StatusReport{

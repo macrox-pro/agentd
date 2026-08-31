@@ -2,6 +2,7 @@ package targets
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/speakeasy-api/agenthooks"
@@ -52,6 +53,9 @@ func (w *GRPCSync) InvokeSync(ctx context.Context, req SyncRequest) (agenthooks.
 	d, err := g.InvokeSync(ctx, req)
 	if err == nil {
 		return d, nil
+	}
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) || errors.Is(ctx.Err(), context.Canceled) {
+		return nil, err
 	}
 	if req.Target.OnError == config.FailOpen {
 		if w.Log != nil {

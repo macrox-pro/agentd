@@ -26,7 +26,7 @@ Daemon process version: field `version` on `agentd daemon status`.
 
 | Command | Flags | Notes |
 |---------|-------|-------|
-| `daemon start` | `--foreground`, `--log-level`, `--log-file` | Detach by default; waits until Health succeeds; logs to [state directory](./configuration.md#state-directory) `agentd.log` |
+| `daemon start` | `--foreground`, `--log-level`, `--log-file`, `--metrics-listen` | Detach by default; waits until Health succeeds; logs to [state directory](./configuration.md#state-directory) `agentd.log`; `--metrics-listen host:port` enables Prometheus scrape for this process |
 | `daemon stop` | `--timeout` (`10s`) | gRPC Shutdown, then SIGTERM fallback |
 | `daemon status` | `--json` | Daemon health + `autostart` block ([Operations](./operations.md#autostart-at-login)) |
 | `daemon reload` | — | Force config re-merge |

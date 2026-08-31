@@ -38,6 +38,19 @@ func TestServiceStartArgs(t *testing.T) {
 			opts: daemon.StartOptions{LogLevel: "", LogFile: ""},
 			want: []string{"daemon", "start", "--foreground"},
 		},
+		{
+			name: "includes_metrics_listen",
+			opts: daemon.StartOptions{MetricsListen: "127.0.0.1:2112"},
+			want: []string{
+				"daemon", "start", "--foreground",
+				"--metrics-listen", "127.0.0.1:2112",
+			},
+		},
+		{
+			name: "omits_empty_metrics_listen",
+			opts: daemon.StartOptions{MetricsListen: ""},
+			want: []string{"daemon", "start", "--foreground"},
+		},
 	}
 
 	for _, tt := range tests {

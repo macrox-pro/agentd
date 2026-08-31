@@ -8,6 +8,7 @@
 // Invariants:
 //   - Sync response never waits on async queue drain.
 //   - Invoke uses config.Snapshot only; no disk I/O on hot path.
+//   - Optional Observer on Engine records invoke/async histograms (nil = no-op).
 //
 // Entry: Engine.Invoke, Queue.Enqueue.
 // See DESIGN.md §1.5 (invoke_sync, async_side), §2.

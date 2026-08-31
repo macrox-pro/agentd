@@ -43,7 +43,7 @@ func TestHookServiceInvoke(t *testing.T) {
 
 	q := dispatch.NewQueue(store.Current().Async, nil)
 	t.Cleanup(func() { q.Close(2 * time.Second) })
-	eng := dispatch.NewEngine(q, nil)
+	eng := dispatch.NewEngine(q, nil, nil)
 
 	srv := server.New(server.Options{
 		Store:     store,
@@ -193,7 +193,7 @@ dispatch:
 
 			srv := server.New(server.Options{
 				Store:     store,
-				Engine:    dispatch.NewEngine(q, nil),
+				Engine:    dispatch.NewEngine(q, nil, nil),
 				Recorder:  recorder,
 				StartedAt: time.Now().UTC(),
 				Version:   "test",

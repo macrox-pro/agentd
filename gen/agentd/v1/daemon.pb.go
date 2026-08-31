@@ -153,6 +153,7 @@ type StatusResponse struct {
 	ConfigLayers           []*LayerInfo           `protobuf:"bytes,7,rep,name=config_layers,json=configLayers,proto3" json:"config_layers,omitempty"`
 	AsyncDroppedCount      uint64                 `protobuf:"varint,8,opt,name=async_dropped_count,json=asyncDroppedCount,proto3" json:"async_dropped_count,omitempty"`                // dispatch async queue overflow (monotonic)
 	TrajectoryDroppedCount uint64                 `protobuf:"varint,9,opt,name=trajectory_dropped_count,json=trajectoryDroppedCount,proto3" json:"trajectory_dropped_count,omitempty"` // trajectory ledger queue overflow (monotonic)
+	MetricsListen          string                 `protobuf:"bytes,10,opt,name=metrics_listen,json=metricsListen,proto3" json:"metrics_listen,omitempty"`                              // Prometheus scrape address; empty when disabled
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -248,6 +249,13 @@ func (x *StatusResponse) GetTrajectoryDroppedCount() uint64 {
 		return x.TrajectoryDroppedCount
 	}
 	return 0
+}
+
+func (x *StatusResponse) GetMetricsListen() string {
+	if x != nil {
+		return x.MetricsListen
+	}
+	return ""
 }
 
 type ReloadConfigRequest struct {
@@ -418,7 +426,7 @@ const file_agentd_v1_daemon_proto_rawDesc = "" +
 	"\rHealthRequest\"(\n" +
 	"\x0eHealthResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\"\x0f\n" +
-	"\rStatusRequest\"\xc6\x03\n" +
+	"\rStatusRequest\"\xed\x03\n" +
 	"\x0eStatusResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x129\n" +
 	"\n" +
@@ -429,7 +437,9 @@ const file_agentd_v1_daemon_proto_rawDesc = "" +
 	"\x14compiled_route_count\x18\x06 \x01(\rR\x12compiledRouteCount\x129\n" +
 	"\rconfig_layers\x18\a \x03(\v2\x14.agentd.v1.LayerInfoR\fconfigLayers\x12.\n" +
 	"\x13async_dropped_count\x18\b \x01(\x04R\x11asyncDroppedCount\x128\n" +
-	"\x18trajectory_dropped_count\x18\t \x01(\x04R\x16trajectoryDroppedCount\"\x15\n" +
+	"\x18trajectory_dropped_count\x18\t \x01(\x04R\x16trajectoryDroppedCount\x12%\n" +
+	"\x0emetrics_listen\x18\n" +
+	" \x01(\tR\rmetricsListen\"\x15\n" +
 	"\x13ReloadConfigRequest\"K\n" +
 	"\x14ReloadConfigResponse\x123\n" +
 	"\x06config\x18\x01 \x01(\v2\x1b.agentd.v1.ConfigGenerationR\x06config\"F\n" +

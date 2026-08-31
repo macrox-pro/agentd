@@ -12,6 +12,7 @@ type fileConfig struct {
 	Dispatch         []fileRoute                `yaml:"dispatch,omitempty"`
 	Trajectory       *fileTrajectory            `yaml:"trajectory,omitempty"`
 	Logging          *fileLogging               `yaml:"logging,omitempty"`
+	Metrics          *fileMetrics               `yaml:"metrics,omitempty"`
 }
 
 type fileApprovals struct {
