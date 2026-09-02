@@ -4,6 +4,9 @@ package daemon_test
 
 import (
 	"context"
+	"os"
+	"os/signal"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -14,7 +17,28 @@ import (
 	"github.com/macrox-pro/agentd/internal/daemon"
 )
 
+// sighupTestMu serializes tests that deliver SIGHUP to the shared test process.
+var sighupTestMu sync.Mutex
+
 func TestReloadSIGHUP(t *testing.T) {
+	sighupTestMu.Lock()
+	t.Cleanup(sighupTestMu.Unlock)
+
+	// The daemon stops its SIGHUP handler on shutdown; keep one for the test
+	// binary so a late hangup cannot terminate go test under -race.
+	hangupSink := make(chan os.Signal, 4)
+	signal.Notify(hangupSink, syscall.SIGHUP)
+	t.Cleanup(func() {
+		signal.Stop(hangupSink)
+		for {
+			select {
+			case <-hangupSink:
+			default:
+				return
+			}
+		}
+	})
+
 	socket, cfg := testSocket(t)
 	startForegroundDaemon(t, socket, cfg)
 
