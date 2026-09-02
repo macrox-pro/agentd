@@ -21,6 +21,8 @@ Terms: [docs/en/glossary.md](./docs/en/glossary.md).
 
 > **Status:** [v0.0.8-beta](./CHANGELOG.md#v008-beta--2026-09-01) (Cursor trajectory stats per-generation sum). Roadmap history: [PROGRESS.md](./PROGRESS.md).
 
+> **Disclaimer:** agentd is developed **entirely by AI agents** as an experimental research project — not production-ready software. Expect rough edges, evolving design, and breaking changes; use at your own risk.
+
 ## Documentation
 
 - [User guide (English)](./docs/en/) — default ([why agentd](./docs/en/why.md) · [getting started](./docs/en/getting-started.md) · [glossary](./docs/en/glossary.md))

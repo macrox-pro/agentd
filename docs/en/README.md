@@ -4,6 +4,8 @@
 
 Install, configure, and run agentd. Pages match the shipped commands and YAML schema.
 
+> **Disclaimer:** agentd is developed **entirely by AI agents** as an experimental research project — not production-ready software. Expect rough edges, evolving design, and breaking changes; use at your own risk.
+
 New here? [Why agentd](./why.md), then [Getting started](./getting-started.md).
 
 ## Contents
