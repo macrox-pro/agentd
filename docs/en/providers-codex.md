@@ -42,6 +42,7 @@ echo '{"session_id":"s","cwd":"/tmp","hook_event_name":"PreToolUse","tool_name":
 | **Cannot ask** | `tool.pre` has Deny/Allow/… but **not Ask**. Guards with `action: ask` degrade via `policy.ask_fallback` (default deny) |
 | **Neutral wire** | Explicit no-op = **empty stdout**, exit 0 — **not** `{}` |
 | **Notify** | Always async semantics; never use notify for blocking gates |
+| **Payload cwd** | Optional top-level `cwd` in run stdin or notify argv JSON selects project `.agentd.yaml` in the daemon ([Configuration → Hook cwd](./configuration.md#hook-cwd-and-project-layer)) |
 | **Trust path** | Trust state keys embed the **absolute** path of `hooks.json`; moving CODEX_HOME requires reinstall |
 | **Empty stdout meaning** | Unlike Claude, empty stdout means allow/no-op in Codex dialect (handled by agenthooks encode) |
 

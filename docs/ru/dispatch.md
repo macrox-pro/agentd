@@ -76,7 +76,7 @@ dispatch:
 |------|-----|--------|
 | `sync_timeout` | маршрут | Необязательный потолок бюджета sync (см. [Бюджет sync](#бюджет-времени-на-sync)) |
 | `merge` | sync `grpc` | `first_conclusive` — побеждает первое ненейтральное решение |
-| `on_error` | sync `grpc` | `fail_closed` (по умолчанию) или `fail_open` при сбое peer |
+| `on_error` | sync `grpc` | `fail_closed` (по умолчанию) или `fail_open` при сбое узла gRPC |
 | `endpoint` | `grpc` | Адрес peer, например `unix:///path/to/peer.sock` |
 | `stdin` | async `exec` | `raw` — полезная нагрузка события в stdin команды |
 

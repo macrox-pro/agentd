@@ -46,12 +46,24 @@ agentd config validate --config ~/.agentd.yaml
 |-------|--------|----------------|
 | 1 | defaults | Built into the binary |
 | 2 | user | `--config` or `~/.agentd.yaml` |
-| 3 | project | `.agentd.yaml` walking up from the current directory |
+| 3 | project | `.agentd.yaml` walking up from hook **payload cwd** (see below) or CLI `--cwd` |
 | 4 | runtime | Daemon-managed file (approvals, temporary blocks) |
 
 **Runtime path:** `runtime.yaml` in the [state directory](#state-directory).
 
 Runtime writes are debounced (**500ms**), mode `0o600`, atomic rename. Each hook call reads the in-memory snapshot — no disk I/O per call.
+
+### Hook cwd and project layer
+
+When the **daemon is running**, `hook run`, `hook notify`, and `hook serve` send a **cwd** with each `Invoke`:
+
+1. Top-level `cwd` in the event JSON (including Codex notify argv payload), when set
+2. Else `workspace_roots[0]` when present (Cursor-style payloads)
+3. Else the hook edge process working directory (used when the payload omits both fields above)
+
+The daemon walks up from that path to find `.agentd.yaml` — the same rule as `config show --cwd`. This is usually the agent workspace from the wire payload, **not** necessarily the shell cwd of the parent process.
+
+CLI `config validate|show|get` use the `--cwd` flag instead of hook JSON. See [CLI → config](./cli.md#config).
 
 ## Top-level YAML keys
 
@@ -63,9 +75,11 @@ Project files typically carry `guards` / `dispatch`. `approvals` and `blocks` us
 
 | Key | Values | Default | Meaning |
 |-----|--------|---------|---------|
-| `fail` | `fail_open` \| `fail_closed` | `fail_closed` | On sync pipeline errors: allow or deny |
+| `fail` | `fail_open` \| `fail_closed` | `fail_closed` | On **daemon** sync pipeline **errors** returned to the engine (for example sync budget deadline/cancel, or a sync target that surfaces an error). Normal guard **deny** is a decision, not remapped by `fail`. gRPC `on_error` handles many peer failures before `policy.fail` applies ([Dispatch](./dispatch.md)) |
 | `ask_fallback` | `deny` \| `no_decision` | `deny` | When the agent cannot ask the user: **deny** blocks; **no_decision** returns a neutral allow |
-| `offline` | `fail_open` \| `fail_closed` | `fail_open` | When the daemon is unreachable from the hook edge |
+| `offline` | `fail_open` \| `fail_closed` | `fail_open` | When the **hook edge** cannot reach the daemon (see below) |
+
+`policy.fail` applies only on the **daemon** path. `policy.offline` applies only when the hook edge runs locally because dial/invoke failed.
 
 When the daemon is unreachable, the hook edge loads local config (defaults merged with user merged with project(cwd) merged with runtime) and applies `policy.offline`. Default `fail_open` encodes a neutral decision (or exit 0 for notify) so agents keep working; `fail_closed` exits **1**. Stderr still prints `daemon not running` in both modes.
 

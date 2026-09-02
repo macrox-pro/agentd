@@ -37,9 +37,10 @@ One-sentence definitions for terms used across the user guide. Each links to the
 | **Runtime layer** | Daemon-written overlay for approvals and temporary blocks (`runtime.yaml` in the state directory). | [Configuration](./configuration.md) |
 | **Snapshot** | The in-memory merged config the daemon reads on each hook call — no disk I/O on the hot path. | [Configuration](./configuration.md) |
 | **State directory** | Where the daemon writes runtime overlay, operational log, and session ledger files (not user config). | [Configuration → State directory](./configuration.md#state-directory) |
-| **`fail_open`** | On errors or unreachable daemon (with `policy.offline: fail_open`), let the agent continue with a neutral reply. | [Configuration → policy](./configuration.md#policy) |
-| **`fail_closed`** | On errors, treat as deny — the agent is blocked. | [Configuration → policy](./configuration.md#policy) |
-| **Offline policy** | What the hook edge does when the daemon is down (`policy.offline`: `fail_open` or `fail_closed`). | [Troubleshooting → Daemon not running](./troubleshooting.md#daemon-not-running) |
+| **`policy.fail`** | When the **daemon** sync pipeline errors (timeout/cancel, sync target error surfaced to the engine): `fail_open` → neutral allow; `fail_closed` → deny/block when the event supports it. Not used for guard deny or for `policy.offline`. | [Configuration → policy](./configuration.md#policy) · [Dispatch](./dispatch.md) |
+| **`policy.offline`** | What the hook edge does when the daemon is unreachable (`fail_open` → exit 0 + neutral wire; `fail_closed` → exit **1**). | [Troubleshooting → Daemon not running](./troubleshooting.md#daemon-not-running) |
+| **`fail_open`** | Policy **mode**: on errors, allow the agent to continue with a neutral reply (used by `policy.fail` or `policy.offline` depending on context). | [Configuration → policy](./configuration.md#policy) |
+| **`fail_closed`** | Policy **mode**: on errors, block or exit **1** (used by `policy.fail` on the daemon or `policy.offline` on the hook edge). | [Configuration → policy](./configuration.md#policy) |
 
 ## Session ledger (trajectory)
 

@@ -49,6 +49,8 @@ The process the coding agent starts. It reads the event, calls the daemon, write
 
 If the daemon cannot be reached: stderr `daemon not running`, then `policy.offline`. Default `fail_open` → exit 0 and a no-op reply so the agent continues. `fail_closed` → exit **1**. Do not print debug on stdout on this path.
 
+When the daemon **is** reachable, the edge forwards payload `cwd` (or `workspace_roots[0]`) so project `.agentd.yaml` applies in the daemon ([Configuration → Hook cwd](./configuration.md#hook-cwd-and-project-layer)).
+
 ### agenthooks (hidden)
 
 `agentd install` writes agent settings that call `agentd agenthooks …`, not `hook`. Hidden subcommands implement the same path so those files work. Prefer `hook run` / `hook serve` / `hook notify` in documentation and hand-written settings.

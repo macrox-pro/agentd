@@ -45,7 +45,17 @@ Fix the file, then `agentd daemon start` again. `config validate` and `config sh
 
 Sync budget ≈ 90% of provider timeout, optionally capped by route `sync_timeout` ([Dispatch](./dispatch.md)). CLI `--timeout 0` leaves deadline unset; daemon then uses kind defaults (30s / 5s).
 
-If sync exceeds budget, context cancels; policy `fail` governs broader failure modes on the daemon side.
+If sync exceeds budget, context cancels; **`policy.fail`** then maps the error to allow or deny/block on the daemon side.
+
+`policy.fail` applies when the sync pipeline returns an **error** to the engine (typical case: budget deadline). It does **not** remap a normal guard deny. For `grpc` sync targets, peer failures are usually handled by the target's `on_error` before `policy.fail` is consulted ([Dispatch](./dispatch.md)).
+
+## OpenCode serve: daemon lost mid-stream
+
+`hook serve` dials the daemon once at start. If a later `Invoke` fails (daemon stopped, socket error), the edge caches `policy.offline` for the rest of that NDJSON session: stderr prints `daemon not running` once, then each frame follows the cached offline mode. Restart the daemon and restart `hook serve` (or reload the OpenCode plugin) to recover daemon policy.
+
+## Undecodable hook payload (daemon up)
+
+If the daemon cannot decode a payload, it returns a **neutral** wire decision and skips trajectory recording for that call. This is not a hook-edge exit failure. Fix the wire JSON or provider mismatch; empty Codex/Kimi stdout is often normal ([Codex empty no-op](#codex-empty-no-op)).
 
 ## Ask loops
 

@@ -33,6 +33,7 @@ agentd hook notify --provider=codex '{"type":"agent-turn-complete"}'
 | **Нет Ask** | На ToolPre есть Deny/Allow/…, но **агент не умеет спрашивать пользователя**. Проверка с `action: ask` уходит в `policy.ask_fallback` (по умолчанию deny) |
 | **Пустой ответ** | No-op = **пустой stdout**, код 0 — **не** `{}` |
 | **Notify** | Только асинхронная семантика; не использовать для блокирующих проверок |
+| **Рабочий каталог в JSON** | Необязательное поле `cwd` в stdin (`hook run`) или в argv (`hook notify`) задаёт проектный `.agentd.yaml` в демоне ([Конфигурация → Рабочий каталог события](./configuration.md#рабочий-каталог-события-и-проектный-конфиг)) |
 | **Путь trust** | Ключи доверия содержат **абсолютный** путь к `hooks.json`; смена CODEX_HOME → переустановка |
 | **Смысл пустого stdout** | В отличие от Claude, пустой stdout в диалекте Codex — allow/no-op (кодирует agenthooks) |
 
