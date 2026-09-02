@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+(nothing yet)
+
+## [v0.0.9] — 2026-09-02
+
+Stable release: policy reliability and milestone e2e wire coverage (see [v0.0.9-beta](#v009-beta--2026-09-02)), plus Windows daemon state paths and platform CI fixes.
+
 ### Fixed
 
 - **Windows daemon state paths** — PID and lock are derived from the state directory when the endpoint is a named pipe (`\\.\pipe\agentd-<sid>`); previously they resolved to `\\.\pipe`, so `daemon start` could not write them. File sockets keep using the socket directory on every platform.
