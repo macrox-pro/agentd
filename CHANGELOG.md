@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## [v0.0.9-beta] — 2026-09-02
+
+Policy reliability on the daemon path and milestone e2e wire coverage.
+
 ### Fixed
 
 - **policy.fail on daemon path** — sync pipeline errors (grpc timeout/cancel, guard failures) now map through `policy.fail` in `dispatch.Engine` instead of returning neutral allow from the server.

@@ -19,7 +19,7 @@ Terms: [docs/en/glossary.md](./docs/en/glossary.md).
 ![Go Version](https://img.shields.io/badge/go-1.26+-00ADD8?logo=go)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-> **Status:** [v0.0.8-beta](./CHANGELOG.md#v008-beta--2026-09-01) (Cursor trajectory stats per-generation sum). Roadmap history: [PROGRESS.md](./PROGRESS.md).
+> **Status:** [v0.0.9-beta](./CHANGELOG.md#v009-beta--2026-09-02) (policy reliability + e2e wire coverage for M15–M20). Roadmap history: [PROGRESS.md](./PROGRESS.md).
 
 > **Disclaimer:** agentd is developed **entirely by AI agents** as an experimental research project — not production-ready software. Expect rough edges, evolving design, and breaking changes; use at your own risk.
 

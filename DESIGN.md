@@ -446,9 +446,9 @@ Tests: [CONVENTIONS.md § Tests](./CONVENTIONS.md#tests) · `go test ./... -race
 | M17 / v0.0.7 | **done** | `doctor`; `install --all-detected` (plan-only default, `--yes` to apply); discovery + hook status; `e2e-m17` |
 | M18 / v0.0.7 | **done** | `setup` TUI wizard; interactive bare `install` on TTY; `AGENTD_NO_TUI` / `CI` bypass; `e2e-m18` |
 | M19 / v0.0.8-beta | **done** | Cursor trajectory stats: sum billing tokens per `stop` (per generation), not session delta; wire row in `e2e-m15` (`cursor_two_stops_sum_tokens`) |
-| M20 | **done** | Policy/reliability wire coverage: `policy.fail` on daemon path, `ask_fallback`, notify/serve `Cwd`; `e2e-m20` |
+| M20 / v0.0.9-beta | **done** | Policy/reliability wire coverage: `policy.fail` on daemon path, `ask_fallback`, notify/serve `Cwd`; `e2e-m20` |
 
-**Shipped:** v0.0.8-beta. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
+**Shipped:** v0.0.9-beta. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
 
 ---
 
