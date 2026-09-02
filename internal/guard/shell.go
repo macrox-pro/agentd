@@ -37,7 +37,7 @@ func shellHandler(cfg config.ShellGuard, dctx DecisionContext) func(context.Cont
 			agenthooks.Logger(ctx).Warn("shell guard: ask_on matched",
 				"tool", e.Tool.Name, "pattern", hit)
 			if !e.Can(agenthooks.CapAsk) {
-				return agenthooks.Deny(fmt.Sprintf(
+				return askUnsupported(dctx.AskFallback, fmt.Sprintf(
 					"shell command blocked: matched ask_on pattern %q (ask unsupported)", hit,
 				)), nil
 			}

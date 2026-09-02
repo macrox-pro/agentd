@@ -125,7 +125,7 @@ func SetToggle(opts SetToggleOptions) (SetToggleResult, error) {
 		return SetToggleResult{}, err
 	}
 
-	userFC, projectFC, err := loadPeerLayers(scope, opts.UserPath, opts.ProjectDir, targetPath, layerFC, fileExists)
+	userFC, projectFC, err := loadPeerLayers(scope, opts.UserPath, opts.ProjectDir, layerFC, fileExists)
 	if err != nil {
 		return SetToggleResult{}, err
 	}
@@ -296,7 +296,7 @@ func loadOptionalLayerFC(path string) (*fileConfig, error) {
 	return fc, err
 }
 
-func loadPeerLayers(scope ToggleScope, userPath, projectDir, targetPath string, layerFC *fileConfig, fileExists bool) (*fileConfig, *fileConfig, error) {
+func loadPeerLayers(scope ToggleScope, userPath, projectDir string, layerFC *fileConfig, fileExists bool) (*fileConfig, *fileConfig, error) {
 	var userFC, projectFC *fileConfig
 
 	switch scope {

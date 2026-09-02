@@ -3,6 +3,9 @@ package dispatch_test
 import (
 	"context"
 	"encoding/json"
+	"bytes"
+	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -16,6 +19,7 @@ import (
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/dispatch"
+	"github.com/macrox-pro/agentd/internal/transport"
 )
 
 func claudeToolPre(t *testing.T, command string) []byte {
@@ -332,4 +336,184 @@ func TestEngineHybrid(t *testing.T) {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
+}
+
+func syncFailureSnap(t *testing.T, fail config.FailMode, mode config.DispatchMode, kinds []string, async []config.CompiledTarget) *config.Snapshot {
+	t.Helper()
+	dir, err := os.MkdirTemp("/tmp", "agentd-hang-")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	sock := filepath.Join(dir, "s.sock")
+	ln, err := transport.Listen(sock)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = ln.Close() })
+	go func() {
+		for {
+			c, acceptErr := ln.Accept()
+			if acceptErr != nil {
+				return
+			}
+			go func(conn net.Conn) {
+				time.Sleep(time.Minute)
+				_ = conn.Close()
+			}(c)
+		}
+	}()
+	snap := testSnap(t)
+	snap.Policy.Fail = fail
+	snap.Routes = []config.CompiledRoute{{
+		Name:  "sync-failure",
+		Match: config.RouteMatch{Kinds: kinds},
+		Mode:  mode,
+		Sync: []config.CompiledTarget{{
+			Kind:     config.TargetGRPC,
+			Endpoint: "unix://" + sock,
+			Timeout:  500 * time.Millisecond,
+			OnError:  config.FailOpen,
+		}},
+		Async: async,
+	}}
+	return snap
+}
+
+func syncFailureDeadline() time.Time {
+	return time.Now().Add(50 * time.Millisecond)
+}
+
+func claudePromptSubmitted(t *testing.T) []byte {
+	t.Helper()
+	b, err := json.Marshal(map[string]any{
+		"session_id":      "s",
+		"cwd":             "/w",
+		"hook_event_name": "UserPromptSubmit",
+		"prompt":          "hello",
+	})
+	require.NoError(t, err)
+	return b
+}
+
+func TestEngineSyncFailurePolicy(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		fail      config.FailMode
+		mode      config.DispatchMode
+		provider       agentdv1.Provider
+		invocationMode agentdv1.InvocationMode
+		raw       func(t *testing.T) []byte
+		kinds     []string
+		async     []config.CompiledTarget
+		wantKind  agentdv1.DecisionKind
+		wantAsync uint32
+	}{
+		{
+			name:     "sync error fail open",
+			fail:     config.FailOpen,
+			mode:     config.ModeSyncOnly,
+			provider: agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+			invocationMode: agentdv1.InvocationMode_INVOCATION_MODE_STDIN,
+			raw:      func(t *testing.T) []byte { return claudeToolPre(t, "echo") },
+			kinds:    []string{"tool.pre"},
+			wantKind: agentdv1.DecisionKind_DECISION_KIND_NO_DECISION,
+		},
+		{
+			name:     "sync error fail closed tool pre",
+			fail:     config.FailClosed,
+			mode:     config.ModeSyncOnly,
+			provider: agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+			invocationMode: agentdv1.InvocationMode_INVOCATION_MODE_STDIN,
+			raw:      func(t *testing.T) []byte { return claudeToolPre(t, "echo") },
+			kinds:    []string{"tool.pre"},
+			wantKind: agentdv1.DecisionKind_DECISION_KIND_DENY,
+		},
+		{
+			name:     "sync error fail closed prompt submitted",
+			fail:     config.FailClosed,
+			mode:     config.ModeSyncOnly,
+			provider: agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+			invocationMode: agentdv1.InvocationMode_INVOCATION_MODE_STDIN,
+			raw:      func(t *testing.T) []byte { return claudePromptSubmitted(t) },
+			kinds:    []string{"prompt.submitted"},
+			wantKind: agentdv1.DecisionKind_DECISION_KIND_BLOCK_PROMPT,
+		},
+		{
+			name:     "sync error fail closed nonblocking event",
+			fail:     config.FailClosed,
+			mode:     config.ModeSyncOnly,
+			provider: agentdv1.Provider_PROVIDER_CODEX,
+			invocationMode: agentdv1.InvocationMode_INVOCATION_MODE_NOTIFY,
+			raw: func(t *testing.T) []byte {
+				return []byte(`{"type":"agent-turn-complete","thread_id":"t1"}`)
+			},
+			kinds:    []string{"notification"},
+			wantKind: agentdv1.DecisionKind_DECISION_KIND_NO_DECISION,
+		},
+		{
+			name:      "parallel sync error keeps async dispatched",
+			fail:      config.FailClosed,
+			mode:      config.ModeParallel,
+			provider:  agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+			invocationMode:   agentdv1.InvocationMode_INVOCATION_MODE_STDIN,
+			raw:       func(t *testing.T) []byte { return claudeToolPre(t, "echo") },
+			kinds:     []string{"tool.pre"},
+			async:     []config.CompiledTarget{{Kind: config.TargetBuiltin, Observe: true}},
+			wantKind:  agentdv1.DecisionKind_DECISION_KIND_DENY,
+			wantAsync: 1,
+		},
+		{
+			name:      "after sync error dispatches converted outcome",
+			fail:      config.FailClosed,
+			mode:      config.ModeAfterSync,
+			provider:  agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+			invocationMode:   agentdv1.InvocationMode_INVOCATION_MODE_STDIN,
+			raw:       func(t *testing.T) []byte { return claudeToolPre(t, "echo") },
+			kinds:     []string{"tool.pre"},
+			async:     []config.CompiledTarget{{Kind: config.TargetBuiltin, Observe: true}},
+			wantKind:  agentdv1.DecisionKind_DECISION_KIND_DENY,
+			wantAsync: 1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			q := dispatch.NewQueue(config.AsyncConfig{
+				QueueCapacity: 8,
+				WorkerLimit:   2,
+				TargetTimeout: time.Second,
+			}, nil)
+			t.Cleanup(func() { q.Close(2 * time.Second) })
+			eng := dispatch.NewEngine(q, nil, nil)
+			snap := syncFailureSnap(t, tt.fail, tt.mode, tt.kinds, tt.async)
+
+			res, err := eng.Invoke(context.Background(), dispatch.InvokeInput{
+				Provider:       tt.provider,
+				RawPayload:     tt.raw(t),
+				Snap:           snap,
+				InvocationMode: tt.invocationMode,
+				Deadline:       syncFailureDeadline(),
+			})
+			require.NoError(t, err)
+			require.NotNil(t, res.Decision)
+			assert.Equal(t, tt.wantKind, res.Decision.Kind)
+			assert.Equal(t, tt.wantAsync, res.AsyncDispatchedCount)
+		})
+	}
+}
+
+func TestEngineRunSyncSkipWarn(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	log := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	eng := dispatch.NewEngine(nil, log, nil)
+	snap := paritySnap(t, []config.CompiledTarget{{Kind: config.TargetLog}}, nil, config.ModeSyncOnly)
+
+	_, err := eng.Invoke(context.Background(), dispatch.InvokeInput{
+		Provider:   agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+		RawPayload: claudeToolPre(t, "echo"),
+		Snap:       snap,
+	})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "skip sync target")
+	assert.Contains(t, buf.String(), "log")
 }

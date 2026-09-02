@@ -19,9 +19,11 @@ func TestAttachSecrets(t *testing.T) {
 	tests := []struct {
 		name       string
 		action     config.GuardAction
+		fallback   config.AskFallback
 		input      string
 		wantKind   agenthooks.DecisionKind
 		wantSecret bool
+		noCapAsk   bool
 	}{
 		{
 			name:     "clean no decision",
@@ -43,6 +45,24 @@ func TestAttachSecrets(t *testing.T) {
 			wantKind:   agenthooks.DecisionDeny,
 			wantSecret: true,
 		},
+		{
+			name:       "unsupported ask fallback deny",
+			action:     config.GuardAsk,
+			fallback:   config.AskFallbackDeny,
+			input:      `{"command":"export AWS_ACCESS_KEY_ID=` + fakeAWSKey + `"}`,
+			wantKind:   agenthooks.DecisionDeny,
+			wantSecret: true,
+			noCapAsk:   true,
+		},
+		{
+			name:       "unsupported ask fallback no_decision",
+			action:     config.GuardAsk,
+			fallback:   config.AskFallbackNoDecision,
+			input:      `{"command":"export AWS_ACCESS_KEY_ID=` + fakeAWSKey + `"}`,
+			wantKind:   agenthooks.DecisionNoDecision,
+			wantSecret: false,
+			noCapAsk:   true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -56,7 +76,7 @@ func TestAttachSecrets(t *testing.T) {
 				Enabled: true,
 				Action:  tt.action,
 				Rules:   config.DefaultSecretsRules,
-			}, guard.DecisionContext{})
+			}, guard.DecisionContext{AskFallback: tt.fallback})
 
 			ev := &agenthooks.ToolPreEvent{
 				Event: agenthooks.Event{
@@ -67,6 +87,9 @@ func TestAttachSecrets(t *testing.T) {
 					Name:  "Bash",
 					Input: json.RawMessage(tt.input),
 				},
+			}
+			if tt.noCapAsk {
+				ev.Provider = agenthooks.ProviderCodex
 			}
 			d, err := r.Decide(context.Background(), ev)
 			require.NoError(t, err, "Decide")

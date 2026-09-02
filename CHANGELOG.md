@@ -2,7 +2,22 @@
 
 ## Unreleased
 
-(nothing yet)
+### Fixed
+
+- **policy.fail on daemon path** — sync pipeline errors (grpc timeout/cancel, guard failures) now map through `policy.fail` in `dispatch.Engine` instead of returning neutral allow from the server.
+- **policy.ask_fallback** — when a guard would Ask but the event lacks `CapAsk`, `ask_fallback` (`deny` vs `no_decision`) is honored instead of always denying.
+- **hook notify/serve Cwd** — `InvokeRequest.Cwd` is forwarded so project `.agentd.yaml` applies on notify and serve paths.
+- **ConfigStore project cache** — project snapshot cache hits use `projectsMu` RLock so concurrent sessions do not block on `reloadMu`.
+- **Makefile docs-check** — terms/links checker failures now fail the target (was masked by `;` before final echo).
+- **CI platform tests** — `platform-test` job on `macos-latest` and `windows-latest` for config/daemon/transport packages.
+
+### Removed
+
+- **policy.unsupported** — YAML key is ignored for compatibility; was parsed but never applied on the daemon path.
+
+### Testing
+
+- **E2E milestones** — `e2e-m15` (`trajectory stats` / `session stats`, gates, **M19** Cursor per-generation token sum via `cursor_two_stops_sum_tokens`); `e2e-m16` (Prometheus `/metrics`); `e2e-m18` (non-interactive TUI gate); `e2e-m20` (`policy.fail`, `ask_fallback`, notify/serve `Cwd` on wire).
 
 ## [v0.0.8-beta] — 2026-09-01
 

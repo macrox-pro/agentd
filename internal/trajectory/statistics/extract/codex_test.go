@@ -26,11 +26,10 @@ func writeCodexRollout(t *testing.T, lines ...string) string {
 	return path
 }
 
-func codexTokenCountLine(input, cached, cacheWrite, output uint64) string {
+func codexTokenCountLine(input, cached, output uint64) string {
 	return `{"type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":` +
 		strconv.FormatUint(input, 10) + `,"cached_input_tokens":` + strconv.FormatUint(cached, 10) +
-		`,"cache_write_input_tokens":` + strconv.FormatUint(cacheWrite, 10) +
-		`,"output_tokens":` + strconv.FormatUint(output, 10) + `}}}}`
+		`,"cache_write_input_tokens":0,"output_tokens":` + strconv.FormatUint(output, 10) + `}}}}`
 }
 
 func codexStopHook(transcriptPath string) string {
@@ -52,7 +51,7 @@ func TestScanCodexTranscript(t *testing.T) {
 		{
 			name:    "codex_stop_full_fields",
 			hookRaw: "",
-			rollout: []string{codexTokenCountLine(15156, 4352, 0, 100)},
+			rollout: []string{codexTokenCountLine(15156, 4352, 100)},
 			check: func(t *testing.T, got extract.TokenFields) {
 				t.Helper()
 				assert.Equal(t, uint64(15156), got.Input)
@@ -64,7 +63,7 @@ func TestScanCodexTranscript(t *testing.T) {
 		{
 			name:    "codex_prompt_submit_skipped",
 			hookRaw: "",
-			rollout: []string{codexTokenCountLine(999, 0, 0, 1)},
+			rollout: []string{codexTokenCountLine(999, 0, 1)},
 			check: func(t *testing.T, got extract.TokenFields) {
 				t.Helper()
 				assert.False(t, got.Any())
@@ -73,7 +72,7 @@ func TestScanCodexTranscript(t *testing.T) {
 		{
 			name:    "codex_malformed_hook_raw",
 			hookRaw: `{not json`,
-			rollout: []string{codexTokenCountLine(10, 0, 0, 1)},
+			rollout: []string{codexTokenCountLine(10, 0, 1)},
 			check: func(t *testing.T, got extract.TokenFields) {
 				t.Helper()
 				assert.False(t, got.Any())
@@ -82,7 +81,7 @@ func TestScanCodexTranscript(t *testing.T) {
 		{
 			name:    "codex_empty_transcript_path",
 			hookRaw: `{"hook_event_name":"Stop","transcript_path":""}`,
-			rollout: []string{codexTokenCountLine(10, 0, 0, 1)},
+			rollout: []string{codexTokenCountLine(10, 0, 1)},
 			check: func(t *testing.T, got extract.TokenFields) {
 				t.Helper()
 				assert.False(t, got.Any())
@@ -110,7 +109,7 @@ func TestScanCodexTranscript(t *testing.T) {
 			hookRaw: "",
 			rollout: []string{
 				`{"type":"event_msg","payload":{"type":"token_count","broken"}`,
-				codexTokenCountLine(5, 0, 0, 1),
+				codexTokenCountLine(5, 0, 1),
 			},
 			check: func(t *testing.T, got extract.TokenFields) {
 				t.Helper()
@@ -151,8 +150,8 @@ func TestScanCodexTranscript(t *testing.T) {
 			name:    "codex_multiple_token_count_picks_last",
 			hookRaw: "",
 			rollout: []string{
-				codexTokenCountLine(10, 0, 0, 1),
-				codexTokenCountLine(20, 0, 0, 2),
+				codexTokenCountLine(10, 0, 1),
+				codexTokenCountLine(20, 0, 2),
 			},
 			check: func(t *testing.T, got extract.TokenFields) {
 				t.Helper()

@@ -99,6 +99,13 @@ e2e_assert_eq() {
 	fi
 }
 
+e2e_assert_not_eq() {
+	local got="$1" want="$2" label="${3:-value}"
+	if [[ "$got" == "$want" ]]; then
+		e2e_fail "${label}: got $(printf %q "$got"), must not equal $(printf %q "$want")"
+	fi
+}
+
 e2e_assert_contains() {
 	local haystack="$1" needle="$2" label="${3:-output}"
 	if ! grep -Fq -- "$needle" <<<"$haystack"; then
@@ -118,6 +125,27 @@ e2e_assert_not_contains() {
 	if grep -Fq -- "$needle" <<<"$haystack"; then
 		e2e_fail "${label}: must not contain $(printf %q "$needle")"
 	fi
+}
+
+# e2e_expect_exit CODE -- CMD... — run CMD, assert exit status; stdout in E2E_LAST_OUT.
+# Set E2E_LAST_ERR_FILE to capture stderr (otherwise stderr is discarded).
+e2e_expect_exit() {
+	local want="$1"
+	shift
+	[[ "${1:-}" == "--" ]] || e2e_fail "e2e_expect_exit: expected -- before command"
+	shift
+	local got=0 stderr_file="${E2E_LAST_ERR_FILE:-}"
+	if [[ -n "$stderr_file" ]]; then
+		E2E_LAST_OUT="$("$@" 2>"$stderr_file")" || got=$?
+	else
+		E2E_LAST_OUT="$("$@" 2>/dev/null)" || got=$?
+	fi
+	e2e_assert_eq "$got" "$want" "exit-status"
+}
+
+# e2e_free_tcp_port — bind 127.0.0.1:0 and return the assigned port number.
+e2e_free_tcp_port() {
+	python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()'
 }
 
 # e2e_assert_trajectory_no_drops — trajectory queue overflow must stay zero.

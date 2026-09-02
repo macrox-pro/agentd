@@ -72,9 +72,6 @@ func mergePolicyPtr(base, user *filePolicy) *filePolicy {
 	if user.Fail != "" {
 		out.Fail = user.Fail
 	}
-	if user.Unsupported != "" {
-		out.Unsupported = user.Unsupported
-	}
 	if user.AskFallback != "" {
 		out.AskFallback = user.AskFallback
 	}

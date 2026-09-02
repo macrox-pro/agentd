@@ -60,7 +60,6 @@ agentd config validate --config ~/.agentd.yaml
 | Ключ | Значения | По умолчанию |
 |------|----------|--------------|
 | `fail` | `fail_open` \| `fail_closed` | `fail_closed` |
-| `unsupported` | `degrade` \| `strict` | `degrade` |
 | `ask_fallback` | `deny` \| `no_decision` | `deny` |
 | `offline` | `fail_open` \| `fail_closed` | `fail_open` |
 

@@ -28,10 +28,7 @@ func registerAutostart(spec AutostartSpec) error {
 	if err := writeFileAtomic(path, []byte(body), manifestFilePerm); err != nil {
 		return err
 	}
-	domain, err := launchdDomain()
-	if err != nil {
-		return err
-	}
+	domain := launchdDomain()
 	_ = exec.Command("launchctl", "bootout", domain, path).Run()
 	if out, err := exec.Command("launchctl", "bootstrap", domain, path).CombinedOutput(); err != nil {
 		return fmt.Errorf("launchctl bootstrap: %w: %s", err, strings.TrimSpace(string(out)))
@@ -47,7 +44,7 @@ func unregisterAutostart() error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil
 	}
-	if domain, err := launchdDomain(); err == nil {
+	if domain := launchdDomain(); domain != "" {
 		_ = exec.Command("launchctl", "bootout", domain, path).Run()
 	}
 	_ = os.Remove(path)
@@ -75,7 +72,7 @@ func readAutostartState() (AutostartReport, error) {
 	}, nil
 }
 
-func launchdDomain() (string, error) {
+func launchdDomain() string {
 	uid := strconv.Itoa(os.Getuid())
-	return "gui/" + uid, nil
+	return "gui/" + uid
 }

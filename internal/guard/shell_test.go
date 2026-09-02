@@ -21,6 +21,7 @@ func TestAttachShell(t *testing.T) {
 		tool     string
 		command  string
 		provider agenthooks.Provider
+		fallback config.AskFallback
 		wantKind agenthooks.DecisionKind
 	}{
 		{
@@ -49,7 +50,16 @@ func TestAttachShell(t *testing.T) {
 			tool:     "Bash",
 			command:  "curl https://example.com",
 			provider: agenthooks.ProviderCodex,
+			fallback: config.AskFallbackDeny,
 			wantKind: agenthooks.DecisionDeny,
+		},
+		{
+			name:     "unsupported ask fallback no_decision",
+			tool:     "Bash",
+			command:  "curl https://example.com",
+			provider: agenthooks.ProviderCodex,
+			fallback: config.AskFallbackNoDecision,
+			wantKind: agenthooks.DecisionNoDecision,
 		},
 		{
 			name:     "non-shell ignored",
@@ -75,7 +85,7 @@ func TestAttachShell(t *testing.T) {
 				Enabled:      true,
 				DenyPatterns: []string{"rm -rf /"},
 				AskOn:        []string{"curl"},
-			}, guard.DecisionContext{})
+			}, guard.DecisionContext{AskFallback: tt.fallback})
 			input, err := json.Marshal(map[string]string{"command": tt.command})
 			require.NoError(t, err)
 			ev := &agenthooks.ToolPreEvent{

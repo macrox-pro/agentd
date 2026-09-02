@@ -42,7 +42,6 @@ type fileTemporaryBlock struct {
 
 type filePolicy struct {
 	Fail        string `yaml:"fail,omitempty"`
-	Unsupported string `yaml:"unsupported,omitempty"`
 	AskFallback string `yaml:"ask_fallback,omitempty"`
 	Offline     string `yaml:"offline,omitempty"`
 }

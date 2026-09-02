@@ -60,6 +60,7 @@ func Notify(ctx context.Context, opts Options) int {
 		Provider:       protoProv,
 		RawPayload:     payload,
 		InvocationMode: agentdv1.InvocationMode_INVOCATION_MODE_NOTIFY,
+		Cwd:            cwd,
 	}
 	if opts.Timeout > 0 {
 		req.Deadline = timestamppb.New(time.Now().Add(opts.Timeout))

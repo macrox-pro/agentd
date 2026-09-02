@@ -47,6 +47,7 @@ type Store struct {
 	runtimePath string
 	gen         atomic.Uint64
 	reloadMu    sync.Mutex
+	projectsMu  sync.RWMutex
 	onReload    func(result string)
 
 	userFC     *fileConfig
@@ -128,8 +129,8 @@ func (s *Store) RuntimePath() string {
 
 // ProjectPaths returns absolute paths of lazily loaded project configs.
 func (s *Store) ProjectPaths() []string {
-	s.reloadMu.Lock()
-	defer s.reloadMu.Unlock()
+	s.projectsMu.RLock()
+	defer s.projectsMu.RUnlock()
 	out := make([]string, 0, len(s.projects))
 	for p := range s.projects {
 		out = append(out, p)
@@ -161,12 +162,25 @@ func (s *Store) EnsureProject(cwd, projectRoot string) (*Snapshot, error) {
 		return s.Current(), nil
 	}
 
+	s.projectsMu.RLock()
+	if ps, hit := s.projects[path]; hit && ps.snap != nil {
+		snap := ps.snap
+		s.projectsMu.RUnlock()
+		return snap, nil
+	}
+	s.projectsMu.RUnlock()
+
 	s.reloadMu.Lock()
 	defer s.reloadMu.Unlock()
 
+	s.projectsMu.Lock()
 	if ps, hit := s.projects[path]; hit && ps.snap != nil {
-		return ps.snap, nil
+		snap := ps.snap
+		s.projectsMu.Unlock()
+		return snap, nil
 	}
+	s.projectsMu.Unlock()
+
 	ps, err := s.readProjectLocked(path)
 	if err != nil {
 		return nil, err
@@ -174,7 +188,9 @@ func (s *Store) EnsureProject(cwd, projectRoot string) (*Snapshot, error) {
 	if err := s.compileOneProjectLocked(ps); err != nil {
 		return nil, err
 	}
+	s.projectsMu.Lock()
 	s.projects[path] = ps
+	s.projectsMu.Unlock()
 	if s.watcher != nil {
 		s.watcher.addFile(path)
 	}
@@ -386,12 +402,21 @@ func (s *Store) reloadAllLocked() error {
 	s.runtimeRaw = runtimeRaw
 	s.runtimeFC = runtimeFC
 
+	s.projectsMu.RLock()
+	paths := make([]string, 0, len(s.projects))
 	for path := range s.projects {
+		paths = append(paths, path)
+	}
+	s.projectsMu.RUnlock()
+
+	for _, path := range paths {
 		ps, err := s.readProjectLocked(path)
 		if err != nil {
 			return err
 		}
+		s.projectsMu.Lock()
 		s.projects[path] = ps
+		s.projectsMu.Unlock()
 	}
 	return s.recompileAllLocked()
 }
@@ -409,6 +434,8 @@ func (s *Store) recompileAllLocked() error {
 	base := snapshotFrom(res, gen, fp, s.userPath, s.runtimePath, "")
 	s.snap.Store(base)
 
+	s.projectsMu.Lock()
+	defer s.projectsMu.Unlock()
 	for path, ps := range s.projects {
 		pres, err := CompileMerged(s.userFC, ps.fc, s.runtimeFC)
 		if err != nil {
@@ -466,9 +493,13 @@ func (s *Store) readProjectLocked(path string) (*projectState, error) {
 }
 
 func (s *Store) projectFCLocked(path string) (*fileConfig, error) {
+	s.projectsMu.RLock()
 	if ps, hit := s.projects[path]; hit {
-		return ps.fc, nil
+		fc := ps.fc
+		s.projectsMu.RUnlock()
+		return fc, nil
 	}
+	s.projectsMu.RUnlock()
 	_, fc, err := readFileConfig(path)
 	if err != nil {
 		return nil, err
@@ -486,7 +517,9 @@ func (s *Store) reloadProjectFile(path string) error {
 	if err := s.compileOneProjectLocked(ps); err != nil {
 		return err
 	}
+	s.projectsMu.Lock()
 	s.projects[path] = ps
+	s.projectsMu.Unlock()
 	return nil
 }
 

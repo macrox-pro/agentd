@@ -50,6 +50,58 @@ func TestServeOpenCodeInitialize(t *testing.T) {
 	assert.Contains(t, stdout.String(), `"seq":1`)
 }
 
+func TestServeCwd(t *testing.T) {
+	tests := []struct {
+		name         string
+		stdin        string
+		wantLastCwd  string
+		wantStdoutSub string
+	}{
+		{
+			name: "serve resolves cwd for each frame",
+			stdin: `{"seq":1,"cwd":"/frame-a","hook":"tool.execute.before","input":{"sessionID":"s","callID":"c1","tool":"bash"},"output":{"args":{}}}` + "\n" +
+				`{"seq":2,"cwd":"/frame-b","hook":"tool.execute.before","input":{"sessionID":"s","callID":"c2","tool":"bash"},"output":{"args":{}}}` + "\n",
+			wantLastCwd:   "/frame-b",
+			wantStdoutSub: `"seq":2`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sockDir, err := os.MkdirTemp("/tmp", "agentd-serve-")
+			require.NoError(t, err, "MkdirTemp(%q)", tt.name)
+			t.Cleanup(func() { _ = os.RemoveAll(sockDir) })
+			socket := filepath.Join(sockDir, "s.sock")
+			cfgDir := t.TempDir()
+
+			ln, err := transport.Listen(socket)
+			require.NoError(t, err, "Listen(%q)", tt.name)
+			t.Cleanup(func() { _ = ln.Close() })
+
+			hook := &cwdHook{}
+			gs := grpc.NewServer()
+			agentdv1.RegisterHookServiceServer(gs, hook)
+			agentdv1.RegisterDaemonServiceServer(gs, okDaemon{})
+			go func() { _ = gs.Serve(ln) }()
+			t.Cleanup(gs.Stop)
+			waitForSocket(t, socket)
+
+			var stdout, stderr bytes.Buffer
+			code := hookedge.Serve(context.Background(), hookedge.Options{
+				Socket:     socket,
+				ConfigPath: filepath.Join(cfgDir, "missing.yaml"),
+				Provider:   "opencode",
+				Stdin:      strings.NewReader(tt.stdin),
+				Stdout:     &stdout,
+				Stderr:     &stderr,
+				Timeout:    2 * time.Second,
+			})
+			assert.Equal(t, 0, code, "Serve(%q): %s", tt.name, stderr.String())
+			assert.Equal(t, tt.wantLastCwd, hook.lastCwd, "Serve(%q)", tt.name)
+			assert.Contains(t, stdout.String(), tt.wantStdoutSub, "Serve(%q)", tt.name)
+		})
+	}
+}
+
 func TestServeRejectsNonOpenCode(t *testing.T) {
 	t.Parallel()
 	var stderr bytes.Buffer

@@ -285,3 +285,65 @@ dispatch:
 		})
 	}
 }
+
+func TestCompilePolicy(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		content string
+		wantErr bool
+		check   func(t *testing.T, pol config.Policy)
+	}{
+		{
+			name: "default policy keys",
+			check: func(t *testing.T, pol config.Policy) {
+				t.Helper()
+				assert.Equal(t, config.FailClosed, pol.Fail)
+				assert.Equal(t, config.AskFallbackDeny, pol.AskFallback)
+				assert.Equal(t, config.FailOpen, pol.Offline)
+			},
+		},
+		{
+			name: "removed unsupported key is ignored for compatibility",
+			content: `version: 1
+policy:
+  unsupported: strict
+  fail: fail_open
+`,
+			check: func(t *testing.T, pol config.Policy) {
+				t.Helper()
+				assert.Equal(t, config.FailOpen, pol.Fail)
+			},
+		},
+		{
+			name:    "invalid policy fail",
+			content: "version: 1\npolicy:\n  fail: nope\n",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if tt.content != "" {
+				path := filepath.Join(t.TempDir(), "agentd.yaml")
+				require.NoError(t, os.WriteFile(path, []byte(tt.content), 0o600))
+				store, err := config.Load(context.Background(), path)
+				if tt.wantErr {
+					require.Error(t, err)
+					return
+				}
+				require.NoError(t, err)
+				if tt.check != nil {
+					tt.check(t, store.Current().Policy)
+				}
+				return
+			}
+			res, err := config.CompileMerged(nil, nil, nil)
+			require.NoError(t, err)
+			if tt.check != nil {
+				tt.check(t, res.Policy)
+			}
+		})
+	}
+}

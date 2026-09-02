@@ -12,8 +12,11 @@ linters:
     - govet
     - ineffassign
     - staticcheck
+    - unparam
     - unused
   settings:
+    unparam:
+      check-exported: false
     staticcheck:
       checks:
         - all

@@ -16,6 +16,8 @@ import (
 	"github.com/macrox-pro/agentd/internal/provider"
 )
 
+const syncPipelineFailReason = "sync pipeline failed (fail-closed policy)"
+
 // Observer records invoke_sync and async_side histogram samples.
 type Observer interface {
 	ObserveInvoke(provider, eventKind, decision, outcome string, seconds float64)
@@ -159,42 +161,55 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
 		return res, nil
 
-	case config.ModeParallel:
-		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
-		d, err := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
-		if err != nil {
-			outcome = invokeOutcome(ctx, err)
-			return InvokeResult{}, err
+	default:
+		var asyncN uint32
+		if mode == config.ModeParallel {
+			asyncN = e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, nil)
 		}
-		res := InvokeResult{Decision: decision.ToProto(d), AsyncDispatchedCount: n, Meta: meta}
-		decisionStr = decisionLabel(res.Decision)
-		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
-		return res, nil
 
-	case config.ModeAfterSync:
-		d, err := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
-		if err != nil {
-			outcome = invokeOutcome(ctx, err)
-			return InvokeResult{}, err
+		d, syncErr := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
+		if syncErr != nil {
+			outcome = invokeOutcome(ctx, syncErr)
+			if e.log != nil {
+				e.log.Warn("sync pipeline failed",
+					"provider", providerName,
+					"event_kind", eventKind,
+					"route", route.Name,
+					"policy_fail", in.Snap.Policy.Fail,
+					"error", syncErr,
+				)
+			}
+			d = syncFailureDecision(in.Snap.Policy.Fail, typed)
 		}
+
 		proto := decision.ToProto(d)
-		syncOutcome := &targets.SyncOutcome{Kind: proto.GetKind(), Reason: proto.GetReason()}
-		n := e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, syncOutcome)
-		res := InvokeResult{Decision: proto, AsyncDispatchedCount: n, Meta: meta}
-		decisionStr = decisionLabel(res.Decision)
-		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
-		return res, nil
-
-	default: // sync_only
-		d, err := e.runSync(ctx, builtin, route.Sync, typed, in.Provider, in.RawPayload)
-		if err != nil {
-			outcome = invokeOutcome(ctx, err)
-			return InvokeResult{}, err
+		if mode == config.ModeAfterSync {
+			syncOutcome := &targets.SyncOutcome{Kind: proto.GetKind(), Reason: proto.GetReason()}
+			asyncN = e.enqueueAsync(builtin, route.Async, typed, in.RawPayload, providerName, eventKind, syncOutcome)
 		}
-		res := InvokeResult{Decision: decision.ToProto(d), AsyncDispatchedCount: 0, Meta: meta}
+
+		res := InvokeResult{Decision: proto, AsyncDispatchedCount: asyncN, Meta: meta}
 		decisionStr = decisionLabel(res.Decision)
 		e.logInvokeDebug(providerName, eventKind, route.Name, res.Decision)
 		return res, nil
+	}
+}
+
+func syncFailureDecision(mode config.FailMode, typed any) agenthooks.Decision {
+	if mode != config.FailClosed {
+		return agenthooks.NoDecision()
+	}
+	base := agenthooks.EventOf(typed)
+	if base == nil || !base.Can(agenthooks.CapDeny) {
+		return agenthooks.NoDecision()
+	}
+	switch base.Kind {
+	case agenthooks.KindToolPre, agenthooks.KindPermission:
+		return agenthooks.Deny(syncPipelineFailReason)
+	case agenthooks.KindPromptSubmitted:
+		return agenthooks.BlockPrompt(syncPipelineFailReason)
+	default:
+		return agenthooks.NoDecision()
 	}
 }
 
@@ -219,6 +234,9 @@ func (e *Engine) runSync(ctx context.Context, b *targets.Builtin, syncTargets []
 	for _, t := range syncTargets {
 		inv, err := targets.NewSyncInvoker(t, b, e.log)
 		if err != nil {
+			if e.log != nil {
+				e.log.Warn("skip sync target", "target", string(t.Kind), "error", err)
+			}
 			continue
 		}
 		d, err := inv.InvokeSync(ctx, targets.SyncRequest{

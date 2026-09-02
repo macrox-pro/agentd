@@ -172,22 +172,14 @@ func testSocketDir(t *testing.T) (socket, cfg string) {
 	return filepath.Join(dir, "s.sock"), filepath.Join(dir, "missing.yaml")
 }
 
-func waitDaemonReady(t *testing.T, socket string, errCh <-chan error, timeout time.Duration) {
+const daemonReadyTimeout = 2 * time.Second
+
+func waitDaemonReady(t *testing.T, socket string) {
 	t.Helper()
-	deadline := time.After(timeout)
+	deadline := time.After(daemonReadyTimeout)
 	ticker := time.NewTicker(20 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		if errCh != nil {
-			select {
-			case err := <-errCh:
-				if err != nil {
-					t.Fatalf("daemon exited before ready: %v", err)
-				}
-				t.Fatal("daemon exited before ready")
-			default:
-			}
-		}
 		select {
 		case <-deadline:
 			t.Fatal("timeout waiting for daemon health")
@@ -234,7 +226,7 @@ func startReloadStubServer(t *testing.T) string {
 	agentdv1.RegisterDaemonServiceServer(gs, &reloadStub{})
 	go func() { _ = gs.Serve(ln) }()
 	t.Cleanup(gs.Stop)
-	waitDaemonReady(t, socket, nil, 2*time.Second)
+	waitDaemonReady(t, socket)
 	return socket
 }
 
@@ -264,7 +256,7 @@ func startSubscribeServer(t *testing.T) (socket string, hub *trajectory.Hub) {
 	t.Cleanup(func() { _ = ln.Close() })
 	go func() { _ = gs.Serve(ln) }()
 	t.Cleanup(gs.Stop)
-	waitDaemonReady(t, socket, nil, 2*time.Second)
+	waitDaemonReady(t, socket)
 	return socket, rec.Hub()
 }
 
@@ -306,7 +298,7 @@ func statusStubServer(t *testing.T) string {
 	agentdv1.RegisterDaemonServiceServer(gs, runningStatusStub{})
 	go func() { _ = gs.Serve(ln) }()
 	t.Cleanup(gs.Stop)
-	waitDaemonReady(t, socket, nil, 2*time.Second)
+	waitDaemonReady(t, socket)
 	return socket
 }
 

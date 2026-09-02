@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -334,4 +335,189 @@ func TestLayerYAML_project_cached(t *testing.T) {
 	cached, err := store.LayerYAML(config.LayerProject, projDir, "")
 	require.NoError(t, err, "LayerYAML(project)")
 	assert.Equal(t, string(uncached), string(cached), "project_cached")
+}
+
+func TestStoreProjectCache(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	tests := []struct {
+		name string
+		run  func(t *testing.T)
+	}{
+		{
+			name: "SnapshotFor and Reload remain race free",
+			run: func(t *testing.T) {
+				t.Helper()
+				dir := t.TempDir()
+				userPath := filepath.Join(dir, "user.yaml")
+				projDir := filepath.Join(dir, "repo")
+				require.NoError(t, os.MkdirAll(projDir, 0o700), "MkdirAll(repo)")
+				require.NoError(t, os.WriteFile(userPath, []byte("version: 1\n"), 0o600), "WriteFile(user)")
+				require.NoError(t, os.WriteFile(filepath.Join(projDir, ".agentd.yaml"), []byte("version: 1\npolicy:\n  fail: fail_open\n"), 0o600), "WriteFile(project)")
+
+				store, err := config.Load(ctx, userPath)
+				require.NoError(t, err, "Load(user)")
+
+				const workers = 16
+				var wg sync.WaitGroup
+				errs := make(chan error, workers)
+				wg.Add(workers)
+				for range workers {
+					go func() {
+						defer wg.Done()
+						for range 20 {
+							if snap := store.SnapshotFor(projDir, ""); snap == nil {
+								errs <- fmt.Errorf("nil snapshot")
+								return
+							}
+							if err := store.Reload(ctx); err != nil {
+								errs <- err
+								return
+							}
+						}
+					}()
+				}
+				wg.Wait()
+				close(errs)
+				for err := range errs {
+					require.NoError(t, err, "concurrent SnapshotFor/Reload")
+				}
+
+				snap := store.SnapshotFor(projDir, "")
+				require.NotNil(t, snap, "SnapshotFor after race")
+				assert.Equal(t, config.FailOpen, snap.Policy.Fail, "SnapshotFor after race")
+			},
+		},
+		{
+			name: "concurrent first load returns one valid project snapshot",
+			run: func(t *testing.T) {
+				t.Helper()
+				dir := t.TempDir()
+				userPath := filepath.Join(dir, "user.yaml")
+				projDir := filepath.Join(dir, "repo")
+				require.NoError(t, os.MkdirAll(projDir, 0o700), "MkdirAll(repo)")
+				require.NoError(t, os.WriteFile(userPath, []byte("version: 1\n"), 0o600), "WriteFile(user)")
+				require.NoError(t, os.WriteFile(filepath.Join(projDir, ".agentd.yaml"), []byte("version: 1\npolicy:\n  fail: fail_open\n"), 0o600), "WriteFile(project)")
+
+				store, err := config.Load(ctx, userPath)
+				require.NoError(t, err, "Load(user)")
+
+				const workers = 16
+				var wg sync.WaitGroup
+				errs := make(chan error, workers)
+				snaps := make([]*config.Snapshot, workers)
+				wg.Add(workers)
+				for i := range workers {
+					go func(idx int) {
+						defer wg.Done()
+						snap, loadErr := store.EnsureProject(projDir, "")
+						if loadErr != nil {
+							errs <- loadErr
+							return
+						}
+						snaps[idx] = snap
+					}(i)
+				}
+				wg.Wait()
+				close(errs)
+				for err := range errs {
+					require.NoError(t, err, "concurrent EnsureProject")
+				}
+
+				var first *config.Snapshot
+				for i, snap := range snaps {
+					require.NotNil(t, snap, "EnsureProject worker %d", i)
+					assert.Equal(t, config.FailOpen, snap.Policy.Fail, "EnsureProject worker %d", i)
+					if first == nil {
+						first = snap
+					} else {
+						assert.Equal(t, first.Generation, snap.Generation, "EnsureProject worker %d", i)
+						assert.Equal(t, first.Fingerprint, snap.Fingerprint, "EnsureProject worker %d", i)
+					}
+				}
+			},
+		},
+		{
+			name: "reload replaces cached project snapshot consistently",
+			run: func(t *testing.T) {
+				t.Helper()
+				dir := t.TempDir()
+				userPath := filepath.Join(dir, "user.yaml")
+				projDir := filepath.Join(dir, "repo")
+				projPath := filepath.Join(projDir, ".agentd.yaml")
+				require.NoError(t, os.MkdirAll(projDir, 0o700), "MkdirAll(repo)")
+				require.NoError(t, os.WriteFile(userPath, []byte("version: 1\n"), 0o600), "WriteFile(user)")
+				require.NoError(t, os.WriteFile(projPath, []byte("version: 1\npolicy:\n  fail: fail_open\n"), 0o600), "WriteFile(project)")
+
+				store, err := config.Load(ctx, userPath)
+				require.NoError(t, err, "Load(user)")
+
+				before, err := store.EnsureProject(projDir, "")
+				require.NoError(t, err, "EnsureProject(before)")
+				require.Equal(t, config.FailOpen, before.Policy.Fail, "EnsureProject(before)")
+
+				require.NoError(t, os.WriteFile(projPath, []byte("version: 1\npolicy:\n  fail: fail_closed\n"), 0o600), "WriteFile(project reload)")
+				require.NoError(t, store.Reload(ctx), "Reload(project)")
+
+				after := store.SnapshotFor(projDir, "")
+				require.NotNil(t, after, "SnapshotFor(after)")
+				assert.Equal(t, config.FailClosed, after.Policy.Fail, "SnapshotFor(after)")
+				assert.Greater(t, after.Generation, before.Generation, "generation after reload")
+			},
+		},
+		{
+			name: "ProjectPaths is safe during concurrent project discovery",
+			run: func(t *testing.T) {
+				t.Helper()
+				dir := t.TempDir()
+				userPath := filepath.Join(dir, "user.yaml")
+				require.NoError(t, os.WriteFile(userPath, []byte("version: 1\n"), 0o600), "WriteFile(user)")
+
+				store, err := config.Load(ctx, userPath)
+				require.NoError(t, err, "Load(user)")
+
+				const projects = 8
+				projDirs := make([]string, projects)
+				for i := range projects {
+					projDir := filepath.Join(dir, fmt.Sprintf("repo%d", i))
+					require.NoError(t, os.MkdirAll(projDir, 0o700), "MkdirAll(%d)", i)
+					require.NoError(t, os.WriteFile(filepath.Join(projDir, ".agentd.yaml"), []byte("version: 1\n"), 0o600), "WriteFile(%d)", i)
+					projDirs[i] = projDir
+				}
+
+				const workers = 16
+				var wg sync.WaitGroup
+				errs := make(chan error, workers)
+				wg.Add(workers)
+				for w := range workers {
+					go func(worker int) {
+						defer wg.Done()
+						projDir := projDirs[worker%projects]
+						if _, loadErr := store.EnsureProject(projDir, ""); loadErr != nil {
+							errs <- loadErr
+							return
+						}
+						paths := store.ProjectPaths()
+						if len(paths) == 0 {
+							errs <- fmt.Errorf("empty ProjectPaths")
+						}
+					}(w)
+				}
+				wg.Wait()
+				close(errs)
+				for err := range errs {
+					require.NoError(t, err, "concurrent ProjectPaths")
+				}
+
+				assert.GreaterOrEqual(t, len(store.ProjectPaths()), 1, "ProjectPaths after discovery")
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tt.run(t)
+		})
+	}
 }

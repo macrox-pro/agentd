@@ -36,13 +36,13 @@ func sampleLedgerEvent(typ, source, provider, session string) trajectory.Event {
 	}
 }
 
-func newSessionTestServer(t *testing.T) (*trajectory.Hub, *grpc.Server, *grpc.ClientConn) {
+func newSessionTestServer(t *testing.T) (*trajectory.Hub, *grpc.ClientConn) {
 	t.Helper()
 	rec := trajectory.NewRecorder(t.TempDir(), 8, nil)
 	t.Cleanup(func() { rec.Close(2 * time.Second) })
 	srv := server.New(server.Options{Recorder: rec})
 	conn := dialBuf(t, srv)
-	return rec.Hub(), srv, conn
+	return rec.Hub(), conn
 }
 
 func TestSubscribeFilterTable(t *testing.T) {
@@ -119,7 +119,7 @@ func TestSubscribeFilterTable(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			hub, _, conn := newSessionTestServer(t)
+			hub, conn := newSessionTestServer(t)
 			sess := agentdv1.NewSessionServiceClient(conn)
 
 			stream, err := sess.Subscribe(ctx, tt.req)
@@ -138,7 +138,7 @@ func TestSubscribeCancel(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 
-	_, _, conn := newSessionTestServer(t)
+	_, conn := newSessionTestServer(t)
 	sess := agentdv1.NewSessionServiceClient(conn)
 
 	stream, err := sess.Subscribe(ctx, &agentdv1.SubscribeRequest{})
@@ -155,7 +155,7 @@ func TestSubscribeIdleThenEvent(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	hub, _, conn := newSessionTestServer(t)
+	hub, conn := newSessionTestServer(t)
 	sess := agentdv1.NewSessionServiceClient(conn)
 
 	stream, err := sess.Subscribe(ctx, &agentdv1.SubscribeRequest{Provider: "gemini"})

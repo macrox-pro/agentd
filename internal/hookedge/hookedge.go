@@ -1,7 +1,7 @@
 // Package hookedge is the CLI wire edge: decode/encode provider hooks via
 // agenthooks and forward Invoke to the local daemon.
 //
-// Owns: provider wire decode/encode, single gRPC Invoke forward,
+// Owns: provider wire decode/encode, single gRPC Invoke forward (including Cwd on run/notify/serve),
 // policy.offline when the daemon is unreachable.
 // Must not: full Decide / guards / route compile (daemon dispatch + targets/builtin).
 //

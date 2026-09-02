@@ -8,6 +8,7 @@
 // Invariants:
 //   - Hot path: Store.Current() only — no disk I/O per Invoke.
 //   - Reload debounced; atomic snapshot swap.
+//   - Project cache: `projectsMu` RLock on hit; load under `reloadMu` then `projectsMu` (never reverse).
 //   - OfflineFor may read disk; used only when the daemon is unreachable.
 //   - PrepareUserConfig runs only from daemon start; Load/LoadWith never bootstrap.
 //   - SetToggle may bootstrap the user config file when missing (same shape as PrepareUserConfig).

@@ -20,7 +20,6 @@ var DefaultSecretsRules = []string{
 func defaultPolicy() Policy {
 	return Policy{
 		Fail:        FailClosed,
-		Unsupported: UnsupportedDegrade,
 		AskFallback: AskFallbackDeny,
 		Offline:     FailOpen,
 	}

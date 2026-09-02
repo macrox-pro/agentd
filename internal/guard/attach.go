@@ -74,9 +74,14 @@ func secretsHandler(cfg config.SecretsGuard, dctx DecisionContext) func(context.
 		agenthooks.Logger(ctx).Warn("secrets guard: credential-shaped strings in tool input",
 			"tool", e.Tool.Name, "findings", len(findings))
 
-		forceDeny := cfg.Action == config.GuardDeny || !e.Can(agenthooks.CapAsk)
-		if forceDeny {
+		if cfg.Action == config.GuardDeny {
 			return agenthooks.Deny(fmt.Sprintf(
+				"tool call blocked: input contains credential-shaped strings: %s",
+				found,
+			)), nil
+		}
+		if !e.Can(agenthooks.CapAsk) {
+			return askUnsupported(dctx.AskFallback, fmt.Sprintf(
 				"tool call blocked: input contains credential-shaped strings: %s",
 				found,
 			)), nil

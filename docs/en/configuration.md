@@ -64,7 +64,6 @@ Project files typically carry `guards` / `dispatch`. `approvals` and `blocks` us
 | Key | Values | Default | Meaning |
 |-----|--------|---------|---------|
 | `fail` | `fail_open` \| `fail_closed` | `fail_closed` | On sync pipeline errors: allow or deny |
-| `unsupported` | `degrade` \| `strict` | `degrade` | When a guard or decision shape is unsupported: **degrade** skips unsupported effects; **strict** treats it as failure |
 | `ask_fallback` | `deny` \| `no_decision` | `deny` | When the agent cannot ask the user: **deny** blocks; **no_decision** returns a neutral allow |
 | `offline` | `fail_open` \| `fail_closed` | `fail_open` | When the daemon is unreachable from the hook edge |
 

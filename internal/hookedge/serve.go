@@ -49,7 +49,7 @@ func Serve(ctx context.Context, opts Options) int {
 		if resolveOffline(opts, "", stderr) == config.FailClosed {
 			return 1
 		}
-		return serveOffline(ctx, opts, stdin, stdout, stderr)
+		return serveOffline(ctx, stdin, stdout, stderr)
 	}
 	defer cli.Close()
 
@@ -64,6 +64,7 @@ func Serve(ctx context.Context, opts Options) int {
 		if base == nil || len(base.Raw) == 0 {
 			return agenthooks.NoDecision(), nil
 		}
+		cwd := ResolveCWD(base.Raw)
 		invokeCtx := hctx
 		var cancel context.CancelFunc
 		if opts.Timeout > 0 {
@@ -74,6 +75,7 @@ func Serve(ctx context.Context, opts Options) int {
 			Provider:       agentdv1.Provider_PROVIDER_OPENCODE,
 			RawPayload:     append([]byte(nil), base.Raw...),
 			InvocationMode: agentdv1.InvocationMode_INVOCATION_MODE_STDIN,
+			Cwd:            cwd,
 		}
 		if opts.Timeout > 0 {
 			req.Deadline = timestamppb.New(time.Now().Add(opts.Timeout))
@@ -81,7 +83,7 @@ func Serve(ctx context.Context, opts Options) int {
 		resp, err := cli.Invoke(invokeCtx, req)
 		if err != nil {
 			if !haveOffline {
-				offlineMode = resolveOffline(opts, ResolveCWD(base.Raw), stderr)
+				offlineMode = resolveOffline(opts, cwd, stderr)
 				haveOffline = true
 			}
 			if offlineMode == config.FailClosed {
@@ -95,7 +97,7 @@ func Serve(ctx context.Context, opts Options) int {
 	return r.Run(ctx, []string{"serve", "--provider=opencode"}, stdin, stdout, stderr)
 }
 
-func serveOffline(ctx context.Context, opts Options, stdin io.Reader, stdout, stderr io.Writer) int {
+func serveOffline(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer) int {
 	r := agenthooks.New(agenthooks.WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil))))
 	r.Use(func(context.Context, any, agenthooks.Next) (agenthooks.Decision, error) {
 		return agenthooks.NoDecision(), nil

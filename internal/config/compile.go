@@ -18,7 +18,6 @@ func baseFileConfig() *fileConfig {
 		Version: 1,
 		Policy: &filePolicy{
 			Fail:        string(pol.Fail),
-			Unsupported: string(pol.Unsupported),
 			AskFallback: string(pol.AskFallback),
 			Offline:     string(pol.Offline),
 		},

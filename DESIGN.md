@@ -120,7 +120,7 @@ sequenceDiagram
 
 Flow: `hook run|serve` → hookedge decode → `HookService.Invoke` → `dispatch.Engine.Invoke` + `config.Snapshot` from `Store.Current()` → route match → sync targets folded with `first_conclusive` (`Runner.Decide` on builtin) → encode.
 
-`fail_closed` denies on guard/dispatch errors. Sync budget: `dispatch.SyncBudget` (`timeout.go`) — must fit provider hook timeout.
+`fail_closed` denies on guard/dispatch errors via `policy.fail` in `dispatch.Engine.Invoke` after sync pipeline failure (timeout/cancel from grpc targets; guard panics). Decode errors remain neutral at the server boundary. Sync budget: `dispatch.SyncBudget` (`timeout.go`) — must fit provider hook timeout.
 
 On Dial/Invoke failure only, hookedge may read disk via `config.OfflineFor` to apply `policy.offline` (live Invoke path stays Store.Current-only in the daemon). Hook entrypoints use `hookclient.DialReady` (Dial + Health) because gRPC dial is lazy.
 
@@ -251,7 +251,7 @@ More examples: [docs/en/dispatch.md](./docs/en/dispatch.md).
 | project | `.agentd.yaml` (nearest ancestor of CWD) | user / CLI |
 | runtime | `$XDG_STATE_HOME/agentd/runtime.yaml` | **daemon only** (why + unset fallback + Windows: [docs/en/configuration.md](./docs/en/configuration.md#state-directory)) |
 
-Merge: `defaults ⊕ user ⊕ project(cwd) ⊕ runtime`. Project path resolved once per `Invoke` via pre-built map (no FS walk on hot path).
+Merge: `defaults ⊕ user ⊕ project(cwd) ⊕ runtime`. Project config is cached in `Store` under `projectsMu` (RLock on cache hit); first load walks ancestors of CWD once, then hot path uses the cached snapshot.
 
 **User bootstrap:** `daemon start` calls `PrepareUserConfig` once before load. Missing `~/.agentd.yaml` (or `--config`) gets a minimal file; invalid user YAML/compile blocks start with stderr notice. `Load` / `config show` / `config validate` never create the user file. Details: [docs/en/configuration.md](./docs/en/configuration.md#user-config-bootstrap).
 
@@ -307,7 +307,7 @@ State: socket path in `$XDG_RUNTIME_DIR/agentd/state.json`, PID + lock files. Op
 
 **Prometheus metrics HTTP** (opt-in, separate from gRPC IPC): when `metrics.enabled` or `--metrics-listen` is set at daemon start, a loopback TCP server exposes `/metrics` on the compiled listen address (default `127.0.0.1:2112`). Not hot-reloaded — changing `metrics.listen` requires `daemon stop` then `daemon start` (`daemon reload` does not rebind the metrics listener). Status `metrics_listen` reports the bound address after `Listen`. Implementation: `internal/daemon` + `internal/metrics`; Status field `metrics_listen` when running.
 
-**Sync grpc target timeout/cancel:** when the sync budget expires or the request context is canceled (`context.DeadlineExceeded` / `context.Canceled`), `GRPCSync` returns the dial/invoke error to `Engine.Invoke` (metrics `outcome=timeout` or `error`) instead of mapping to Deny. Other grpc errors with `fail_closed` still map to Deny without failing Invoke.
+**Sync grpc target timeout/cancel:** when the sync budget expires or the request context is canceled (`context.DeadlineExceeded` / `context.Canceled`), `GRPCSync` returns the dial/invoke error to `Engine.Invoke` (metrics `outcome=timeout` or `error`). `Engine.Invoke` then applies `policy.fail` (`fail_closed` → Deny/BlockPrompt when the event supports it; `fail_open` → NoDecision). Other grpc errors with route `on_error: fail_closed` still map to Deny inside `GRPCSync` without failing Invoke.
 
 ---
 
@@ -377,7 +377,7 @@ Four-layer merge (§3). Key top-level sections:
 
 | Section | Purpose |
 |---------|---------|
-| `policy` | `fail`, `unsupported`, `ask_fallback`, `offline` |
+| `policy` | `fail`, `ask_fallback`, `offline` |
 | `async` | `queue_capacity`, `worker_limit`, `target_timeout`, `on_overflow` |
 | `logging` | daemon log level/file |
 | `dispatch_defaults` / `dispatch` | §2 |
@@ -441,11 +441,12 @@ Tests: [CONVENTIONS.md § Tests](./CONVENTIONS.md#tests) · `go test ./... -race
 | M9–M12 / v0.0.2 | **done** | Trajectory P0–P3 (ledger, import, replay/fork, Subscribe) |
 | M13 / v0.0.3 | **done** | `policy.offline` hook edge (OfflineFor, DialReady, serve offline cache); `e2e-m13` |
 | M14 / v0.0.4 | **done** | `daemon enable`/`disable` login autostart; `config enable`/`disable`/`get` toggles; `e2e-m14` |
-| M15 / v0.0.5 | **done** | Trajectory statistics: daemon rollup (`trajectory stats`) + offline `session stats` |
-| M16 / v0.0.6 | **done** | Prometheus metrics HTTP; trajectory stats token/delta rollup |
+| M15 / v0.0.5 | **done** | Trajectory statistics: daemon rollup (`trajectory stats`) + offline `session stats`; `e2e-m15` |
+| M16 / v0.0.6 | **done** | Prometheus metrics HTTP; trajectory stats token/delta rollup; `e2e-m16` |
 | M17 / v0.0.7 | **done** | `doctor`; `install --all-detected` (plan-only default, `--yes` to apply); discovery + hook status; `e2e-m17` |
-| M18 / v0.0.7 | **done** | `setup` TUI wizard; interactive bare `install` on TTY; `AGENTD_NO_TUI` / `CI` bypass |
-| M19 / v0.0.8-beta | **done** | Cursor trajectory stats: sum billing tokens per `stop` (per generation), not session delta |
+| M18 / v0.0.7 | **done** | `setup` TUI wizard; interactive bare `install` on TTY; `AGENTD_NO_TUI` / `CI` bypass; `e2e-m18` |
+| M19 / v0.0.8-beta | **done** | Cursor trajectory stats: sum billing tokens per `stop` (per generation), not session delta; wire row in `e2e-m15` (`cursor_two_stops_sum_tokens`) |
+| M20 | **done** | Policy/reliability wire coverage: `policy.fail` on daemon path, `ask_fallback`, notify/serve `Cwd`; `e2e-m20` |
 
 **Shipped:** v0.0.8-beta. Session handoff + acceptance archive: [PROGRESS.md](./PROGRESS.md).
 

@@ -53,7 +53,7 @@ func startStatsServer(t *testing.T, cfgPath string, gateFail bool) string {
 	t.Cleanup(func() { _ = ln.Close() })
 	go func() { _ = gs.Serve(ln) }()
 	t.Cleanup(gs.Stop)
-	waitDaemonReady(t, socket, nil, 2*time.Second)
+	waitDaemonReady(t, socket)
 	return socket
 }
 
@@ -97,7 +97,7 @@ func startStatsGateStub(t *testing.T, fail statisticsGateFail) string {
 	agentdv1.RegisterTrajectoryServiceServer(gs, &statsGateStub{fail: fail})
 	go func() { _ = gs.Serve(ln) }()
 	t.Cleanup(gs.Stop)
-	waitDaemonReady(t, socket, nil, 2*time.Second)
+	waitDaemonReady(t, socket)
 	return socket
 }
 

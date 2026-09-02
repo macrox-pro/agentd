@@ -143,8 +143,8 @@ func TestEngineObserveInvoke(t *testing.T) {
 					Snap:       snap,
 					Deadline:   time.Now().Add(50 * time.Millisecond),
 				})
-				require.Error(t, err, "Invoke")
-				return obs, "timeout", agentdv1.DecisionKind_DECISION_KIND_UNSPECIFIED.String(), true
+				require.NoError(t, err, "Invoke")
+				return obs, "timeout", agentdv1.DecisionKind_DECISION_KIND_DENY.String(), false
 			},
 			wantObserved: true,
 		},

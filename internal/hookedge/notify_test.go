@@ -55,6 +55,68 @@ func TestNotify(t *testing.T) {
 	assert.Equal(t, 0, code, "Notify(): %s", stderr.String())
 }
 
+func TestNotifyCwd(t *testing.T) {
+	tests := []struct {
+		name       string
+		payload    string
+		chdir      bool
+		wantCwd    func(t *testing.T, dir string) string
+	}{
+		{
+			name:    "payload cwd is forwarded",
+			payload: `{"type":"agent-turn-complete","thread_id":"t1","cwd":"/proj/from-payload"}`,
+			wantCwd: func(t *testing.T, _ string) string {
+				t.Helper()
+				return "/proj/from-payload"
+			},
+		},
+		{
+			name:    "missing payload cwd uses process cwd",
+			payload: `{"type":"agent-turn-complete","thread_id":"t1"}`,
+			chdir:   true,
+			wantCwd: func(t *testing.T, dir string) string {
+				t.Helper()
+				want, err := filepath.EvalSymlinks(dir)
+				require.NoError(t, err, "EvalSymlinks(dir)")
+				return want
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sockDir, err := os.MkdirTemp("/tmp", "agentd-notify-")
+			require.NoError(t, err, "MkdirTemp(%q)", tt.name)
+			t.Cleanup(func() { _ = os.RemoveAll(sockDir) })
+			socket := filepath.Join(sockDir, "s.sock")
+			cfgDir := t.TempDir()
+			if tt.chdir {
+				require.NoError(t, os.Chdir(cfgDir), "Chdir(%q)", tt.name)
+			}
+
+			ln, err := transport.Listen(socket)
+			require.NoError(t, err, "Listen(%q)", tt.name)
+			t.Cleanup(func() { _ = ln.Close() })
+
+			hook := &cwdHook{}
+			gs := grpc.NewServer()
+			agentdv1.RegisterHookServiceServer(gs, hook)
+			agentdv1.RegisterDaemonServiceServer(gs, okDaemon{})
+			go func() { _ = gs.Serve(ln) }()
+			t.Cleanup(gs.Stop)
+			waitForSocket(t, socket)
+
+			code := hookedge.Notify(context.Background(), hookedge.Options{
+				Socket:     socket,
+				ConfigPath: filepath.Join(cfgDir, "missing.yaml"),
+				Provider:   "codex",
+				PayloadArg: tt.payload,
+			})
+			assert.Equal(t, 0, code, "Notify(%q)", tt.name)
+			assert.Equal(t, tt.wantCwd(t, cfgDir), hook.lastCwd, "Notify(%q)", tt.name)
+		})
+	}
+}
+
 func TestNotifyOffline(t *testing.T) {
 	t.Parallel()
 

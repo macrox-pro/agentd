@@ -70,12 +70,12 @@ func codexStopInput(t *testing.T, snap *config.Snapshot, sessionID, transcriptPa
 	}
 }
 
-func writeCodexRollout(t *testing.T, input, cached, cacheWrite, output uint64) string {
+func writeCodexRollout(t *testing.T, input, cached, output uint64) string {
 	t.Helper()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "rollout.jsonl")
-	line := fmt.Sprintf(`{"type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":%d,"cached_input_tokens":%d,"cache_write_input_tokens":%d,"output_tokens":%d}}}}`,
-		input, cached, cacheWrite, output)
+	line := fmt.Sprintf(`{"type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":%d,"cached_input_tokens":%d,"cache_write_input_tokens":0,"output_tokens":%d}}}}`,
+		input, cached, output)
 	require.NoError(t, os.WriteFile(path, []byte(line+"\n"), 0o600))
 	return path
 }
@@ -292,7 +292,7 @@ func TestObserve(t *testing.T) {
 		{
 			name: "codex_stop_transcript_fallback",
 			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
-				path := writeCodexRollout(t, 15156, 4352, 0, 100)
+				path := writeCodexRollout(t, 15156, 4352, 100)
 				return statistics.NewCollector(), codexStopInput(t, enabledSnap(true), "s1", path)
 			},
 			check: func(t *testing.T, c *statistics.Collector) {
@@ -307,7 +307,7 @@ func TestObserve(t *testing.T) {
 		{
 			name: "codex_stop_hook_raw_wins",
 			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
-				path := writeCodexRollout(t, 999, 0, 0, 999)
+				path := writeCodexRollout(t, 999, 0, 999)
 				raw := fmt.Sprintf(`{"hook_event_name":"Stop","session_id":"s1","transcript_path":%q,"usage":{"input_tokens":7,"output_tokens":3}}`, path)
 				return statistics.NewCollector(), trajectory.RecordInput{
 					Provider:   agentdv1.Provider_PROVIDER_CODEX,
@@ -391,9 +391,9 @@ func TestObserve(t *testing.T) {
 			name: "codex_two_stops_same_session",
 			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
 				c := statistics.NewCollector()
-				pathA := writeCodexRollout(t, 10, 0, 0, 1)
+				pathA := writeCodexRollout(t, 10, 0, 1)
 				c.Observe(codexStopInput(t, enabledSnap(true), "s1", pathA))
-				pathB := writeCodexRollout(t, 20, 0, 0, 2)
+				pathB := writeCodexRollout(t, 20, 0, 2)
 				return c, codexStopInput(t, enabledSnap(true), "s1", pathB)
 			},
 			check: func(t *testing.T, c *statistics.Collector) {
@@ -407,9 +407,9 @@ func TestObserve(t *testing.T) {
 			name: "codex_two_sessions",
 			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
 				c := statistics.NewCollector()
-				pathA := writeCodexRollout(t, 10, 0, 0, 1)
+				pathA := writeCodexRollout(t, 10, 0, 1)
 				c.Observe(codexStopInput(t, enabledSnap(true), "a", pathA))
-				pathB := writeCodexRollout(t, 20, 0, 0, 2)
+				pathB := writeCodexRollout(t, 20, 0, 2)
 				return c, codexStopInput(t, enabledSnap(true), "b", pathB)
 			},
 			check: func(t *testing.T, c *statistics.Collector) {

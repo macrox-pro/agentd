@@ -9,13 +9,6 @@ const (
 	FailClosed FailMode = "fail_closed"
 )
 
-type UnsupportedMode string
-
-const (
-	UnsupportedDegrade UnsupportedMode = "degrade"
-	UnsupportedStrict  UnsupportedMode = "strict"
-)
-
 type AskFallback string
 
 const (
@@ -26,7 +19,6 @@ const (
 // Policy is the compiled fail/ask policy.
 type Policy struct {
 	Fail        FailMode
-	Unsupported UnsupportedMode
 	AskFallback AskFallback
 	Offline     FailMode
 }
@@ -42,13 +34,6 @@ func parsePolicy(fp *filePolicy, def Policy) (Policy, error) {
 			return Policy{}, fmt.Errorf("policy.fail: %w", err)
 		}
 		out.Fail = m
-	}
-	if fp.Unsupported != "" {
-		m, err := parseUnsupported(fp.Unsupported)
-		if err != nil {
-			return Policy{}, fmt.Errorf("policy.unsupported: %w", err)
-		}
-		out.Unsupported = m
 	}
 	if fp.AskFallback != "" {
 		m, err := parseAskFallback(fp.AskFallback)
@@ -71,15 +56,6 @@ func parseFailMode(s string) (FailMode, error) {
 	switch FailMode(s) {
 	case FailOpen, FailClosed:
 		return FailMode(s), nil
-	default:
-		return "", fmt.Errorf("unknown %q", s)
-	}
-}
-
-func parseUnsupported(s string) (UnsupportedMode, error) {
-	switch UnsupportedMode(s) {
-	case UnsupportedDegrade, UnsupportedStrict:
-		return UnsupportedMode(s), nil
 	default:
 		return "", fmt.Errorf("unknown %q", s)
 	}

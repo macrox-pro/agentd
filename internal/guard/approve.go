@@ -11,6 +11,7 @@ type DecisionContext struct {
 	Approvals       config.Approvals
 	TemporaryBlocks []config.TemporaryBlock
 	ProjectRoot     string
+	AskFallback     config.AskFallback
 }
 
 func approved(ctx DecisionContext, kind config.ApprovalKind, fingerprint, sessionID string) bool {

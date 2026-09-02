@@ -272,6 +272,18 @@ func (denyHook) Invoke(context.Context, *agentdv1.InvokeRequest) (*agentdv1.Invo
 	}, nil
 }
 
+type cwdHook struct {
+	agentdv1.UnimplementedHookServiceServer
+	lastCwd string
+}
+
+func (h *cwdHook) Invoke(_ context.Context, req *agentdv1.InvokeRequest) (*agentdv1.InvokeResponse, error) {
+	h.lastCwd = req.GetCwd()
+	return &agentdv1.InvokeResponse{
+		Decision: &agentdv1.Decision{Kind: agentdv1.DecisionKind_DECISION_KIND_NO_DECISION},
+	}, nil
+}
+
 type okDaemon struct {
 	agentdv1.UnimplementedDaemonServiceServer
 }

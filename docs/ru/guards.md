@@ -34,7 +34,7 @@ agentd config get guard-shell
 - **Deny** — жёсткий отказ.
 - **Ask** — запрос разрешения; в тексте может быть `approval_fingerprint=sha256:…` для [одобрения](./approvals.md).
 
-Не все агенты умеют Ask.
+Не все агенты умеют Ask. Если Ask недоступен, действует `policy.ask_fallback`: `deny` (по умолчанию) или `no_decision` ([Конфигурация](./configuration.md#policy)).
 
 ## Пример
 

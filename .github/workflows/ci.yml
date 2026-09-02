@@ -41,3 +41,23 @@ jobs:
           go-version: "1.26.x"
       - name: E2E
         run: make e2e
+
+  platform-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+      - name: Test platform packages
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            go test ./internal/config/... ./internal/daemon/... ./internal/transport/... -count=1
+          else
+            go test ./internal/config/... ./internal/daemon/... ./internal/transport/... -race -count=1
+          fi
+        shell: bash

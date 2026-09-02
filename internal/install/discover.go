@@ -74,10 +74,7 @@ func Discover(ctx context.Context, env DiscoverEnv) ([]Finding, error) {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		f, ok, err := discoverOne(rule, env)
-		if err != nil {
-			return nil, err
-		}
+		f, ok := discoverOne(rule, env)
 		if ok {
 			out = append(out, f)
 		}
@@ -103,7 +100,7 @@ func (env DiscoverEnv) withDefaults() DiscoverEnv {
 	return env
 }
 
-func discoverOne(rule discoverRule, env DiscoverEnv) (Finding, bool, error) {
+func discoverOne(rule discoverRule, env DiscoverEnv) (Finding, bool) {
 	var projectDir, userDir string
 	if rule.projectRel != "" {
 		p := filepath.Join(env.Cwd, rule.projectRel)
@@ -112,10 +109,7 @@ func discoverOne(rule discoverRule, env DiscoverEnv) (Finding, bool, error) {
 		}
 	}
 	if rule.userRel != "" || rule.userEnv != "" {
-		u, err := userMarkerDir(rule, env)
-		if err != nil {
-			return Finding{}, false, err
-		}
+		u := userMarkerDir(rule, env)
 		if u != "" && isDir(env.Stat, u) {
 			userDir = u
 		}
@@ -127,7 +121,7 @@ func discoverOne(rule discoverRule, env DiscoverEnv) (Finding, bool, error) {
 			Confidence: ConfidenceHigh,
 			ProjectDir: projectDir,
 			UserDir:    userDir,
-		}, true, nil
+		}, true
 	}
 
 	for _, bin := range rule.binaries {
@@ -138,22 +132,22 @@ func discoverOne(rule discoverRule, env DiscoverEnv) (Finding, bool, error) {
 				Confidence: ConfidenceMedium,
 				Binary:     path,
 				Note:       "binary in PATH only; config dir not found",
-			}, true, nil
+			}, true
 		}
 	}
-	return Finding{}, false, nil
+	return Finding{}, false
 }
 
-func userMarkerDir(rule discoverRule, env DiscoverEnv) (string, error) {
+func userMarkerDir(rule discoverRule, env DiscoverEnv) string {
 	if rule.userEnv != "" {
 		if v := filepath.Clean(env.Getenv(rule.userEnv)); v != "" && v != "." {
-			return v, nil
+			return v
 		}
 	}
 	if rule.userRel == "" {
-		return "", nil
+		return ""
 	}
-	return filepath.Join(env.Home, rule.userRel), nil
+	return filepath.Join(env.Home, rule.userRel)
 }
 
 func isDir(stat func(string) (fs.FileInfo, error), path string) bool {

@@ -34,7 +34,7 @@ Features: `guard-shell`, `guard-mcp`, `guard-paths` ([CLI](./cli.md#config)). **
 - **Deny** — hard stop; provider encodes deny.
 - **Ask** — provider Ask / permission prompt; message may include `approval_fingerprint=sha256:…` for later [Approvals](./approvals.md).
 
-Provider capability limits still apply (some agents cannot ask).
+Provider capability limits still apply (some agents cannot ask). When Ask is unsupported, `policy.ask_fallback` controls the outcome: `deny` (default) or `no_decision` ([Configuration](./configuration.md#policy)).
 
 ## Example
 

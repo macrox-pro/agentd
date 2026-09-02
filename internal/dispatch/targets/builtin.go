@@ -39,11 +39,7 @@ func (b *Builtin) Observe(ctx context.Context, typed any) {
 }
 
 func (b *Builtin) newRunner(guardNames []string, observeOnly bool) *agenthooks.Runner {
-	opts := []agenthooks.Option{
-		agenthooks.WithLogger(b.logger()),
-		agenthooks.WithPolicy(toHooksPolicy(b.Policy)),
-	}
-	r := agenthooks.New(opts...)
+	r := agenthooks.New(agenthooks.WithLogger(b.logger()))
 	if observeOnly {
 		r.OnAny(func(context.Context, *agenthooks.Event) error { return nil })
 		return r
@@ -52,6 +48,7 @@ func (b *Builtin) newRunner(guardNames []string, observeOnly bool) *agenthooks.R
 		Approvals:       b.Approvals,
 		TemporaryBlocks: b.TemporaryBlocks,
 		ProjectRoot:     b.ProjectRoot,
+		AskFallback:     b.Policy.AskFallback,
 	}
 	guard.AttachBlocks(r, b.TemporaryBlocks)
 	guard.AttachCheckers(r, b.Guards, dctx, guardNames)
@@ -71,27 +68,4 @@ func ProjectRootOf(snap *config.Snapshot) string {
 		return ""
 	}
 	return filepath.Dir(snap.ProjectPath)
-}
-
-func toHooksPolicy(p config.Policy) agenthooks.Policy {
-	out := agenthooks.Policy{}
-	switch p.Fail {
-	case config.FailClosed:
-		out.Fail = agenthooks.FailClosed
-	default:
-		out.Fail = agenthooks.FailOpen
-	}
-	switch p.AskFallback {
-	case config.AskFallbackDeny:
-		out.AskFallback = agenthooks.FallbackDeny
-	default:
-		out.AskFallback = agenthooks.FallbackNoDecision
-	}
-	switch p.Unsupported {
-	case config.UnsupportedStrict:
-		out.Unsupported = agenthooks.Strict
-	default:
-		out.Unsupported = agenthooks.Degrade
-	}
-	return out
 }

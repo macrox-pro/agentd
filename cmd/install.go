@@ -66,7 +66,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	if installProvider == "" && !installAllDetected && tui.Interactive(os.Getenv, os.Stdout) {
 		return runInstallWizard(cmd, tui.ModeShort, false, false, "")
 	}
-	if err := validateInstallFlags(cmd); err != nil {
+	if err := validateInstallFlags(); err != nil {
 		return err
 	}
 	exe, err := resolveInstallExecutable()
@@ -94,7 +94,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	return install.WriteReport(cmd.OutOrStdout(), result)
 }
 
-func validateInstallFlags(cmd *cobra.Command) error {
+func validateInstallFlags() error {
 	if installProvider != "" && installAllDetected {
 		return fmt.Errorf("--provider and --all-detected are mutually exclusive")
 	}

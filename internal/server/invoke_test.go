@@ -3,6 +3,7 @@ package server_test
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,12 +12,14 @@ import (
 	"github.com/speakeasy-api/agenthooks/agenthookstest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/config"
 	"github.com/macrox-pro/agentd/internal/dispatch"
 	"github.com/macrox-pro/agentd/internal/server"
 	"github.com/macrox-pro/agentd/internal/trajectory"
+	"github.com/macrox-pro/agentd/internal/transport"
 )
 
 func claudeToolPre(t *testing.T, command string) []byte {
@@ -232,4 +235,94 @@ dispatch:
 			}
 		})
 	}
+}
+
+func TestInvokeTrajectorySyncFailure(t *testing.T) {
+	ctx := context.Background()
+	stateDir := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", stateDir)
+
+	hangDir, err := os.MkdirTemp("/tmp", "agentd-hang-")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = os.RemoveAll(hangDir) })
+	sock := filepath.Join(hangDir, "s.sock")
+	ln, err := transport.Listen(sock)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = ln.Close() })
+	go func() {
+		for {
+			c, acceptErr := ln.Accept()
+			if acceptErr != nil {
+				return
+			}
+			go func(conn net.Conn) {
+				time.Sleep(time.Minute)
+				_ = conn.Close()
+			}(c)
+		}
+	}()
+
+	path := filepath.Join(t.TempDir(), "agentd.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`version: 1
+trajectory:
+  enabled: true
+policy:
+  fail: fail_closed
+dispatch:
+  - name: grpc-sync
+    match:
+      kind: [tool.pre]
+    mode: sync_only
+    sync:
+      - target: grpc
+        endpoint: unix://`+sock+`
+        timeout: 500ms
+        on_error: fail_open
+`), 0o600))
+
+	store, err := config.Load(ctx, path)
+	require.NoError(t, err)
+
+	q := dispatch.NewQueue(store.Current().Async, nil)
+	t.Cleanup(func() { q.Close(2 * time.Second) })
+	recorder := trajectory.NewRecorder(trajectory.DefaultSessionsDir(), store.Current().Trajectory.QueueCapacity, nil)
+	t.Cleanup(func() { recorder.Close(2 * time.Second) })
+
+	srv := server.New(server.Options{
+		Store:     store,
+		Engine:    dispatch.NewEngine(q, nil, nil),
+		Recorder:  recorder,
+		StartedAt: time.Now().UTC(),
+		Version:   "test",
+	})
+	conn := dialBuf(t, srv)
+	hook := agentdv1.NewHookServiceClient(conn)
+
+	invokeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	_, err = hook.Invoke(invokeCtx, &agentdv1.InvokeRequest{
+		Provider:       agentdv1.Provider_PROVIDER_CLAUDE_CODE,
+		RawPayload:     claudeToolPre(t, "echo"),
+		InvocationMode: agentdv1.InvocationMode_INVOCATION_MODE_STDIN,
+		Cwd:            "/w",
+		Deadline:       timestamppb.New(time.Now().Add(50 * time.Millisecond)),
+	})
+	require.NoError(t, err)
+
+	time.Sleep(200 * time.Millisecond)
+	summaries, err := trajectory.ListSessions(trajectory.DefaultSessionsDir(), "claude-code")
+	require.NoError(t, err)
+	require.NotEmpty(t, summaries)
+
+	events, err := trajectory.ReadEvents(summaries[0].Path)
+	require.NoError(t, err)
+	var decided bool
+	for _, e := range events {
+		if e.Type == trajectory.TypeHookDecided {
+			decided = true
+			break
+		}
+	}
+	assert.True(t, decided, "trajectory should record converted sync failure decision")
 }
