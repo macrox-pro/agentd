@@ -6,6 +6,7 @@
 
 - **Windows daemon state paths** — PID and lock are derived from the state directory when the endpoint is a named pipe (`\\.\pipe\agentd-<sid>`); previously they resolved to `\\.\pipe`, so `daemon start` could not write them. File sockets keep using the socket directory on every platform.
 - **Windows platform tests** — daemon lifecycle tests listen on a named pipe instead of a file path (`platform-test (windows-latest)` failed with `Incorrect function` on every `transport.Listen`); config bootstrap/toggle write-failure tests no longer rely on Unix-only `chmod` semantics; macOS `TestReloadSIGHUP` keeps a process-wide SIGHUP handler so `go test` is not terminated after daemon shutdown.
+- **e2e-m20 ask_fallback** — read the session ledger file for the hook under test instead of `find … | head -n1` (CI picked the prior `m20-codex-nod` file).
 
 ## [v0.0.9-beta] — 2026-09-02
 

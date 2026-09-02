@@ -150,12 +150,13 @@ e2e_assert_matches "$OUT" 'sync pipeline failed|block|deny' sync_failure_prompt_
 e2e_daemon_stop
 
 # ask_fallback_no_decision
+rm -rf "$SESSIONS/codex" 2>/dev/null || true
 write_ask_fallback_config no_decision
 e2e_daemon_start --config "$CFG"
 e2e_run_hook "$BIN" hook run --socket "$SOCK" --config "$CFG" --provider=codex <<<"$CODEX_CURL_NOD"
 e2e_trajectory_settle
 e2e_wait_provider_sessions codex
-CODEX_LOG="$(find "$SESSIONS/codex" -name '*.jsonl' | head -n1)"
+CODEX_LOG="$SESSIONS/codex/m20-codex-nod.jsonl"
 python3 - "$CODEX_LOG" "m20-codex-nod" "DECISION_KIND_NO_DECISION" <<'PY'
 import json, sys
 path, session, want = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -181,7 +182,8 @@ write_ask_fallback_config ""
 e2e_daemon_start --config "$CFG"
 e2e_run_hook "$BIN" hook run --socket "$SOCK" --config "$CFG" --provider=codex <<<"$CODEX_CURL_DENY"
 e2e_trajectory_settle
-CODEX_LOG="$(find "$SESSIONS/codex" -name '*.jsonl' | head -n1)"
+e2e_wait_provider_sessions codex
+CODEX_LOG="$SESSIONS/codex/m20-codex-deny.jsonl"
 python3 - "$CODEX_LOG" "m20-codex-deny" "DECISION_KIND_DENY" <<'PY'
 import json, sys
 path, session, want = sys.argv[1], sys.argv[2], sys.argv[3]
