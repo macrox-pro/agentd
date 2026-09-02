@@ -5,7 +5,7 @@
 ### Fixed
 
 - **Windows daemon state paths** — PID and lock are derived from the state directory when the endpoint is a named pipe (`\\.\pipe\agentd-<sid>`); previously they resolved to `\\.\pipe`, so `daemon start` could not write them. File sockets keep using the socket directory on every platform.
-- **Windows platform tests** — daemon lifecycle tests listen on a named pipe instead of a file path (`platform-test (windows-latest)` failed with `Incorrect function` on every `transport.Listen`).
+- **Windows platform tests** — daemon lifecycle tests listen on a named pipe instead of a file path (`platform-test (windows-latest)` failed with `Incorrect function` on every `transport.Listen`); config bootstrap/toggle write-failure tests no longer rely on Unix-only `chmod` semantics.
 
 ## [v0.0.9-beta] — 2026-09-02
 

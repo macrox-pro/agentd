@@ -11,7 +11,7 @@
 - `internal/transport/path_windows.go` — `pipeNamespace` const + `IsPipePath`
 - `internal/daemon/paths.go` + `paths_unix.go` / `paths_windows.go` / `paths_other.go` — `stateDir` seam; pipe endpoints use `config.DefaultStateDir()`
 - `internal/daemon/start_test.go` — `testSocket` returns a unique pipe on Windows
-- Tests: `TestIsPipePath`, `TestPathsStateDirWindows` (both Windows-only)
+- Tests: `TestIsPipePath`, `TestPathsStateDirWindows`; config write-failure tests use blocked parent path (not Unix `chmod`)
 - Docs: `docs/{en,ru}/configuration.md`, `docs/{en,ru}/operations.md`, `docs/en/troubleshooting.md`, DESIGN §5, CHANGELOG Unreleased
 
 ### Next todo

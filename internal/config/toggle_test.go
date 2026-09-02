@@ -399,12 +399,12 @@ func TestSetToggle(t *testing.T) {
 			},
 		},
 		{
-			name: "write_readonly_dir_fails",
+			name: "write_blocked_parent_fails",
 			setup: func(t *testing.T) (string, string) {
 				dir := t.TempDir()
-				require.NoError(t, os.Chmod(dir, 0o500))
-				t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
-				return filepath.Join(dir, "user.yaml"), dir
+				block := filepath.Join(dir, "block")
+				require.NoError(t, os.WriteFile(block, []byte("x"), 0o600), "WriteFile(%q)", block)
+				return filepath.Join(block, "user.yaml"), dir
 			},
 			toggle:  "trajectory",
 			scope:   config.ToggleScopeUser,
@@ -462,7 +462,7 @@ func TestSetToggle(t *testing.T) {
 				} else {
 					require.ErrorIs(t, err, tt.wantErr, "SetToggle(%q)", tt.name)
 				}
-			} else if tt.name == "user_path_is_directory" || tt.name == "empty_user_path" || tt.name == "write_readonly_dir_fails" || tt.name == "invalid_compile_blocks_write" {
+			} else if tt.name == "user_path_is_directory" || tt.name == "empty_user_path" || tt.name == "write_blocked_parent_fails" || tt.name == "invalid_compile_blocks_write" {
 				require.Error(t, err, "SetToggle(%q)", tt.name)
 			} else {
 				require.NoError(t, err, "SetToggle(%q)", tt.name)

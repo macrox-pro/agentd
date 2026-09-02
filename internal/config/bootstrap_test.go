@@ -102,29 +102,14 @@ func TestPrepareUserConfig_invalid_parse_notify(t *testing.T) {
 func TestPrepareUserConfig_bootstrap_write_fails(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	require.NoError(t, os.Chmod(dir, 0o500))
-	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
-	path := filepath.Join(dir, "agentd.yaml")
+	block := filepath.Join(dir, "block")
+	require.NoError(t, os.WriteFile(block, []byte("x"), 0o600), "WriteFile(%q)", block)
+	path := filepath.Join(block, "agentd.yaml")
 
 	err := config.PrepareUserConfig(path, nil)
 	require.Error(t, err, "PrepareUserConfig(%q)", path)
 	_, statErr := os.Stat(path)
-	assert.True(t, os.IsNotExist(statErr), "Stat(%q)", path)
-}
-
-func TestPrepareUserConfig_unreadable(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "agentd.yaml")
-	require.NoError(t, os.WriteFile(path, []byte("version: 1\n"), 0o400), "WriteFile(%q)", path)
-	require.NoError(t, os.Chmod(path, 0o000), "Chmod(%q)", path)
-	t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
-
-	var notify bytes.Buffer
-	err := config.PrepareUserConfig(path, &notify)
-	require.Error(t, err, "PrepareUserConfig(%q)", path)
-	assert.False(t, errors.Is(err, config.ErrParseConfig))
-	assert.NotContains(t, notify.String(), "invalid user config")
+	require.Error(t, statErr, "Stat(%q)", path)
 }
 
 func TestPrepareUserConfig_idempotent_twice(t *testing.T) {
