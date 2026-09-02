@@ -16,6 +16,8 @@ agentd собирает один рабочий конфиг из **четырё
 | → журнал работы | `agentd.log` |
 | → журнал сессий | `sessions/<provider>/<session_id>.jsonl` (если включён) |
 | Сокет (не состояние) | `$XDG_RUNTIME_DIR/agentd/agentd.sock` (запасной путь на Darwin `~/Library/Caches/agentd/`; Linux `~/.local/run/agentd/`; иначе временный каталог) — [DESIGN.md §5](../../DESIGN.md#5-transport) |
+| → PID-файл | `agentd.pid` (рядом с сокетом; в Windows — в каталоге состояния) |
+| → файл блокировки | `agentd.lock` (рядом с сокетом; в Windows — в каталоге состояния; один демон на пользователя) |
 
 ## Автосоздание пользовательского конфига
 

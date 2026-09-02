@@ -8,6 +8,8 @@
 //
 // Invariants:
 //   - One daemon per user (lock file).
+//   - PID and lock live next to a file socket; a Windows named pipe has no
+//     filesystem parent, so pipe endpoints use the per-user state directory.
 //   - Reload is debounced in config.Store, not here.
 //   - Logger configured once at startup; default log file under state dir.
 //   - Disable removes OS autostart only; never stops a running daemon.

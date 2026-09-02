@@ -16,9 +16,10 @@ type Paths struct {
 	Dir    string
 }
 
-// NewPaths derives state file paths from a socket path.
+// NewPaths derives state file paths from a socket path. The state directory is
+// platform-specific (paths_unix.go / paths_windows.go / paths_other.go).
 func NewPaths(socket string) Paths {
-	dir := filepath.Dir(socket)
+	dir := stateDir(socket)
 	return Paths{
 		Socket: socket,
 		PID:    filepath.Join(dir, "agentd.pid"),

@@ -303,7 +303,7 @@ Protobuf: `api/agentd/v1/`. Buf rules: [AGENTS.md § Protobuf](./AGENTS.md#proto
 | Linux/macOS | `$XDG_RUNTIME_DIR/agentd/agentd.sock` (Unix, `0600`) |
 | Windows | `\\.\pipe\agentd-<user-sid>` (named pipe) |
 
-State: socket path in `$XDG_RUNTIME_DIR/agentd/state.json`, PID + lock files. Optional dev: loopback TCP. Implementation: `internal/transport` (`listen_*.go` / `dial_*.go` / `path_*.go`).
+State: socket path in `$XDG_RUNTIME_DIR/agentd/state.json`, PID + lock files next to the socket. A named pipe has no filesystem parent, so on Windows `internal/daemon` keeps PID + lock in the per-user state directory (`%LOCALAPPDATA%\agentd`). Optional dev: loopback TCP. Implementation: `internal/transport` (`listen_*.go` / `dial_*.go` / `path_*.go`).
 
 **Prometheus metrics HTTP** (opt-in, separate from gRPC IPC): when `metrics.enabled` or `--metrics-listen` is set at daemon start, a loopback TCP server exposes `/metrics` on the compiled listen address (default `127.0.0.1:2112`). Not hot-reloaded — changing `metrics.listen` requires `daemon stop` then `daemon start` (`daemon reload` does not rebind the metrics listener). Status `metrics_listen` reports the bound address after `Listen`. Implementation: `internal/daemon` + `internal/metrics`; Status field `metrics_listen` when running.
 

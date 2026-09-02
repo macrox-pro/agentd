@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -53,13 +54,23 @@ func skipUnlessDefaultSocketIsolated(t *testing.T) {
 	}
 }
 
+const testPipePrefix = `\\.\pipe\agentd-test-`
+
+// Pipe names are machine-global, so each endpoint carries the process id and a
+// counter instead of the test name.
+var testPipeSeq atomic.Uint64
+
 func testSocket(t *testing.T) (socket, cfg string) {
 	t.Helper()
 	root := testEnv(t)
+	cfg = filepath.Join(root, "missing.yaml")
+	if runtime.GOOS == "windows" {
+		return fmt.Sprintf("%s%d-%d", testPipePrefix, os.Getpid(), testPipeSeq.Add(1)), cfg
+	}
 	dir, err := os.MkdirTemp("", "agentd-daemon-")
 	require.NoError(t, err, "MkdirTemp")
 	t.Cleanup(func() { _ = os.RemoveAll(dir) })
-	return filepath.Join(dir, "s.sock"), filepath.Join(root, "missing.yaml")
+	return filepath.Join(dir, "s.sock"), cfg
 }
 
 func launchForegroundDaemon(t *testing.T, socket, cfg string) <-chan error {
@@ -119,7 +130,7 @@ func TestStartStopTable(t *testing.T) {
 				})
 				err := daemon.Start(context.Background(), daemon.StartOptions{
 					Socket:     socket,
-					ConfigPath: filepath.Join(filepath.Dir(socket), "missing.yaml"),
+					ConfigPath: filepath.Join(t.TempDir(), "missing.yaml"),
 					Foreground: true,
 					Version:    "test2",
 				})

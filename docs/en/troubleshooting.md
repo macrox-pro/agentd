@@ -21,7 +21,7 @@ agentd daemon enable   # optional: start automatically when you log in
 
 Check `--socket` matches the edge process. Daemon operational logs: `agentd.log` in the [state directory](./configuration.md#state-directory).
 
-**Start lock:** `daemon start` acquires `agentd.lock` next to the socket before removing a stale socket or PID from a crashed prior run. If another start is in progress or a live daemon holds the lock, start fails with “already running.” Only one process cleans stale files, and only under that lock.
+**Start lock:** `daemon start` acquires `agentd.lock` next to the socket (in the state directory on Windows) before removing a stale socket or PID from a crashed prior run. If another start is in progress or a live daemon holds the lock, start fails with “already running.” Only one process cleans stale files, and only under that lock.
 
 To start agentd automatically on login: `agentd daemon enable`. If enable failed but `daemon status --json` shows `"autostart":{"enabled":true}`, fix your config and run `daemon start` or log in again — you do not need to run enable twice. See [Operations → Autostart at login](./operations.md#autostart-at-login).
 

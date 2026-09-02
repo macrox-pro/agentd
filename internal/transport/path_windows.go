@@ -4,13 +4,15 @@ package transport
 
 import (
 	"fmt"
+	"strings"
 
 	"golang.org/x/sys/windows"
 )
 
 const (
-	pipePrefix = `\\.\pipe\agentd`
-	pipeSep    = `-`
+	pipeNamespace = `\\.\pipe\`
+	pipeBaseName  = "agentd"
+	pipeSep       = `-`
 )
 
 // DefaultSocketPath returns the platform default agentd named pipe path.
@@ -18,9 +20,18 @@ const (
 func DefaultSocketPath() string {
 	sid, err := currentUserSID()
 	if err != nil || sid == "" {
-		return pipePrefix
+		return pipeNamespace + pipeBaseName
 	}
-	return pipePrefix + pipeSep + sid
+	return pipeNamespace + pipeBaseName + pipeSep + sid
+}
+
+// IsPipePath reports whether path names a Windows named pipe rather than a file.
+func IsPipePath(path string) bool {
+	if len(path) <= len(pipeNamespace) {
+		return false
+	}
+	// The pipe namespace is case-insensitive: \\.\PIPE\name is the same pipe.
+	return strings.EqualFold(path[:len(pipeNamespace)], pipeNamespace)
 }
 
 func currentUserSID() (string, error) {

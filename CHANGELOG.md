@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- **Windows daemon state paths** — PID and lock are derived from the state directory when the endpoint is a named pipe (`\\.\pipe\agentd-<sid>`); previously they resolved to `\\.\pipe`, so `daemon start` could not write them. File sockets keep using the socket directory on every platform.
+- **Windows platform tests** — daemon lifecycle tests listen on a named pipe instead of a file path (`platform-test (windows-latest)` failed with `Incorrect function` on every `transport.Listen`).
+
 ## [v0.0.9-beta] — 2026-09-02
 
 Policy reliability on the daemon path and milestone e2e wire coverage.

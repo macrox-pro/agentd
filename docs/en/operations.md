@@ -6,7 +6,7 @@ Day-to-day control of the user daemon: status, reload, stop, metrics, and autost
 
 ## One daemon per user
 
-A lock file (`agentd.lock`) and socket stop a second copy from starting. Override the socket with `--socket`. PID is written to `agentd.pid` next to the socket — see [Configuration → State directory](./configuration.md#state-directory).
+A lock file (`agentd.lock`) and socket stop a second copy from starting. Override the socket with `--socket`. PID is written to `agentd.pid` next to the socket; on Windows the socket is a named pipe with no folder of its own, so both files live in the state directory — see [Configuration → State directory](./configuration.md#state-directory).
 
 ## Status
 

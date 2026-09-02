@@ -18,8 +18,8 @@ User config is the file `~/.agentd.yaml` — not a `~/.agentd/` folder. Data the
 | → operational log | `agentd.log` |
 | → session ledger | `sessions/<provider>/<session_id>.jsonl` (when enabled) |
 | IPC socket (not state) | `$XDG_RUNTIME_DIR/agentd/agentd.sock` (macOS fallback `~/Library/Caches/agentd/`; Linux `~/.local/run/agentd/`; else temp) — [DESIGN.md §5](../../DESIGN.md#5-transport) |
-| → PID file | `agentd.pid` (next to the socket in the runtime directory) |
-| → lock file | `agentd.lock` (next to the socket; one daemon per user) |
+| → PID file | `agentd.pid` (next to the socket in the runtime directory; Windows: in the state directory) |
+| → lock file | `agentd.lock` (next to the socket; Windows: in the state directory; one daemon per user) |
 
 ## User config bootstrap
 

@@ -28,6 +28,29 @@ func TestDefaultSocketPathUsesSID(t *testing.T) {
 	assert.Contains(t, path, tokUser.User.Sid.String())
 }
 
+func TestIsPipePath(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		in   string
+		want bool
+	}{
+		{name: "default socket", in: transport.DefaultSocketPath(), want: true},
+		{name: "pipe path", in: `\\.\pipe\agentd-test`, want: true},
+		{name: "upper case namespace", in: `\\.\PIPE\agentd-test`, want: true},
+		{name: "namespace without name", in: `\\.\pipe\`, want: false},
+		{name: "file path", in: `C:\Temp\agentd\s.sock`, want: false},
+		{name: "empty", in: "", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, transport.IsPipePath(tt.in), "IsPipePath(%q)", tt.in)
+		})
+	}
+}
+
 func TestListenDialRoundTripWindows(t *testing.T) {
 	t.Parallel()
 	path := `\\.\pipe\agentd-test-` + strings.ReplaceAll(t.Name(), "/", "-")
