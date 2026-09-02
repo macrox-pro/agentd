@@ -225,6 +225,13 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) and [AGENTS.md](./AGENTS.md).
 
 Primary-source excerpts used when designing provider support — see [`research/`](./research/) (each tree has an index and `SOURCES.md`).
 
+- [Claude Code](./research/claude-code/)
+- [Cursor](./research/cursor/)
+- [OpenAI Codex](./research/codex/)
+- [Gemini CLI](./research/gemini/)
+- [OpenCode](./research/opencode/)
+- [Cross-provider best practices](./research/best-practice/)
+
 ## Contributing
 
 Issues and pull requests are welcome. Please read [CONTRIBUTING.md](./CONTRIBUTING.md) (and [AGENTS.md](./AGENTS.md) before submitting code).

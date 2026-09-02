@@ -21,6 +21,7 @@ make lint && make intent-check && make docs-check && make test
 
 | When | Phase | One-liner |
 |------|-------|-----------|
+| 2026-09-02 | OpenCode docs research | 52 topic files under `research/opencode/`; README + SOURCES/MANIFEST/CHECKLIST |
 | 2026-09-01 | v0.0.8-beta | Cursor stats per-generation sum; CHANGELOG + docs version bump |
 | 2026-09-01 | Cursor stats tokens | Sum each Cursor stop (per generation); drop session delta; DESIGN §14.6 + docs |
 | 2026-09-01 | Docs refactor | Glossary, EN/RU rewrite, docs-check linters, README/DESIGN/CONVENTIONS style |
