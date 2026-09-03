@@ -146,7 +146,7 @@ components:
         name:
           type: string
           minLength: 1
-          description: Named Cursor-hosted environment, self-hosted pool, or self-hosted machine name. For `type: pool`, this is the pool name (defaults to `default` when omitted). Unknown pool names return `400`. Omit `repos` with `type: pool` to target a repo-less pool.
+          description: Named Cursor-hosted environment, Team Pool, or self-hosted machine name. For `type: pool`, this is the pool name (defaults to `default` when omitted). Unknown pool names return `400`. Omit `repos` with `type: pool` to target a repo-less pool.
           example: 'Release workspace'
 
     McpAuth:

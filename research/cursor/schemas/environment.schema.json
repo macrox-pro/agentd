@@ -63,18 +63,65 @@
               }
             },
             "anyOf": [
-              { "required": ["serverUrl"] },
-              { "required": ["command"] }
+              {
+                "required": [
+                  "serverUrl"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              }
             ],
             "additionalProperties": false
           }
+        },
+        "egressAllowlist": {
+          "type": "array",
+          "description": "Additional outbound domains that agents in this environment are allowed to reach. When set without egressMode, it is unioned with the inherited user/team network allowlist.",
+          "items": {
+            "type": "string",
+            "description": "An allowed outbound domain, e.g. `registry.npmjs.org`."
+          }
+        },
+        "egressMode": {
+          "type": "string",
+          "description": "How this environment's egress allowlist combines with team/user network settings. `allow_all` disables egress restrictions (subject to team policy). `parent_plus_network_settings` unions egressAllowlist with the inherited user/team allowlist. `default_with_network_settings` allows the default domains plus egressAllowlist. `network_settings_only` allows only required domains plus egressAllowlist.",
+          "enum": [
+            "allow_all",
+            "parent_plus_network_settings",
+            "default_with_network_settings",
+            "network_settings_only"
+          ]
+        },
+        "chromeExecutablePath": {
+          "type": "string",
+          "description": "Path to a Chrome/Chromium executable inside the environment, used for browser-based testing."
+        },
+        "enable_testing": {
+          "description": "Whether agents may run cloud testing (e.g. computer use) in this environment. Defaults to true; set to false to disable.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          ]
         },
         "ports": {
           "type": "array",
           "description": "Ports to expose from the container. Similar to devcontainers port forwarding.",
           "items": {
             "type": "object",
-            "required": ["port"],
+            "required": [
+              "port"
+            ],
             "properties": {
               "name": {
                 "type": "string",
@@ -98,7 +145,9 @@
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": ["command"],
+                  "required": [
+                    "command"
+                  ],
                   "properties": {
                     "name": {
                       "type": "string",
@@ -117,7 +166,9 @@
               },
               {
                 "type": "object",
-                "required": ["command"],
+                "required": [
+                  "command"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -149,21 +200,40 @@
               "type": "string",
               "description": "The location of the Dockerfile that defines the contents of the container. The path is relative to the folder containing the `environment.json` file."
             },
+            "dockerfileContents": {
+              "type": "string",
+              "description": "Inline Dockerfile content. Use this instead of `dockerfile` when you want to define the Dockerfile directly in `environment.json`."
+            },
             "context": {
               "type": "string",
               "description": "The location of the context folder for building the Docker image. The path is relative to the folder containing the `environment.json` file."
             }
           },
-          "required": ["dockerfile"],
+          "anyOf": [
+            {
+              "required": [
+                "dockerfile"
+              ]
+            },
+            {
+              "required": [
+                "dockerfileContents"
+              ]
+            }
+          ],
           "unevaluatedProperties": false
+        },
+        "image": {
+          "type": "string",
+          "description": "An explicit container image reference (registry image) for the environment base. One of `build`, `image`, or `snapshot` typically defines the environment base."
         },
         "snapshot": {
           "type": "string",
-          "description": "A snapshot ID for the base environment."
+          "description": "A snapshot ID for the base environment. Takes precedence over `build` and `image` when set."
         },
         "agentCanUpdateSnapshot": {
           "type": "boolean",
-          "description": "Whether the agent can update the snapshot."
+          "description": "Whether the agent can update the snapshot. Defaults to true for snapshot-based and default-base environments; always false when the base is `build` or `image`."
         }
       },
       "required": []

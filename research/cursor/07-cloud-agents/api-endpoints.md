@@ -5,13 +5,13 @@ primary_sources:
     url: "https://cursor.com/docs/cloud-agent/api/endpoints.md"
     section: "API"
 also_cited_in: []
-studied_at: "2026-08-25"
-cursor_docs_snapshot: "2026-08-25"
+studied_at: "2026-09-03"
+cursor_docs_snapshot: "2026-09-03"
 applicability: "current"
 ---
 # Cloud Agents API
 
-> **Applicability:** Verbatim excerpts from Cursor documentation (snapshot 2026-08-25).
+> **Applicability:** Verbatim excerpts from Cursor documentation (snapshot 2026-09-03).
 
 ### Source: API endpoints
 
@@ -73,19 +73,19 @@ applicability: "current"
 >
 > `env` object (optional)
 >
-> Execution environment target. Use a named `cloud` environment, or route to a self-hosted `pool` or `machine`. Mutually exclusive with explicit `repos` when selecting a named Cursor-hosted environment.
+> Execution environment target. Use a named `cloud` environment, or route to a `pool` or `machine` you host. Mutually exclusive with explicit `repos` when selecting a named Cursor-hosted environment.
 >
 > `env.type` string (required if `env` provided)
 >
-> Execution environment type. `cloud` uses Cursor-hosted VMs; `pool` and `machine` route to self-hosted workers.
+> Execution environment type. `cloud` uses Cursor-hosted VMs; `pool` and `machine` route to your own workers.
 >
 > `env.name` string (optional)
 >
-> Named Cursor-hosted environment, self-hosted pool, or self-hosted machine name. For `env.type: "pool"`, this is the pool name (defaults to `default` when omitted). An unknown pool name returns `400` instead of queueing forever.
+> Named Cursor-hosted environment, pool, or machine name. For `env.type: "pool"`, this is the pool name (defaults to `default` when omitted). An unknown pool name returns `400` instead of queueing forever.
 >
 > `repos` array (optional)
 >
-> Repository configuration. Mutually exclusive with a named cloud environment. Omit both `repos` and `env` to start a no-repo agent. You can also omit `repos` when `env.type` is `pool` to target a [repo-less pool](https://cursor.com/docs/cloud-agent/self-hosted-guides/pool.md#repo-less-pools). Maximum 20 repositories.
+> Repository configuration. Mutually exclusive with a named cloud environment. Omit both `repos` and `env` to start a no-repo agent. You can also omit `repos` when `env.type` is `pool` to target an any-repo pool. Maximum 20 repositories.
 >
 > `repos[0].url` string (required)
 >
@@ -193,7 +193,7 @@ applicability: "current"
 >   }'
 > ```
 >
-> Self-hosted pool (including repo-less):
+> Worker pool (including any-repo):
 >
 > ```bash
 > curl --request POST \
@@ -955,11 +955,11 @@ applicability: "current"
 > }
 > ```
 >
-> ## Fleet Management
+> ## Workers and Pools
 >
-> Monitor pool worker utilization and build autoscaling against self-hosted Cloud Agent pools. Durable pools stay registered after the last worker disconnects, so you can scale to zero and bring capacity back when [pending requests](https://cursor.com/docs/cloud-agent/api/endpoints.md#list-pending-pool-requests) appear.
+> Monitor worker utilization and build autoscaling for your pools. Durable pools stay registered after the last worker disconnects, so you can scale to zero and bring capacity back when [pending requests](https://cursor.com/docs/cloud-agent/api/endpoints.md#list-pending-pool-requests) appear.
 >
-> The endpoint paths keep the older `private-workers` name; they refer to the same [self-hosted workers](https://cursor.com/docs/cloud-agent/self-hosted-agents.md).
+> The endpoint paths keep the older `private-workers` name; they refer to the same Self-Hosted Machines workers.
 >
 > Authenticate with the pool's service account API key via Basic auth or Bearer token. Other API key types are rejected.
 >
@@ -967,7 +967,7 @@ applicability: "current"
 >
 > /v0/private-workers
 >
-> List self-hosted pool workers for the authenticated service account's team, newest first.
+> List pool workers for the authenticated service account's team, newest first.
 >
 > #### Query Parameters
 >
@@ -995,8 +995,8 @@ applicability: "current"
 >
 > - `workerId` string — Unique worker identifier. Auto-generated ids are UUIDs; workers started with `CURSOR_AGENT_WORKER_ID` report that custom id instead.
 > - `isInUse` boolean — Whether the worker currently has an assigned agent.
-> - `repoOwner`, `repoName` string — Primary repository metadata when the worker registered a git remote. Empty strings for repo-less workers.
-> - `repoUrl` string (optional) — Primary repository URL. Omitted for repo-less workers.
+> - `repoOwner`, `repoName` string — Primary repository metadata when the worker registered a git remote. Empty strings for any-repo workers.
+> - `repoUrl` string (optional) — Primary repository URL. Omitted for any-repo workers.
 > - `workspaceRootPath` string — Primary workspace path on the worker.
 > - `connectedAtMs` integer — Connection time in Unix milliseconds.
 > - `userId` integer — Owning user id. `0` for workers authenticated with a service account key.
@@ -1071,7 +1071,7 @@ applicability: "current"
 >
 > /v0/private-workers/
 >
-> Retrieve a single self-hosted pool worker by its ID.
+> Retrieve a single pool worker by its ID.
 >
 > #### Path Parameters
 >
@@ -1089,7 +1089,7 @@ applicability: "current"
 >
 > /v0/private-workers/pools
 >
-> List durable self-hosted pools for the authenticated service account's team. Pools remain registered after the last worker disconnects, so you can monitor scale-to-zero fleets and decide when to provision capacity.
+> List durable pools for the authenticated service account's team. Pools remain registered after the last worker disconnects, so you can monitor scale-to-zero fleets and decide when to provision capacity.
 >
 > #### Query Parameters
 >
@@ -1114,7 +1114,7 @@ applicability: "current"
 > - `inUseWorkerCount` integer — Connected workers that currently have an assigned agent. Idle capacity is `connectedWorkerCount - inUseWorkerCount`.
 > - `firstSeenAtMs`, `lastSeenAtMs` integer — First and last observation times in Unix milliseconds.
 > - `isStale` boolean — Whether the pool is marked stale after long inactivity.
-> - `repoOwner`, `repoName`, `repoUrl` string (optional) — Repository metadata when the pool is tied to a repo. Omitted for [repo-less pools](https://cursor.com/docs/cloud-agent/self-hosted-guides/pool.md#repo-less-pools).
+> - `repoOwner`, `repoName`, `repoUrl` string (optional) — Repository metadata when the pool is tied to a repo. Omitted for any-repo pools.
 >
 > ```bash
 > curl --request GET \
@@ -1154,7 +1154,7 @@ applicability: "current"
 > }
 > ```
 >
-> The `sandbox` entry is repo-less: repo fields are omitted, and the pool stays selectable with zero connected workers.
+> The `sandbox` entry is any-repo: repo fields are omitted, and the pool stays selectable with zero connected workers.
 >
 > ### Register A Pool
 >
@@ -1174,7 +1174,7 @@ applicability: "current"
 >
 > `repoOwner`, `repoName` string (optional)
 >
-> Repository metadata when the pool is tied to a repo. Provide both together, or omit both for a repo-less pool.
+> Repository metadata when the pool is tied to a repo. Provide both together, or omit both for an any-repo pool.
 >
 > `repoUrl` string (optional)
 >
@@ -1230,7 +1230,7 @@ applicability: "current"
 >
 > `repo_name` string (optional)
 >
-> Repository name when deregistering a repo-scoped pool record. Provide `repo_owner` and `repo_name` together, or omit both for a repo-less pool.
+> Repository name when deregistering a repo-scoped pool record. Provide `repo_owner` and `repo_name` together, or omit both for an any-repo pool.
 >
 > ```bash
 > curl --request DELETE \
@@ -1250,7 +1250,7 @@ applicability: "current"
 >
 > /v0/private-workers/pending-requests
 >
-> List self-hosted pool requests that have not been assigned to a worker yet. Use this endpoint to scale capacity when users are waiting for an available pool worker, or pair it with [Claim A Pending Request](https://cursor.com/docs/cloud-agent/api/endpoints.md#claim-a-pending-request) before starting an ephemeral worker.
+> List pool requests that have not been assigned to a worker yet. Use this endpoint to scale capacity when users are waiting for an available pool worker, or pair it with [Claim A Pending Request](https://cursor.com/docs/cloud-agent/api/endpoints.md#claim-a-pending-request) before starting an ephemeral worker.
 >
 > This endpoint requires a service account API key. It returns requests for the key's team and excludes My Machines requests. If the key is scoped to specific repositories, pass `repository`; the repository must be in the key's allowed scope.
 >
@@ -1268,7 +1268,7 @@ applicability: "current"
 >
 > `repository` string (optional)
 >
-> Filter by repository URL. Required for repo-scoped service account API keys. Omit for repo-less pending requests.
+> Filter by repository URL. Required for repo-scoped service account API keys. Omit for any-repo pending requests.
 >
 > `pool` string (optional)
 >
@@ -1284,7 +1284,7 @@ applicability: "current"
 > - `userId` integer — Cursor user id that created the request.
 > - `userEmail` string (optional) — Email of the requesting user, when available. Use it to select user-affine capacity without another lookup.
 > - `serviceAccountId` string (optional) — Service account associated with the request, when present.
-> - `repoOwner`, `repoName`, `repoUrl` string (optional) — Repository metadata when the request targets a repo. Omitted for repo-less pool requests.
+> - `repoOwner`, `repoName`, `repoUrl` string (optional) — Repository metadata when the request targets a repo. Omitted for any-repo pool requests.
 > - `labels` array — Request labels as `{ key, value }` pairs (includes `repo=` and `pool=` when set).
 > - `createdAtMs` integer — Request creation time in Unix milliseconds.
 >

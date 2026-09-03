@@ -1,10 +1,10 @@
 # Source catalog
 
-Target snapshot: **2026-08-25**. Status `done` = fetched and excerpted.
+Target snapshot: **2026-09-03**. Status `done` = fetched and excerpted.
 
 | ID | Source | URL | Priority | Status | studied_at |
 |----|--------|-----|----------|--------|------------|
-| T1-HOOKS | hooks.md | https://cursor.com/docs/hooks.md | P0 | done | 2026-08-25 |
+| T1-HOOKS | hooks.md | https://cursor.com/docs/hooks.md | P0 | done | 2026-09-03 |
 | T1-THIRD-PARTY-HOOKS | third-party-hooks.md | https://cursor.com/docs/reference/third-party-hooks.md | P0 | done | 2026-08-25 |
 | T1-MCP | mcp.md | https://cursor.com/docs/mcp.md | P0 | done | 2026-08-25 |
 | T1-MCP-INSTALL | install-links.md | https://cursor.com/docs/mcp/install-links.md | P0 | done | 2026-08-25 |
@@ -56,7 +56,7 @@ Target snapshot: **2026-08-25**. Status `done` = fetched and excerpted.
 | T1-CLOUD-META | metadata.md | https://cursor.com/docs/cloud-agent/metadata.md | P1 | done | 2026-08-25 |
 | T1-CLOUD-AUTO | automations.md | https://cursor.com/docs/cloud-agent/automations.md | P1 | done | 2026-08-25 |
 | T1-CLOUD-WH | webhooks.md | https://cursor.com/docs/cloud-agent/api/webhooks.md | P1 | done | 2026-08-25 |
-| T1-CLOUD-API | endpoints.md | https://cursor.com/docs/cloud-agent/api/endpoints.md | P1 | done | 2026-08-25 |
+| T1-CLOUD-API | endpoints.md | https://cursor.com/docs/cloud-agent/api/endpoints.md | P1 | done | 2026-09-03 |
 | T1-API | api.md | https://cursor.com/docs/api.md | P1 | done | 2026-08-25 |
 | T1-CLOUD-SEC | security.md | https://cursor.com/docs/cloud-agent/security.md | P1 | done | 2026-08-25 |
 | T1-CLOUD-NET | security-network.md | https://cursor.com/docs/cloud-agent/security-network.md | P1 | done | 2026-08-25 |
@@ -64,7 +64,8 @@ Target snapshot: **2026-08-25**. Status `done` = fetched and excerpted.
 | T1-CLOUD-PRIV | private-connectivity.md | https://cursor.com/docs/cloud-agent/private-connectivity.md | P1 | done | 2026-08-25 |
 | T1-CLOUD-BP | best-practices.md | https://cursor.com/docs/cloud-agent/best-practices.md | P1 | done | 2026-08-25 |
 | T1-CLOUD-SETTINGS | settings.md | https://cursor.com/docs/cloud-agent/settings.md | P1 | done | 2026-08-25 |
-| T1-CLOUD-SELF | self-hosted-agents.md | https://cursor.com/docs/cloud-agent/self-hosted-agents.md | P1 | done | 2026-08-25 |
+| T1-CLOUD-SELF | self-hosted.md | https://cursor.com/docs/cloud-agent/self-hosted.md | P1 | done | 2026-09-03 |
+| T1-CLOUD-SELF-POOL | pool.md | https://cursor.com/docs/cloud-agent/self-hosted/pool.md | P1 | done | 2026-09-03 |
 | T1-BUGBOT | bugbot.md | https://cursor.com/docs/bugbot.md | P1 | done | 2026-08-25 |
 | T1-SEC-AGENTS | security-agents.md | https://cursor.com/docs/security-agents.md | P1 | done | 2026-08-25 |
 | T1-APPROVAL | approval-agents.md | https://cursor.com/docs/approval-agents.md | P1 | done | 2026-08-25 |
@@ -90,3 +91,5 @@ Target snapshot: **2026-08-25**. Status `done` = fetched and excerpted.
 - **Help center (`T2-HELP-*`):** Fetched and reviewed. Only `T2-HELP-BUILD` retained as a dedicated topic file; others overlap `/docs/` content.
 - **Schemas:** `schemas/cloud-agents-openapi.yaml` and `schemas/environment.schema.json` stored verbatim (not excerpted in topic `.md` files).
 - **hooks.md sections:** intro, categories, cloud, quickstart, hook-types, examples, partners, configuration, team-distribution, reference, environment-variables, troubleshooting — all mapped to `02-hooks/*`.
+
+- **Refresh 2026-09-03:** Confirmed drifts applied for hooks cloud matrix (Self-Hosted Machines paragraph), self-hosted overview rename (`Self-Hosted Agents` → `Self-Hosted Machines`, URL `self-hosted.md`), Team Pools hooks (`sessionStart`/`sessionEnd` on workers), OpenAPI (`Team Pool` wording), `environment.schema.json` (`egressAllowlist`/`egressMode`/`chromeExecutablePath`/`enable_testing`/`dockerfileContents`/`image`), API Workers/Pools section naming. Canonical URL `self-hosted-agents.md` redirects to `self-hosted.md`. Full page re-excerpt still pending for most other T1 sources.

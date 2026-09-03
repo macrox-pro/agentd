@@ -2,7 +2,9 @@
 
 Structured verbatim excerpts from [cursor.com/docs](https://cursor.com/docs) and selected help pages.
 
-**Snapshot date: 2026-08-25** (see `cursor_docs_snapshot` in topic front matter).
+**Snapshot date: 2026-09-03** (see `cursor_docs_snapshot` in topic front matter).
+
+Refresh 2026-09-03 updated drifted sources: hooks cloud support (Self-Hosted Machines + `sessionStart`/`sessionEnd`), self-hosted overview (`self-hosted.md`), Team Pools hooks excerpt, Cloud Agents OpenAPI, `environment.schema.json`, and Workers/Pools API naming. Other topic files retain 2026-08-25 excerpts pending full re-fetch.
 
 ## How to read
 
@@ -23,7 +25,7 @@ Structured verbatim excerpts from [cursor.com/docs](https://cursor.com/docs) and
 | Tab and lifecycle hooks | [02-hooks/hook-events-tab-and-lifecycle.md](./02-hooks/hook-events-tab-and-lifecycle.md) | T1-HOOKS |
 | Hook execution and protocol | [02-hooks/execution-and-protocol.md](./02-hooks/execution-and-protocol.md) | T1-HOOKS |
 | Hook config and precedence | [02-hooks/config-and-precedence.md](./02-hooks/config-and-precedence.md) | T1-HOOKS |
-| Cloud hook support matrix | [02-hooks/cloud-support-matrix.md](./02-hooks/cloud-support-matrix.md) | T1-HOOKS |
+| Cloud hook support matrix | [02-hooks/cloud-support-matrix.md](./02-hooks/cloud-support-matrix.md) | T1-HOOKS, T1-CLOUD-SELF-POOL |
 | Hook examples | [02-hooks/hooks-examples.md](./02-hooks/hooks-examples.md) | T1-HOOKS |
 | Partner integrations | [02-hooks/partner-integrations.md](./02-hooks/partner-integrations.md) | T1-HOOKS |
 | Third-party hooks | [02-hooks/third-party-hooks.md](./02-hooks/third-party-hooks.md) | T1-THIRD-PARTY-HOOKS |
@@ -53,7 +55,7 @@ Structured verbatim excerpts from [cursor.com/docs](https://cursor.com/docs) and
 | Cloud automations | [07-cloud-agents/automations-and-webhooks.md](./07-cloud-agents/automations-and-webhooks.md) | T1-CLOUD-AUTO, T1-CLOUD-WH |
 | Cloud Agents API | [07-cloud-agents/api-endpoints.md](./07-cloud-agents/api-endpoints.md) | T1-CLOUD-API, T1-API |
 | Cloud security | [07-cloud-agents/security-network-identity.md](./07-cloud-agents/security-network-identity.md) | T1-CLOUD-SEC, T1-CLOUD-NET, T1-CLOUD-ID, T1-CLOUD-PRIV |
-| Self-hosted agents | [07-cloud-agents/self-hosted-agents.md](./07-cloud-agents/self-hosted-agents.md) | T1-CLOUD-SELF |
+| Self-hosted machines | [07-cloud-agents/self-hosted-agents.md](./07-cloud-agents/self-hosted-agents.md) | T1-CLOUD-SELF, T1-CLOUD-SELF-POOL |
 | Bugbot | [08-review-and-automation/bugbot.md](./08-review-and-automation/bugbot.md) | T1-BUGBOT |
 | Security agents | [08-review-and-automation/security-agents.md](./08-review-and-automation/security-agents.md) | T1-SEC-AGENTS |
 | Approval agents | [08-review-and-automation/approval-agents.md](./08-review-and-automation/approval-agents.md) | T1-APPROVAL |
@@ -85,7 +87,7 @@ Reference only — not duplicated inside topic files.
 | Native hooks (`.cursor/hooks.json`, stdio JSON) | Analog to hook lifecycle; different wire than `agentd hook run --provider=cursor --argv-payload` |
 | Install root | Cursor user scope → `~/.cursor` (`internal/install/dir.go`) |
 | Policy layers | Hooks/MCP intercept at runtime; rules/skills inject prompt context |
-| Cloud agents | User hooks unavailable in cloud VMs; project `.cursor/hooks.json` only |
+| Cloud agents | User hooks unavailable in cloud VMs; project `.cursor/hooks.json` only. Self-Hosted Machines workers also run project (+ Enterprise team/enterprise) hooks; `sessionStart`/`sessionEnd` fire on claim/release |
 | Trajectory | Partial Cursor transcript import: `agentd session import --provider cursor --path …` |
 | Guards | `beforeMCPExecution`, `beforeShellExecution` mirror agentd guard concerns |
 
