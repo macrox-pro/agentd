@@ -59,10 +59,20 @@
 |------------|----------------------|--------|
 | `tool.pre` | `PreToolUse` (Claude), `preToolUse` (Cursor) и т. д. | Перед инструментом |
 | `prompt.submitted` | `PromptSubmitted`, `UserPromptSubmit` и т. д. | Пользователь отправил запрос |
-| `agent.stop` | `Stop`, `SessionEnd` и т. д. | Завершение сессии |
+| `agent.stop` | `Stop` | Завершение сессии агента (не `subagent.stop`) |
 | `tool.post` | `PostToolUse` и т. д. | После инструмента |
+| `tool.error` | `PostToolUseFailure` и т. д. | Сбой инструмента |
+| `permission.request` | Запрос разрешения | Агент просит выполнить инструмент |
+| `session.start` | `SessionStart` | Новая сессия |
+| `session.end` | `SessionEnd` | Сессия закрыта |
+| `subagent.start` | `SubagentStart` | Вложенный агент стартовал |
+| `subagent.stop` | `SubagentStop` | Вложенный агент завершился |
+| `compact.pre` | `PreCompact` | Сжатие контекста сейчас начнётся |
+| `compact.post` | `PostCompact` | Сжатие контекста закончилось |
+| `file.edited` | `afterFileEdit` (Cursor) | Файл изменён (не в установке по умолчанию) |
+| `model.response` | Кадры «после мысли агента» | Ответ модели (не в установке по умолчанию) |
 | `notification` | Codex `notify`, observe-only кадры | Только наблюдение |
-| `other` | Прочее | По умолчанию только async |
+| `other` | Неизвестные нативные имена | Запасной маршрут, если нет точного default |
 
 Значения по умолчанию: [Маршрутизация → Виды событий](./dispatch.md#виды-событий-kind).
 

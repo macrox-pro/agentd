@@ -181,6 +181,7 @@ func TestObserve(t *testing.T) {
 			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
 				c := statistics.NewCollector()
 				in := sampleRecordInput(enabledSnap(true))
+				in.Result.Meta.EventKind = "agent.stop"
 				in.RawPayload = []byte(`{"usage":{"input_tokens":4}}`)
 				return c, in
 			},
@@ -257,6 +258,22 @@ func TestObserve(t *testing.T) {
 				r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
 				assert.Equal(t, uint64(1), r.HooksByKind[agentdv1.EventKind_EVENT_KIND_AGENT_STOP])
 				assert.Equal(t, uint64(0), r.InputTokensTotal)
+			},
+		},
+		{
+			name: "subagent_stop_does_not_bill",
+			setup: func(t *testing.T) (*statistics.Collector, trajectory.RecordInput) {
+				c := statistics.NewCollector()
+				in := cursorStopInput(enabledSnap(true), "s1", `{"input_tokens":19582,"output_tokens":92}`)
+				in.Result.Meta.EventKind = "subagent.stop"
+				return c, in
+			},
+			check: func(t *testing.T, c *statistics.Collector) {
+				time.Sleep(20 * time.Millisecond)
+				r := c.Snapshot(agentdv1.Provider_PROVIDER_UNSPECIFIED)
+				assert.Equal(t, uint64(0), r.InputTokensTotal, "subagent.stop billing")
+				assert.Equal(t, uint64(0), r.OutputTokensTotal, "subagent.stop billing")
+				assert.Equal(t, uint64(1), r.HooksByKind[agentdv1.EventKind_EVENT_KIND_OTHER])
 			},
 		},
 		{

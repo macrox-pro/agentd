@@ -43,8 +43,8 @@ func defaultTrajectory() TrajectoryConfig {
 func defaultImportProviders() map[string]ImportProviderConfig {
 	return map[string]ImportProviderConfig{
 		string(provider.ClaudeCode): {Enabled: false, Path: ""},
-		string(provider.Cursor):      {Enabled: false, Path: ""},
-		string(provider.Codex):       {Enabled: false, Path: ""},
+		string(provider.Cursor):     {Enabled: false, Path: ""},
+		string(provider.Codex):      {Enabled: false, Path: ""},
 	}
 }
 

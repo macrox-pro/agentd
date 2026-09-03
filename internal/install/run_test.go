@@ -24,6 +24,7 @@ func TestRun(t *testing.T) {
 		wantErr       bool
 		wantPath      string
 		wantSubstr    []string
+		wantAbsent    []string
 		checkShim     bool
 		useDefaultDir bool
 	}{
@@ -32,7 +33,7 @@ func TestRun(t *testing.T) {
 			provider:      "claude-code",
 			scope:         "project",
 			wantPath:      filepath.Join(".claude", "settings.json"),
-			wantSubstr:    []string{"agenthooks", "run", "--provider=claude-code"},
+			wantSubstr:    []string{"agenthooks", "run", "--provider=claude-code", "SubagentStart", "PreCompact", "PostToolUseFailure"},
 			useDefaultDir: true,
 		},
 		{
@@ -41,7 +42,8 @@ func TestRun(t *testing.T) {
 			scope:         "user",
 			installSubdir: filepath.Join("home", ".cursor"),
 			wantPath:      "hooks.json",
-			wantSubstr:    []string{"agenthooks", "--provider=cursor"},
+			wantSubstr:    []string{"agenthooks", "--provider=cursor", "subagentStart", "preCompact"},
+			wantAbsent:    []string{"afterAgentThought", "afterFileEdit"},
 			useDefaultDir: true,
 		},
 		{
@@ -49,7 +51,8 @@ func TestRun(t *testing.T) {
 			provider:      "cursor",
 			scope:         "project",
 			wantPath:      filepath.Join(".cursor", "hooks.json"),
-			wantSubstr:    []string{"agenthooks", "--provider=cursor"},
+			wantSubstr:    []string{"agenthooks", "--provider=cursor", "subagentStart"},
+			wantAbsent:    []string{"afterAgentThought", "afterFileEdit"},
 			useDefaultDir: true,
 		},
 		{
@@ -60,6 +63,15 @@ func TestRun(t *testing.T) {
 			installSubdir: filepath.Join("repo", ".codex"),
 			wantPath:      "hooks.json",
 			wantSubstr:    []string{"agenthooks", "--provider=codex"},
+			useDefaultDir: true,
+		},
+		{
+			name:          "gemini project skips unmapped natives",
+			provider:      "gemini",
+			scope:         "project",
+			wantPath:      filepath.Join(".gemini", "settings.json"),
+			wantSubstr:    []string{"agenthooks", "--provider=gemini"},
+			wantAbsent:    []string{"subagentStart", "SubagentStart"},
 			useDefaultDir: true,
 		},
 		{
@@ -133,6 +145,9 @@ func TestRun(t *testing.T) {
 			assert.Contains(t, body, bin)
 			for _, s := range tt.wantSubstr {
 				assert.Contains(t, body, s)
+			}
+			for _, s := range tt.wantAbsent {
+				assert.NotContains(t, body, s)
 			}
 			if tt.checkShim {
 				assert.True(t,

@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-(nothing yet)
+### Changed
+
+- **Hook kind coverage** — compiled defaults and routing cover the agenthooks vocabulary (`session.*`, `tool.error`, `permission.request`, `subagent.*`, `compact.*`, plus `file.edited` / `model.response` as catch-all/defaults). New kinds default to `async_only`. Unknown `dispatch_defaults` keys and `match.kind` values fail config compile.
+- **Default install** — writes observe hooks for `tool.error`, permission, `subagent.*`, and `compact.*` (still skips `file.edited` / `model.response`). Re-run `agentd install` after upgrade. Gemini still skips unmapped natives.
+- **Trajectory stats** — daemon billing tokens stay on `agent.stop` only (`subagent.stop` cannot inflate totals). Unmapped kinds roll up as OTHER. Ledger schema unchanged.
 
 ## [v0.0.9] — 2026-09-02
 

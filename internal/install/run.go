@@ -120,5 +120,11 @@ func defaultHooks() []ahinstall.HookSpec {
 		{Kind: agenthooks.KindSessionStart, Blocking: false, Timeout: shortHookTimeout},
 		{Kind: agenthooks.KindSessionEnd, Blocking: false, Timeout: shortHookTimeout},
 		{Kind: agenthooks.KindNotification, Blocking: false, Timeout: shortHookTimeout},
+		{Kind: agenthooks.KindToolError, Blocking: false, Timeout: shortHookTimeout},
+		{Kind: agenthooks.KindPermission, Blocking: false, Timeout: shortHookTimeout},
+		{Kind: agenthooks.KindSubagentStart, Blocking: false, Timeout: shortHookTimeout},
+		{Kind: agenthooks.KindSubagentStop, Blocking: false, Timeout: shortHookTimeout},
+		{Kind: agenthooks.KindCompactPre, Blocking: false, Timeout: shortHookTimeout},
+		{Kind: agenthooks.KindCompactPost, Blocking: false, Timeout: shortHookTimeout},
 	}
 }

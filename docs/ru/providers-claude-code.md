@@ -38,6 +38,7 @@ echo '{"session_id":"s","cwd":"/tmp","hook_event_name":"PreToolUse","tool_name":
 | **Ask / Deny** | На ToolPre доступны Deny, Ask, Allow, правка входа, system message, stop-agent (матрица agenthooks) |
 | **PromptSubmitted** | Deny / контекст / system message — **без Ask** |
 | **Таймауты** | В спецификации хуков — секунды; бюджет синхронного пути берётся из значений по умолчанию при установке, если у вызова нет срока |
-| **Блокирующие хуки** | ToolPre / PromptSubmitted / Stop в наборе install по умолчанию — blocking |
+| **Блокирующие хуки** | `tool.pre` / `prompt.submitted` / `agent.stop` в наборе install по умолчанию — blocking |
+| **Observe-хуки** | Установщик также пишет неблокирующие `session.*`, `tool.error`, permission, `subagent.*` и `compact.*`. После обновления снова выполните `agentd install` |
 
 См. также: [Агенты](./providers.md), [Одобрения](./approvals.md), [Проверки](./guards.md).

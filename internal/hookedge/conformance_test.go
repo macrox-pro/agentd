@@ -52,6 +52,14 @@ func TestConformanceFixtures(t *testing.T) {
 		{name: "gemini before_tool", cliProvider: "gemini", fixture: "gemini/before_tool.json"},
 		{name: "kimi pre_tool_use", cliProvider: "kimi-code", fixture: "kimi/pre_tool_use.json"},
 		{name: "opencode tool_execute_before", cliProvider: "opencode", fixture: "opencode/tool_execute_before.json", serve: true},
+		{name: "claude permission_request", cliProvider: "claude-code", fixture: "claude/permission_request.json"},
+		{name: "claude subagent_start", cliProvider: "claude-code", fixture: "claude/subagent_start.json"},
+		{name: "claude subagent_stop", cliProvider: "claude-code", fixture: "claude/subagent_stop.json"},
+		{name: "claude pre_compact", cliProvider: "claude-code", fixture: "claude/pre_compact.json"},
+		{name: "claude session_start", cliProvider: "claude-code", fixture: "claude/session_start.json"},
+		{name: "cursor session_start", cliProvider: "cursor", fixture: "cursor/session_start.json"},
+		{name: "kimi post_tool_use_failure", cliProvider: "kimi-code", fixture: "kimi/post_tool_use_failure.json"},
+		{name: "cursor after_file_edit", cliProvider: "cursor", fixture: "cursor/after_file_edit.json"},
 	}
 
 	for _, tt := range tests {

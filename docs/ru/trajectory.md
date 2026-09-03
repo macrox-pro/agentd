@@ -55,8 +55,9 @@ agentd trajectory stats [--provider ID] [--json]
 
 Счётчики токенов демона берутся из сырой полезной нагрузки каждого вызова (не зависят от `include_raw`):
 
-- **Cursor** — токены биллинга на хуке `stop` (за generation, сумма каждого stop); `context_tokens_last` на `preCompact`.
-- **Codex** — токены из хвоста rollout-транскрипта на `Stop`, если в raw хука нет usage (`transcript_path` в raw).
+- **Cursor** — токены биллинга только на `agent.stop` (за generation, сумма каждого stop). `subagent.stop` биллинг не увеличивает. `context_tokens_last` по-прежнему обновляется с `preCompact` / `compact.pre`.
+- **Codex** — токены из хвоста rollout-транскрипта на `agent.stop`, если в raw хука нет usage (`transcript_path` в raw).
+- Виды без enum в proto (например `subagent.*`, `compact.*`, `file.edited`) в `trajectory stats` попадают в **OTHER**.
 
 Для офлайн `session stats` поля токенов в JSONL требуют `include_raw` (запасной путь Codex — `transcript_path` в сохранённом raw).
 

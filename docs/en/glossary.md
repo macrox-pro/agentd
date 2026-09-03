@@ -57,10 +57,20 @@ Wire names used in YAML `match:` and `dispatch_defaults`. Provider JSON may use 
 |-----------|------------------------|---------------|
 | `tool.pre` | `PreToolUse` (Claude), `preToolUse` (Cursor), etc. | Before a tool runs |
 | `prompt.submitted` | `PromptSubmitted`, `UserPromptSubmit`, etc. | User sent a prompt |
-| `agent.stop` | `Stop`, `SessionEnd`, etc. | Agent session ending |
+| `agent.stop` | `Stop` | Agent session ending (not `subagent.stop`) |
 | `tool.post` | `PostToolUse`, etc. | After a tool finished |
+| `tool.error` | `PostToolUseFailure`, etc. | Tool failed |
+| `permission.request` | Permission / approval prompts | Agent asked to run a tool |
+| `session.start` | `SessionStart` | New agent session |
+| `session.end` | `SessionEnd` | Session closed |
+| `subagent.start` | `SubagentStart` | Nested agent started |
+| `subagent.stop` | `SubagentStop` | Nested agent finished |
+| `compact.pre` | `PreCompact` | Context compaction about to run |
+| `compact.post` | `PostCompact` | Compaction finished |
+| `file.edited` | `afterFileEdit` (Cursor) | File changed (not in the default install set) |
+| `model.response` | After-agent-thought style frames | Model output (not in the default install set) |
 | `notification` | Codex `notify`, observe-only frames | Fire-and-forget observation |
-| `other` | Anything else | Default async-only handling |
+| `other` | Unmapped native names | Catch-all when no exact default matches |
 
 Full routing defaults: [Dispatch → Kind defaults](./dispatch.md#kind-defaults).
 

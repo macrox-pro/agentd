@@ -63,8 +63,9 @@ Requires a **running daemon**. Counters reset when the daemon process restarts; 
 
 Daemon token totals are extracted from each hook event payload (not gated by `include_raw`):
 
-- **Cursor** — billing tokens on `stop` hooks (per generation, sum each stop); `context_tokens_last` on `preCompact`.
-- **Codex** — billing tokens from the rollout transcript tail on `Stop` when hook raw carries no usage (`transcript_path` in raw).
+- **Cursor** — billing tokens only on `agent.stop` (per generation, sum each stop). `subagent.stop` does not add billing. `context_tokens_last` still updates from `preCompact` / `compact.pre`.
+- **Codex** — billing tokens from the rollout transcript tail on `agent.stop` when hook raw carries no usage (`transcript_path` in raw).
+- Kinds without a proto enum (for example `subagent.*`, `compact.*`, `file.edited`) roll up as **OTHER** in `trajectory stats`.
 
 Offline `session stats` token fields require `include_raw` in the JSONL ledger (Codex transcript fallback needs `transcript_path` in stored raw).
 

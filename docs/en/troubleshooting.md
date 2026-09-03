@@ -41,6 +41,8 @@ agentd config validate --config ~/.agentd.yaml
 
 Fix the file, then `agentd daemon start` again. `config validate` and `config show` do not create a missing user file.
 
+If start fails with `unknown kind`, fix the typo in `dispatch_defaults` or `match.kind` ([Dispatch](./dispatch.md#event-kinds-kind)).
+
 ## Timeouts
 
 Sync budget ≈ 90% of provider timeout, optionally capped by route `sync_timeout` ([Dispatch](./dispatch.md)). CLI `--timeout 0` leaves deadline unset; daemon then uses kind defaults (30s / 5s).

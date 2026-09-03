@@ -1,6 +1,10 @@
 package config
 
-import "time"
+import (
+	"time"
+
+	"github.com/speakeasy-api/agenthooks"
+)
 
 // DefaultSecretsRules are the built-in rule names enabled when secrets.rules is empty.
 var DefaultSecretsRules = []string{
@@ -51,11 +55,21 @@ func defaultGuards() Guards {
 
 func defaultKindDefaults() map[string]KindDefault {
 	return map[string]KindDefault{
-		"tool.pre":         {Mode: ModeParallel},
-		"prompt.submitted": {Mode: ModeSyncOnly},
-		"agent.stop":       {Mode: ModeSyncThenAsync},
-		"tool.post":        {Mode: ModeParallel},
-		"notification":     {Mode: ModeAsyncOnly},
-		"other":            {Mode: ModeAsyncOnly},
+		string(agenthooks.KindToolPre):         {Mode: ModeParallel},
+		string(agenthooks.KindPromptSubmitted): {Mode: ModeSyncOnly},
+		string(agenthooks.KindStop):            {Mode: ModeSyncThenAsync},
+		string(agenthooks.KindToolPost):        {Mode: ModeParallel},
+		string(agenthooks.KindNotification):    {Mode: ModeAsyncOnly},
+		string(agenthooks.KindOther):           {Mode: ModeAsyncOnly},
+		string(agenthooks.KindSessionStart):    {Mode: ModeAsyncOnly},
+		string(agenthooks.KindSessionEnd):      {Mode: ModeAsyncOnly},
+		string(agenthooks.KindToolError):       {Mode: ModeAsyncOnly},
+		string(agenthooks.KindPermission):      {Mode: ModeAsyncOnly},
+		string(agenthooks.KindSubagentStart):   {Mode: ModeAsyncOnly},
+		string(agenthooks.KindSubagentStop):    {Mode: ModeAsyncOnly},
+		string(agenthooks.KindCompactPre):      {Mode: ModeAsyncOnly},
+		string(agenthooks.KindCompactPost):     {Mode: ModeAsyncOnly},
+		string(agenthooks.KindFileEdited):      {Mode: ModeAsyncOnly},
+		string(agenthooks.KindModelResponse):   {Mode: ModeAsyncOnly},
 	}
 }

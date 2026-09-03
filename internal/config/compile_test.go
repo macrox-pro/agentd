@@ -24,9 +24,22 @@ func TestCompileMerged(t *testing.T) {
 		{
 			name: "defaults",
 			wantMode: map[string]config.DispatchMode{
-				"tool.pre":     config.ModeParallel,
-				"notification": config.ModeAsyncOnly,
-				"agent.stop":   config.ModeAfterSync, // normalized from sync_then_async
+				"tool.pre":           config.ModeParallel,
+				"prompt.submitted":   config.ModeSyncOnly,
+				"agent.stop":         config.ModeAfterSync, // normalized from sync_then_async
+				"tool.post":          config.ModeParallel,
+				"notification":       config.ModeAsyncOnly,
+				"other":              config.ModeAsyncOnly,
+				"session.start":      config.ModeAsyncOnly,
+				"session.end":        config.ModeAsyncOnly,
+				"tool.error":         config.ModeAsyncOnly,
+				"permission.request": config.ModeAsyncOnly,
+				"subagent.start":     config.ModeAsyncOnly,
+				"subagent.stop":      config.ModeAsyncOnly,
+				"compact.pre":        config.ModeAsyncOnly,
+				"compact.post":       config.ModeAsyncOnly,
+				"file.edited":        config.ModeAsyncOnly,
+				"model.response":     config.ModeAsyncOnly,
 			},
 			wantSync: true,
 		},
@@ -265,7 +278,56 @@ dispatch:
 				assert.True(t, found, "gate route")
 			},
 		},
-
+		{
+			name: "reject unknown dispatch_defaults kind",
+			content: `version: 1
+dispatch_defaults:
+  not.a.kind: { mode: async_only }
+`,
+			wantErr: true,
+		},
+		{
+			name: "reject unknown match.kind",
+			content: `version: 1
+dispatch:
+  - name: bad
+    match:
+      kind: [not.a.kind]
+    mode: async_only
+    async:
+      - target: log
+        level: info
+`,
+			wantErr: true,
+		},
+		{
+			name: "accept match.kind star",
+			content: `version: 1
+dispatch:
+  - name: observe-all
+    match:
+      kind: ["*"]
+      provider: ["*"]
+    mode: parallel
+    sync:
+      - target: builtin
+        guards: [secrets]
+    async:
+      - target: builtin
+        observe: true
+`,
+			check: func(t *testing.T, snap *config.Snapshot) {
+				t.Helper()
+				found := false
+				for _, r := range snap.Routes {
+					if r.Name == "observe-all" {
+						found = true
+						assert.Equal(t, []string{"*"}, r.Match.Kinds)
+					}
+				}
+				assert.True(t, found, "observe-all route")
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -276,6 +338,9 @@ dispatch:
 			store, err := config.Load(ctx, path)
 			if tt.wantErr {
 				require.Error(t, err, "Load(%q)", tt.name)
+				if tt.name == "reject unknown dispatch_defaults kind" || tt.name == "reject unknown match.kind" {
+					assert.Contains(t, err.Error(), "unknown kind")
+				}
 				return
 			}
 			require.NoError(t, err, "Load(%q)", tt.name)

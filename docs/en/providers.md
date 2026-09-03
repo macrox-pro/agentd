@@ -46,6 +46,8 @@ On success, `agentd install` prints each created, updated, or unchanged file wit
 
 Generated commands use `agentd agenthooks …` (same as `hook …`). Timeouts: before-tool and prompt-submit **30s**; all other event kinds **5s**.
 
+The default installer writes `tool.pre`, `tool.post`, `tool.error`, `prompt.submitted`, `agent.stop`, `session.start`, `session.end`, `notification`, `permission.request`, `subagent.start`, `subagent.stop`, `compact.pre`, and `compact.post` when the agent has a native mapping. Gemini skips kinds it does not map (for example subagent). `file.edited` / `model.response` are not auto-installed. After an agentd upgrade, re-run `agentd install`.
+
 Design: [DESIGN.md §1–§2](../../DESIGN.md) · codecs: [agenthooks](https://github.com/speakeasy-api/agenthooks).
 
 ## Auto-detection

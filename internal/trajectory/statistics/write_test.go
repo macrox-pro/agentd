@@ -22,7 +22,7 @@ func TestWriteRollup(t *testing.T) {
 	})
 	respWithKinds := statistics.Response(since, statistics.StatisticsRollup{
 		HooksByKind: map[agentdv1.EventKind]uint64{
-			agentdv1.EventKind_EVENT_KIND_SESSION_START:     1,
+			agentdv1.EventKind_EVENT_KIND_SESSION_START:    1,
 			agentdv1.EventKind_EVENT_KIND_PROMPT_SUBMITTED: 1,
 		},
 		InputTokensTotal: 19582,
@@ -60,9 +60,9 @@ func TestWriteRollup(t *testing.T) {
 			contains: []string{`"input_tokens_total": 19582`},
 		},
 		{
-			name: "json_emit_zero_scalars",
-			resp: statistics.Response(since, statistics.StatisticsRollup{}),
-			jsonOut:  true,
+			name:    "json_emit_zero_scalars",
+			resp:    statistics.Response(since, statistics.StatisticsRollup{}),
+			jsonOut: true,
 			contains: []string{
 				`"input_tokens_total": 0`,
 				`"output_tokens_total": 0`,

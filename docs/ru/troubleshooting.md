@@ -41,6 +41,8 @@ agentd config validate --config ~/.agentd.yaml
 
 Исправьте файл и снова выполните `agentd daemon start`. `config validate` и `config show` не создают отсутствующий пользовательский файл.
 
+Если старт падает с `unknown kind`, исправьте опечатку в `dispatch_defaults` или `match.kind` ([Маршрутизация](./dispatch.md#виды-событий-kind)).
+
 ## Таймауты
 
 Бюджет синхронного пути ≈ 90 % таймаута агента, при желании ограничен `route.sync_timeout` ([Маршрутизация](./dispatch.md)). CLI `--timeout 0` не задаёт срок; демон берёт значения по виду события (30 с / 5 с).

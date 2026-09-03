@@ -8,7 +8,7 @@ import (
 
 // TokenFields holds optional token counters from hook raw JSON.
 type TokenFields struct {
-	Input, Output, CacheRead, CacheWrite, Context uint64
+	Input, Output, CacheRead, CacheWrite, Context                uint64
 	HasInput, HasOutput, HasCacheRead, HasCacheWrite, HasContext bool
 }
 

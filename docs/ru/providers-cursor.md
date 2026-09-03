@@ -36,5 +36,6 @@ agentd hook run --provider=cursor --argv-payload '<json>'
 | **Async и sync** | Сбой асинхронной телеметрии **не** должен менять sync-решение ([DESIGN.md §2](../../DESIGN.md#2-hook-dispatch-engine)) |
 | **PromptSubmitted** | На уровне kind — в основном Deny |
 | **fail-closed** | Ожидания Cursor по fail-closed учитывает agenthooks при install/runtime |
+| **Установка по умолчанию** | Есть `subagentStart` / `preCompact` и связанные observe-хуки. **Не** пишет `afterAgentThought` и `afterFileEdit`. После обновления agentd снова выполните `agentd install` |
 
 См. также: [Агенты](./providers.md), [Маршрутизация](./dispatch.md), [Диагностика](./troubleshooting.md).

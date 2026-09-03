@@ -67,6 +67,8 @@ agentd config validate --config ~/.agentd.yaml
 
 Из схемы файла: `version`, `policy`, `async`, `logging`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`, `trajectory`, `metrics`.
 
+Ключи `dispatch_defaults` и значения `dispatch[].match.kind` — только известные wire-виды ([Маршрутизация](./dispatch.md#виды-событий-kind)). Опечатка валит `config validate` и `daemon start`. Bootstrap `~/.agentd.yaml` остаётся коротким — defaults видов живут в бинарнике.
+
 В проектном файле обычно `guards` / `dispatch`. Блоки `approvals` и `blocks` чаще попадают в runtime через CLI или gRPC.
 
 ### policy

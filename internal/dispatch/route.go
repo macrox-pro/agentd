@@ -9,8 +9,9 @@ import (
 	"github.com/macrox-pro/agentd/internal/config"
 )
 
-// MatchRoute returns the first compiled route that matches the event, or a
-// default-kind fallback. User routes (Default=false) are listed first.
+// MatchRoute returns the first compiled route that matches the event.
+// Precedence: user route, then exact-kind default, then the default "other"
+// catch-all so kinds without their own default are observed instead of dropped.
 func MatchRoute(routes []config.CompiledRoute, typed any) *config.CompiledRoute {
 	base := agenthooks.EventOf(typed)
 	kind := string(agenthooks.KindOther)
@@ -23,27 +24,34 @@ func MatchRoute(routes []config.CompiledRoute, typed any) *config.CompiledRoute 
 	}
 	toolName, toolCanon := toolIdentity(typed)
 
-	var fallback *config.CompiledRoute
+	var exact, catchAll *config.CompiledRoute
 	for i := range routes {
 		r := &routes[i]
+		// The default "other" route is the fallback for kinds without their own
+		// default, so a new agenthooks kind is observed instead of dropped.
+		if r.Default && r.Kind == string(agenthooks.KindOther) {
+			if catchAll == nil {
+				catchAll = r
+			}
+			continue
+		}
 		if !routeMatches(r, kind, provider, toolName, toolCanon) {
 			continue
 		}
 		if !r.Default {
 			return r
 		}
-		if fallback == nil {
-			fallback = r
+		if exact == nil {
+			exact = r
 		}
 	}
-	return fallback
+	if exact != nil {
+		return exact
+	}
+	return catchAll
 }
 
 func routeMatches(r *config.CompiledRoute, kind, provider, toolName string, toolCanon agenthooks.CanonicalTool) bool {
-	// Legacy single-kind default routes.
-	if r.Kind != "" && len(r.Match.Kinds) == 0 {
-		return r.Kind == kind || r.Kind == string(agenthooks.KindOther)
-	}
 	m := r.Match
 	if len(m.Kinds) > 0 && !stringIn(m.Kinds, kind) {
 		return false

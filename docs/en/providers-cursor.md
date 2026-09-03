@@ -39,5 +39,6 @@ agentd hook run --provider=cursor --argv-payload '{"session_id":"s","cwd":"/tmp"
 | **Async vs sync** | Async/telemetry failure must **not** change the sync decision ([DESIGN.md §2](../../DESIGN.md#2-hook-dispatch-engine)) |
 | **PromptSubmitted** | Capability surface is Deny-only at the kind level |
 | **failClosed** | Install/runtime follow Cursor’s stricter fail-closed expectations via agenthooks |
+| **Default install** | Includes `subagentStart` / `preCompact` and related observe hooks. Does **not** write `afterAgentThought` or `afterFileEdit`. Re-run `agentd install` after upgrading agentd |
 
 See also: [Providers index](./providers.md), [Dispatch](./dispatch.md), [Troubleshooting](./troubleshooting.md).

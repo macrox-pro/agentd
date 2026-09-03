@@ -141,8 +141,12 @@ func (e *Engine) Invoke(ctx context.Context, in InvokeInput) (InvokeResult, erro
 		Log:             e.log,
 	}
 
-	unlock := e.sessions.Lock(SessionIDOf(typed))
-	defer unlock()
+	// async_only only enqueues; locking would let high-frequency observe
+	// events serialize with tool.pre on the same session.
+	if mode != config.ModeAsyncOnly {
+		unlock := e.sessions.Lock(SessionIDOf(typed))
+		defer unlock()
+	}
 
 	budget := SyncBudget(time.Now(), in.Deadline, eventKind, route.SyncTimeout)
 	if budget > 0 {

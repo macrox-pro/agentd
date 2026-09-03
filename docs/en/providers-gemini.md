@@ -35,6 +35,7 @@ echo '{"session_id":"s","cwd":"/tmp","hook_event_name":"PreToolUse","tool_name":
 | **Hook names** | Installer sets display names required by Gemini `/hooks` UX |
 | **stderr** | The hook edge must **never** write debug to stderr on this path (Gemini may treat stderr specially). Put audit on async `file` / `log` ([DESIGN.md §2](../../DESIGN.md#2-hook-dispatch-engine)) |
 | **Ask** | `tool.pre` supports Ask/Deny/Allow |
+| **Unmapped kinds** | Subagent hooks are skipped on install; the daemon still routes them if you add them by hand |
 | **Exit codes** | Gemini blocking/prompt semantics differ from Claude; agenthooks owns encoding — do not invent exit codes in agentd |
 
 See also: [Providers index](./providers.md), [Operations](./operations.md).

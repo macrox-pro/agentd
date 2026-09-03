@@ -16,10 +16,24 @@
 |------------|------------------|--------|
 | `tool.pre` | `PreToolUse` (Claude), `preToolUse` (Cursor) и т. д. | Перед инструментом |
 | `prompt.submitted` | `PromptSubmitted`, `UserPromptSubmit` и т. д. | Пользователь отправил запрос |
-| `agent.stop` | `Stop`, `SessionEnd` и т. д. | Завершение сессии |
+| `agent.stop` | `Stop` | Завершение сессии агента (не `subagent.stop`) |
 | `tool.post` | `PostToolUse` и т. д. | После инструмента |
+| `tool.error` | `PostToolUseFailure` и т. д. | Сбой инструмента |
+| `permission.request` | Запрос разрешения | Агент просит выполнить инструмент |
+| `session.start` | `SessionStart` | Новая сессия |
+| `session.end` | `SessionEnd` | Сессия закрыта |
+| `subagent.start` | `SubagentStart` | Вложенный агент стартовал |
+| `subagent.stop` | `SubagentStop` | Вложенный агент завершился |
+| `compact.pre` | `PreCompact` | Сжатие контекста сейчас начнётся |
+| `compact.post` | `PostCompact` | Сжатие контекста закончилось |
+| `file.edited` | `afterFileEdit` (Cursor) | Файл изменён (маршрутизируется, если подписаться; в установку по умолчанию не входит) |
+| `model.response` | Кадры «после мысли агента» | Ответ модели (маршрутизируется, если подписаться; в установку по умолчанию не входит) |
 | `notification` | Codex `notify`, observe-only кадры | Только наблюдение |
-| `other` | Прочее | По умолчанию только async |
+| `other` | Неизвестные нативные имена | Запасной маршрут, если нет точного default |
+
+Неизвестные ключи в `dispatch_defaults` или `match.kind` — ошибка compile (старт демона / `config validate`).
+
+Сначала пользовательские маршруты `dispatch:`. Затем default точного вида. Затем default `other`, чтобы новый вид наблюдался, а не терялся. Режимы `async_only` не берут блокировку сессии.
 
 ## Режимы
 
@@ -31,7 +45,7 @@
 | `after_sync` | Async после sync, с результатом sync |
 | `sync_then_async` | То же, что `after_sync` |
 
-Маршруты в `dispatch:` проверяются сверху вниз; побеждает первое совпадение.
+Маршруты в `dispatch:` проверяются первыми (сверху вниз среди пользовательских). Затем default точного вида. Затем default `other`.
 
 ## Цели
 
@@ -88,13 +102,25 @@ dispatch:
 
 ```yaml
 dispatch_defaults:
-  tool.pre:         { mode: parallel }
-  prompt.submitted: { mode: sync_only }
-  agent.stop:       { mode: sync_then_async }
-  tool.post:        { mode: parallel }
-  notification:     { mode: async_only }
-  other:            { mode: async_only }
+  tool.pre:            { mode: parallel }
+  prompt.submitted:    { mode: sync_only }
+  agent.stop:          { mode: sync_then_async }
+  tool.post:           { mode: parallel }
+  notification:        { mode: async_only }
+  other:               { mode: async_only }
+  session.start:       { mode: async_only }
+  session.end:         { mode: async_only }
+  tool.error:          { mode: async_only }
+  permission.request:  { mode: async_only }
+  subagent.start:      { mode: async_only }
+  subagent.stop:       { mode: async_only }
+  compact.pre:         { mode: async_only }
+  compact.post:        { mode: async_only }
+  file.edited:         { mode: async_only }
+  model.response:      { mode: async_only }
 ```
+
+После обновления agentd снова выполните `agentd install`, чтобы агенты подписались на новые виды. `file.edited` и `model.response` маршрутизируются, если хук пришёл, но установщик по умолчанию их не пишет.
 
 ## Бюджет времени на sync
 

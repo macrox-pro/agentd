@@ -34,6 +34,10 @@ func encodeDecision(ctx context.Context, provider string, argvPayload bool, payl
 		return promptDecisionFromProto(d), nil
 	})
 	r.OnStop(func(context.Context, *agenthooks.StopEvent) (agenthooks.StopDecision, error) {
+		// Finish ignores the daemon Decision, matching the existing OnStop path.
+		return agenthooks.Finish(), nil
+	})
+	r.OnSubagentStop(func(context.Context, *agenthooks.StopEvent) (agenthooks.StopDecision, error) {
 		return agenthooks.Finish(), nil
 	})
 	r.OnToolPost(func(context.Context, *agenthooks.ToolPostEvent) (agenthooks.ToolPostDecision, error) {

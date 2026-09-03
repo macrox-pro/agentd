@@ -69,6 +69,8 @@ CLI `config validate|show|get` use the `--cwd` flag instead of hook JSON. See [C
 
 From the file schema: `version`, `policy`, `async`, `logging`, `guards`, `approvals`, `blocks`, `dispatch_defaults`, `dispatch`, `trajectory`, `metrics`.
 
+`dispatch_defaults` keys and `dispatch[].match.kind` values must be known wire kinds ([Dispatch](./dispatch.md#event-kinds-kind)). A typo fails `config validate` and `daemon start`. Bootstrap `~/.agentd.yaml` stays minimal — kind defaults live in the binary.
+
 Project files typically carry `guards` / `dispatch`. `approvals` and `blocks` usually land in runtime via CLI/gRPC.
 
 ### policy

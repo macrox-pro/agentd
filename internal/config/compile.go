@@ -137,6 +137,14 @@ func compileUserRoutes(in []fileRoute) ([]CompiledRoute, error) {
 			return nil, fmt.Errorf("dispatch[%q].mode: %w", fr.Name, err)
 		}
 		mode = NormalizeMode(mode)
+		for _, k := range fr.Match.Kind {
+			if k == "*" {
+				continue
+			}
+			if err := validateEventKind(k); err != nil {
+				return nil, fmt.Errorf("dispatch[%q].match.kind: %w", fr.Name, err)
+			}
+		}
 		syncTargets, err := compileTargets(fr.Sync, true, fr.Name)
 		if err != nil {
 			return nil, err

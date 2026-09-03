@@ -19,10 +19,10 @@ func TestFromEvents(t *testing.T) {
 	t.Parallel()
 	now := time.Now().UTC()
 	tests := []struct {
-		name         string
-		events       []trajectory.Event
-		buildEvents  func(t *testing.T) []trajectory.Event
-		check        func(t *testing.T, s statistics.Session)
+		name        string
+		events      []trajectory.Event
+		buildEvents func(t *testing.T) []trajectory.Event
+		check       func(t *testing.T, s statistics.Session)
 	}{
 		{
 			name:   "empty_file",

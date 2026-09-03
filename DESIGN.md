@@ -175,19 +175,31 @@ Central router: **sync pipeline** (agent response; must fit provider timeout) + 
 
 ```yaml
 dispatch_defaults:
-  tool.pre:         { mode: parallel,        blocking: true }
-  prompt.submitted: { mode: sync_only,        blocking: true }
-  agent.stop:       { mode: sync_then_async, blocking: true }
-  tool.post:        { mode: parallel,        blocking: false }
-  notification:     { mode: async_only,      blocking: false }
-  other:            { mode: async_only,      blocking: false }
+  tool.pre:            { mode: parallel,        blocking: true }
+  prompt.submitted:    { mode: sync_only,        blocking: true }
+  agent.stop:          { mode: sync_then_async, blocking: true }
+  tool.post:           { mode: parallel,        blocking: false }
+  notification:        { mode: async_only,      blocking: false }
+  other:               { mode: async_only,      blocking: false }
+  session.start:       { mode: async_only,      blocking: false }
+  session.end:         { mode: async_only,      blocking: false }
+  tool.error:          { mode: async_only,      blocking: false }
+  permission.request:  { mode: async_only,      blocking: false }
+  subagent.start:      { mode: async_only,      blocking: false }
+  subagent.stop:       { mode: async_only,      blocking: false }
+  compact.pre:         { mode: async_only,      blocking: false }
+  compact.post:        { mode: async_only,      blocking: false }
+  file.edited:         { mode: async_only,      blocking: false }
+  model.response:      { mode: async_only,      blocking: false }
 ```
 
-Wire kind names (`tool.pre`, `prompt.submitted`, `agent.stop`, `tool.post`, `notification`, `other`): [docs/en/dispatch.md § Event kinds](./docs/en/dispatch.md#event-kinds-kind) · [glossary](./docs/en/glossary.md).
+`blocking` here describes the default **install** hook set, not YAML `dispatch_defaults` (mode only). `file.edited` / `model.response` are compiled routes only — not auto-installed.
+
+Wire kind names: [docs/en/dispatch.md § Event kinds](./docs/en/dispatch.md#event-kinds-kind) · [glossary](./docs/en/glossary.md).
 
 ### Routes
 
-Routes evaluated top-down; first match wins. Example:
+User routes first (top-down). Then exact-kind default. Then default `other` catch-all. `async_only` does not take the per-session lock. Example:
 
 ```yaml
 dispatch:

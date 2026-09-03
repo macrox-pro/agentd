@@ -4,6 +4,8 @@ import (
 	"maps"
 	"sync"
 
+	"github.com/speakeasy-api/agenthooks"
+
 	agentdv1 "github.com/macrox-pro/agentd/gen/agentd/v1"
 	"github.com/macrox-pro/agentd/internal/trajectory"
 	"github.com/macrox-pro/agentd/internal/trajectory/statistics/extract"
@@ -54,7 +56,8 @@ func (c *Collector) Observe(in trajectory.RecordInput) {
 
 	raw := append([]byte(nil), in.RawPayload...)
 	prov := in.Provider
-	go c.extractAsync(prov, raw)
+	kind := meta.EventKind
+	go c.extractAsync(prov, raw, kind)
 }
 
 func applyObserve(r *StatisticsRollup, hook agentdv1.EventKind, decision agentdv1.DecisionKind, asyncN uint64) {
@@ -63,21 +66,28 @@ func applyObserve(r *StatisticsRollup, hook agentdv1.EventKind, decision agentdv
 	r.AsyncDispatched += asyncN
 }
 
-func (c *Collector) extractAsync(prov agentdv1.Provider, raw []byte) {
+func (c *Collector) extractAsync(prov agentdv1.Provider, raw []byte, eventKind string) {
 	if c == nil || len(raw) == 0 {
 		return
 	}
+	stop := agenthooks.EventKind(eventKind) == agenthooks.KindStop
 	tokens := extract.Tokens(prov, raw)
-	if !tokens.Any() {
+	if !tokens.Any() && stop {
 		tokens = extract.TokensFromTranscript(prov, raw)
 	}
 	if !tokens.Any() {
 		return
 	}
+	var billing extract.TokenFields
+	if stop {
+		billing = billingTokensForRollup(tokens)
+	}
+	contextTokens := contextTokensForRollup(tokens)
+	if !billing.HasBilling() && !contextTokens.HasContext {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	billing := billingTokensForRollup(tokens)
-	contextTokens := contextTokensForRollup(tokens)
 	applyTokens(&c.global, billing)
 	applyTokens(&c.global, contextTokens)
 	if prov != agentdv1.Provider_PROVIDER_UNSPECIFIED {

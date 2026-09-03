@@ -4,18 +4,19 @@
 
 ## Current
 
-**v0.0.9 release prep** — changelog + metadata updated locally; tag `v0.0.9` not pushed yet.
+**Full hook kind coverage** — config vocabulary, catch-all routing, stats billing gate, Tier A install.
 
 ### Next todo
 
-1. Commit release metadata, tag `v0.0.9`, push — `release.yml` runs goreleaser + GitHub Release.
-2. Watch CI after push: `platform-test (windows-latest)` validates the pipe/state-dir fixes (no local Windows runner).
-3. Follow-up (separate session): `trajectory.DefaultSessionsDir()` has no Windows branch — the session ledger lands in `%USERPROFILE%\.local\state\agentd\sessions` instead of `%LOCALAPPDATA%\agentd`, and daemon tests do not isolate it.
+1. Commit hook-kind coverage (tests + docs + `e2e-m21.sh` green).
+2. Tag `v0.0.9` still pending from prior session if not already pushed.
+3. Follow-up: `trajectory.DefaultSessionsDir()` Windows branch.
 
 ## Recent (done)
 
 | When | Phase | One-liner |
 |------|-------|-----------|
+| 2026-09-03 | Hook kinds | 16-kind defaults, catch-all, skip lock on async_only, billing only on `agent.stop`, Tier A install |
 | 2026-09-02 | v0.0.9 prep | CHANGELOG/README/DESIGN/docs for stable v0.0.9 (Windows fixes + beta scope) |
 | 2026-09-02 | Windows state paths | pipe endpoints keep pid/lock in the state dir; daemon tests listen on a pipe |
 | 2026-09-02 | v0.0.9-beta | released; CHANGELOG/README/DESIGN release metadata |

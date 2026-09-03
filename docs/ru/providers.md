@@ -46,6 +46,8 @@ agentd install --provider=PROVIDER --scope=SCOPE [--dir PATH]
 
 В настройках агента вызывается `agentd agenthooks …` (то же, что `hook …`). Таймауты: «перед инструментом» и отправка запроса **30 с**; более короткие события **5 с**.
 
+Установщик по умолчанию пишет `tool.pre`, `tool.post`, `tool.error`, `prompt.submitted`, `agent.stop`, `session.start`, `session.end`, `notification`, `permission.request`, `subagent.start`, `subagent.stop`, `compact.pre` и `compact.post`, если у агента есть нативное соответствие. Gemini пропускает виды без маппинга (например subagent). `file.edited` / `model.response` автоматически не ставятся. После обновления agentd снова выполните `agentd install`.
+
 Устройство: [DESIGN.md §1–§2](../../DESIGN.md) · форматы: [agenthooks](https://github.com/speakeasy-api/agenthooks).
 
 ## Автообнаружение

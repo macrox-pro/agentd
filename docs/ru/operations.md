@@ -100,7 +100,7 @@ agentd daemon disable
 
 ### После обновления agentd
 
-После установки нового бинарника (например `go install …@latest`) снова выполните `agentd daemon enable`. Смотрите `autostart.stale` в `daemon status --json`.
+После установки нового бинарника (например `go install …@latest`) снова выполните `agentd daemon enable`. Смотрите `autostart.stale` в `daemon status --json`. Снова выполните `agentd install`, чтобы агенты подписались на новые виды хуков.
 
 ### `disable` и `stop`
 

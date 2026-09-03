@@ -3,12 +3,45 @@ package config
 import (
 	"fmt"
 	"maps"
+	"slices"
+	"strings"
 	"time"
+
+	"github.com/speakeasy-api/agenthooks"
 )
 
 // KindDefault is a per-kind dispatch default.
 type KindDefault struct {
 	Mode DispatchMode
+}
+
+// eventKinds is the routable wire vocabulary, sourced from agenthooks so
+// config and the decoder cannot drift. model.request and mcp.inventory are
+// omitted: no provider renderer maps them.
+var eventKinds = []string{
+	string(agenthooks.KindSessionStart),
+	string(agenthooks.KindSessionEnd),
+	string(agenthooks.KindPromptSubmitted),
+	string(agenthooks.KindToolPre),
+	string(agenthooks.KindToolPost),
+	string(agenthooks.KindToolError),
+	string(agenthooks.KindPermission),
+	string(agenthooks.KindStop),
+	string(agenthooks.KindSubagentStart),
+	string(agenthooks.KindSubagentStop),
+	string(agenthooks.KindCompactPre),
+	string(agenthooks.KindCompactPost),
+	string(agenthooks.KindFileEdited),
+	string(agenthooks.KindModelResponse),
+	string(agenthooks.KindNotification),
+	string(agenthooks.KindOther),
+}
+
+func validateEventKind(kind string) error {
+	if slices.Contains(eventKinds, kind) {
+		return nil
+	}
+	return fmt.Errorf("unknown kind %q (valid: %s)", kind, strings.Join(eventKinds, ", "))
 }
 
 // TargetKind identifies a dispatch target type.
@@ -70,6 +103,9 @@ func parseKindDefaults(in map[string]fileKindDefault, def map[string]KindDefault
 	out := make(map[string]KindDefault, len(def))
 	maps.Copy(out, def)
 	for k, v := range in {
+		if err := validateEventKind(k); err != nil {
+			return nil, fmt.Errorf("dispatch_defaults.%s: %w", k, err)
+		}
 		cur := out[k]
 		if v.Mode != "" {
 			m, err := parseDispatchMode(v.Mode)

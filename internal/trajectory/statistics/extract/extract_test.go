@@ -12,9 +12,9 @@ import (
 func TestExtract(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name string
-		prov agentdv1.Provider
-		raw  string
+		name  string
+		prov  agentdv1.Provider
+		raw   string
 		check func(t *testing.T, got extract.TokenFields)
 	}{
 		{
@@ -126,9 +126,9 @@ func TestExtract(t *testing.T) {
 func TestTokensFromTranscript(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name string
-		prov agentdv1.Provider
-		raw  string
+		name  string
+		prov  agentdv1.Provider
+		raw   string
 		check func(t *testing.T, got extract.TokenFields)
 	}{
 		{

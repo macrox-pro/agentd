@@ -15,11 +15,11 @@ func TestFindProjectConfig(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		setup       func(t *testing.T) (cwd, root string)
-		wantFound   bool
-		wantBase    string // expected basename dir of config ("" = any)
-		wantInRoot  bool
+		name       string
+		setup      func(t *testing.T) (cwd, root string)
+		wantFound  bool
+		wantBase   string // expected basename dir of config ("" = any)
+		wantInRoot bool
 	}{
 		{
 			name: "missing",

@@ -4,6 +4,7 @@
 // PrepareUserConfig (daemon-start user bootstrap), SetToggle/GetToggle (CLI feature toggles),
 // OfflineFor (edge unreachable path), metrics YAML compile.
 // Must not: dispatch routing (dispatch), hook wire (hookedge).
+// Kind vocabulary for dispatch_defaults / match.kind mirrors agenthooks event kinds.
 //
 // Invariants:
 //   - Hot path: Store.Current() only — no disk I/O per Invoke.

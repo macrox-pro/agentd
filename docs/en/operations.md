@@ -102,7 +102,7 @@ This usually means your OS is set to start agentd on login, but something blocke
 
 ### After upgrading agentd
 
-If you install a new binary (for example `go install …@latest`), run `agentd daemon enable` again so login autostart points at the new path. Check `autostart.stale` in `daemon status --json`.
+If you install a new binary (for example `go install …@latest`), run `agentd daemon enable` again so login autostart points at the new path. Check `autostart.stale` in `daemon status --json`. Re-run `agentd install` so coding agents pick up new hook kinds.
 
 ### `disable` vs `stop`
 

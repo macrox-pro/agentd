@@ -31,6 +31,21 @@ func TestSyncBudget(t *testing.T) {
 			want: time.Duration(5*time.Second) * 9 / 10,
 		},
 		{
+			name: "subagent.start short budget",
+			kind: "subagent.start",
+			want: time.Duration(5*time.Second) * 9 / 10,
+		},
+		{
+			name: "compact.pre short budget",
+			kind: "compact.pre",
+			want: time.Duration(5*time.Second) * 9 / 10,
+		},
+		{
+			name: "prompt.submitted long budget",
+			kind: "prompt.submitted",
+			want: 27 * time.Second,
+		},
+		{
 			name:     "invoke deadline with margin",
 			deadline: now.Add(10 * time.Second),
 			kind:     "tool.pre",

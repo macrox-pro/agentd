@@ -41,5 +41,6 @@ echo '{"session_id":"s","cwd":"/tmp","hook_event_name":"PreToolUse","tool_name":
 | **PromptSubmitted** | Can Deny / add context / system message — **no Ask** |
 | **Timeouts** | Hook timeouts in seconds; sync budget uses install defaults when the hook request has no deadline |
 | **Blocking** | `tool.pre` / `prompt.submitted` / `agent.stop` are blocking in the default install set |
+| **Observe hooks** | Default install also writes non-blocking `session.*`, `tool.error`, permission, `subagent.*`, and `compact.*`. Re-run `agentd install` after upgrading |
 
 See also: [Providers index](./providers.md), [Approvals](./approvals.md), [Guards](./guards.md).
